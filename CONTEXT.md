@@ -24,12 +24,18 @@ exactly one per household.
 ### The childcare calendar
 
 **Childcare pattern**:
-The weekdays on which the child is normally in childcare and needs
-collecting. One per household. (Shape and editing rules: issue #6.)
+The set of weekdays on which the child is normally in childcare and needs
+collecting. One per household, but not fixed for all time: a household can
+adopt a new set of weekdays effective from a given date, and each earlier
+date still derives its childcare days from whichever pattern was in effect
+then. (See ADR-0002.)
+_Avoid_: Schedule, recurrence
 
 **Closure**:
 A single date on which a weekday the pattern would include has no childcare
-after all — public holiday, facility closed, child off sick.
+after all — public holiday, facility closed, child off sick. Carries an
+optional free-text reason; no taxonomy. A multi-day closure (a holiday week)
+is just several Closure rows, not a range.
 _Avoid_: Holiday, day off
 
 **Childcare day**:
