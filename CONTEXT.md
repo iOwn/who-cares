@@ -47,16 +47,37 @@ free-text label and note, neither of which changes app behaviour.
 _Avoid_: Unavailability, trip, out-of-office
 
 **Pickup request**:
-Raised automatically when an absence covers a childcare day; asks the
-other member to take responsibility for that day's pickup. One per covered
-childcare day, answered by accept or decline. (Lifecycle: issue #3.)
+Raised automatically when an absence covers a childcare day that has no
+existing assignment and exactly one member is absent that day; asks the
+other member to take responsibility for that day's pickup. Moves from
+**Open** to a terminal state — **Accepted**, **Declined**, or
+**Withdrawn** — and never reopens; asking again after a Decline or a
+Withdrawal always raises a fresh request. If both members are absent on
+the same childcare day, no request is raised at all — the day goes
+straight to at-risk.
 _Avoid_: Wish, ask
+
+**Withdrawn**:
+A pickup request closed with no answer given, because it stopped needing
+one: the requester cancelled it, the absence behind it was cancelled or
+shortened, or the day was resolved by a direct claim before the other
+member responded.
+_Avoid_: Cancelled, expired
+
+**Direct claim**:
+A member taking responsibility for a childcare day outright, bypassing
+the pickup request flow entirely. Can target any day, whether unassigned
+or already assigned — the newest claim wins, displacing whatever
+assignment came before it.
+_Avoid_: Reassignment, override
 
 **Assignment**:
 The record of who is responsible for collecting the child on a given
 childcare day. At most one per date; its assignee is a member or nobody.
-Arises from an accepted pickup request or a member directly claiming the
-day.
+Arises from an accepted pickup request or a direct claim, and stands on
+its own once made: it doesn't change retroactively if the pickup request
+or absence behind it is later cancelled, and a later direct claim
+replaces it without altering the original request's own terminal state.
 _Avoid_: Responsibility, duty, slot
 
 **At-risk day**:
