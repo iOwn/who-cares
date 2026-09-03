@@ -86,7 +86,25 @@ or absence behind it is later cancelled, and a later direct claim
 replaces it without altering the original request's own terminal state.
 _Avoid_: Responsibility, duty, slot
 
+**Day state**:
+The derived status a childcare day surfaces as, computed at read time and
+never stored: **Resolved**, **Pending**, **At-risk**, or not applicable (any
+date that isn't a childcare day at all).
+_Avoid_: Status, phase
+
+**Resolved**:
+A childcare day with an assignee (via an accepted pickup request or a
+direct claim) who is not themselves absent that day.
+
+**Pending**:
+A childcare day with an open pickup request that hasn't yet crossed either
+At-risk threshold.
+
 **At-risk day**:
-A childcare day whose pickup is not safely covered. A derived status that
-drives UI highlighting and notifications. (Exact predicate: issue #4.)
+A childcare day whose pickup is not safely covered — no assignee, or an
+assignee who is themselves absent that day — because either both members
+are absent (no request is ever raised) or an open pickup request has
+crossed whichever escalation threshold comes first: 48h since it was
+raised, or 48h before the childcare day itself. Drives UI highlighting and
+notifications. (See ADR-0003.)
 _Avoid_: Gap, conflict
