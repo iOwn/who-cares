@@ -51,10 +51,10 @@ Raised automatically when an absence covers a childcare day that has no
 existing assignment and exactly one member is absent that day; asks the
 other member to take responsibility for that day's pickup. Moves from
 **Open** to a terminal state — **Accepted**, **Declined**, or
-**Withdrawn** — and never reopens; asking again after a Decline or a
-Withdrawal always raises a fresh request. If both members are absent on
-the same childcare day, no request is raised at all — the day goes
-straight to at-risk.
+**Withdrawn** — and never reopens and is never re-raised: once a request
+is Declined or Withdrawn, the only way the day gets covered is a direct
+claim. If both members are absent on the same childcare day, no request
+is raised at all — the day goes straight to at-risk.
 _Avoid_: Wish, ask
 
 **Withdrawn**:
