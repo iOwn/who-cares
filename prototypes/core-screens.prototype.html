@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhoCares — core screens PROTOTYPE (throwaway)</title>
+<style>
+/* ============================================================
+   PROTOTYPE — throwaway code, wayfinder ticket #13
+   "Core screens / information architecture"
+   Not production code. No tests, no persistence, no framework.
+   Run: double-click this file, or `npx serve prototypes`.
+   Three structurally different variants of the same screens,
+   switchable via ?variant=A|B|C and the floating bottom bar.
+   ============================================================ */
+:root{
+  --resolved:#16a34a; --resolved-bg:#dcfce7;
+  --pending:#d97706;  --pending-bg:#fef3c7;
+  --at-risk:#dc2626;  --at-risk-bg:#fee2e2;
+  --na:#9ca3af;       --na-bg:#f1f5f9;
+  --quiet:#64748b;    --quiet-bg:#f8fafc;
+  --ink:#0f172a; --sub:#475569; --line:#e2e8f0; --card:#ffffff; --page:#f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0; background:var(--page); color:var(--ink);}
+button{font:inherit; cursor:pointer;}
+.banner{background:#1e1b4b; color:#fef3c7; text-align:center; font-size:12px; padding:6px; letter-spacing:.02em;}
+#topbar{display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--card); border-bottom:1px solid var(--line); flex-wrap:wrap; position:sticky; top:0; z-index:20;}
+#topbar h1{font-size:16px; margin:0; margin-right:8px;}
+.pillbtn{border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 12px; font-size:13px;}
+.pillbtn.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+.spacer{flex:1;}
+.smallmuted{font-size:12px; color:var(--sub);}
+#app{max-width:1100px; margin:0 auto; padding:16px; padding-bottom:90px;}
+
+/* switcher */
+.switcher{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); background:#111827; color:#fff;
+  border-radius:999px; padding:6px 6px; display:flex; align-items:center; gap:6px; box-shadow:0 6px 20px rgba(0,0,0,.35); z-index:50;}
+.switcher button{background:#1f2937; color:#fff; border:none; border-radius:999px; width:30px; height:30px;}
+.switcher button:hover{background:#374151;}
+.switcher .label{font-size:13px; padding:0 8px; white-space:nowrap;}
+
+/* modal */
+.overlay{position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:40; padding:16px;}
+.overlay.right{justify-content:flex-end; align-items:stretch;}
+.overlay.bottom{align-items:flex-end;}
+.sheet{background:#fff; border-radius:14px; max-width:420px; width:100%; padding:18px; max-height:85vh; overflow:auto;}
+.sheet.side{border-radius:0; height:100%; max-width:360px; max-height:none;}
+@media (max-width:480px){
+  /* On phones the requests panel has nowhere to sit beside the calendar,
+     so the bell push-navigates to a full-screen view instead of a side sheet. */
+  .sheet.side{max-width:none; width:100%;}
+}
+.sheet.full{max-width:480px; border-radius:14px 14px 0 0; margin-bottom:64px;}
+.sheet h2{margin-top:0; font-size:17px;}
+.closex{float:right; border:none; background:none; font-size:18px; color:var(--sub);}
+label{display:block; font-size:12px; color:var(--sub); margin:10px 0 4px;}
+input,textarea{width:100%; padding:8px; border:1px solid var(--line); border-radius:8px; font:inherit;}
+.row{display:flex; gap:8px;}
+.row > *{flex:1;}
+.actions{display:flex; gap:8px; margin-top:14px;}
+.btn{border-radius:8px; border:1px solid var(--line); background:#fff; padding:8px 14px; font-size:14px;}
+.btn.primary{background:var(--ink); color:#fff; border-color:var(--ink);}
+.btn.accept{background:var(--resolved); color:#fff; border-color:var(--resolved);}
+.btn.decline{background:#fff; color:var(--at-risk); border-color:var(--at-risk);}
+.btn.ghost{background:none; border-color:transparent; color:var(--sub);}
+.btn.danger{color:var(--at-risk); border-color:var(--at-risk); background:#fff;}
+.btn:disabled{opacity:.4; cursor:default;}
+
+/* legend */
+.legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--sub); margin-bottom:10px;}
+.legend span{display:inline-flex; align-items:center; gap:5px;}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+.dot.resolved{background:var(--resolved);} .dot.pending{background:var(--pending);}
+.dot.at-risk{background:var(--at-risk);} .dot.na{background:var(--na);} .dot.quiet{background:var(--quiet);}
+
+.guidebtn{border:1px dashed var(--line); background:#fff; border-radius:8px; padding:5px 10px; font-size:12px; color:var(--sub);}
+.guide li{margin-bottom:10px;}
+.guide code{background:var(--quiet-bg); padding:1px 5px; border-radius:4px;}
+
+/* ---------- Variant A: calendar-first grid + modal ---------- */
+.a-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+.a-cell{position:relative; border:1px solid var(--line); border-radius:10px; background:#fff; min-height:78px; padding:6px; text-align:left;}
+.a-cell.na{background:repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9 6px,#eef1f5 6px,#eef1f5 12px); color:#94a3b8;}
+.a-cell .num{font-weight:600; font-size:13px;}
+.a-cell .today{outline:2px solid var(--ink); outline-offset:-2px;}
+.a-badge{position:absolute; top:6px; right:6px; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff;}
+.a-who{font-size:11px; margin-top:20px; color:var(--sub);}
+.a-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+.fab{background:var(--ink); color:#fff; border:none; border-radius:999px; padding:10px 18px; font-size:14px; font-weight:600;}
+.bell{position:relative; border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 10px;}
+.bellcount{position:absolute; top:-6px; right:-6px; background:var(--at-risk); color:#fff; border-radius:999px; font-size:10px; padding:1px 5px;}
+.weekday-hd{font-size:11px; color:var(--sub); text-align:center; padding-bottom:4px;}
+.reqcard{border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; background:#fff;}
+.reqcard.escalated{border-color:var(--at-risk); background:var(--at-risk-bg);}
+
+/* ---------- Variant B: feed-first with tabs ---------- */
+.b-tabs{display:flex; gap:6px; margin-bottom:14px;}
+.b-tab{flex:1; text-align:center; padding:9px; border-radius:8px; border:1px solid var(--line); background:#fff; font-size:13px;}
+.b-tab.active{background:var(--ink); color:#fff; border-color:var(--ink);}
+.b-card{border-radius:12px; padding:14px; margin-bottom:10px; border-left:5px solid var(--quiet); background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.b-card.at-risk{border-color:var(--at-risk); background:var(--at-risk-bg);}
+.b-card.pending{border-color:var(--pending); background:var(--pending-bg);}
+.b-card .title{font-weight:600; font-size:14px; margin-bottom:2px;}
+.b-card .sub{font-size:12px; color:var(--sub); margin-bottom:8px;}
+.b-section-title{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--sub); margin:18px 0 8px;}
+.b-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+.b-cell{border:1px solid var(--line); border-radius:8px; padding:5px; min-height:56px; font-size:11px; background:#fff;}
+.b-cell.na{background:var(--na-bg); color:#94a3b8;}
+.b-chip{display:inline-block; margin-top:4px; font-size:10px; padding:1px 5px; border-radius:5px; color:#fff;}
+.b-fabbar{position:fixed; left:0; right:0; bottom:56px; display:flex; justify-content:center;}
+.b-fab{background:var(--ink); color:#fff; border:none; border-radius:999px; padding:12px 22px; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,.3);}
+.b-step{font-size:12px; color:var(--sub); margin-bottom:8px;}
+
+/* ---------- Variant C: master-detail split ---------- */
+.c-wrap{display:flex; gap:16px; align-items:flex-start;}
+.c-list{flex:0 0 320px; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+.c-detail{flex:1; background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; min-height:420px;}
+.c-pinned{background:var(--pending-bg); padding:10px 14px; font-size:12px; font-weight:600; color:#92400e;}
+.c-row{display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); font-size:13px;}
+.c-row:hover{background:var(--quiet-bg); cursor:pointer;}
+.c-row.selected{background:#eef2ff;}
+.c-row .d{width:46px; color:var(--sub); font-size:11px;}
+.c-row .t{flex:1;}
+.c-row .status{font-size:11px; color:var(--sub);}
+.c-addbtn{width:100%; padding:10px; border:none; border-bottom:1px solid var(--line); background:#f8fafc; font-weight:600; font-size:13px;}
+.c-inlineform{padding:14px; border-bottom:1px solid var(--line); background:#fafaff;}
+@media (max-width:820px){
+  .c-wrap{flex-direction:column;}
+  .c-list{flex:1 1 auto; width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="banner">🧪 PROTOTYPE — throwaway UI exploration for wayfinder ticket #13 (Core screens / information architecture). Not production code.</div>
+<div id="topbar"></div>
+<div id="app"></div>
+<div id="switcherbar" class="switcher"></div>
+<div id="modal-root"></div>
+
+<script>
+/* ---------------- domain-ish seed data (see CONTEXT.md) ---------------- */
+const MEMBERS = [{id:'alex', name:'Alex'}, {id:'sam', name:'Sam'}];
+const other = id => id === 'alex' ? 'sam' : 'alex';
+const nameOf = id => MEMBERS.find(m => m.id === id).name;
+const PATTERN_WEEKDAYS = [1,2,3,4,5]; // Mon-Fri
+const CLOSURES = { '2026-09-21': 'Public holiday' };
+const WINDOW_START = new Date(2026,7,31); // Mon 31 Aug 2026
+const WINDOW_DAYS = 28;
+const TODAY_KEY = '2026-09-03';
+
+let SIM_NOW = new Date(2026,8,3,9,0,0);
+let nextAbsenceId = 100, nextRequestId = 100;
+
+let absences = [
+  {id:1, member:'alex', start:'2026-09-10', end:'2026-09-10', label:'Sick', note:''},
+  {id:2, member:'sam',  start:'2026-09-07', end:'2026-09-08', label:'Conference', note:'Berlin, back late'},
+  {id:3, member:'alex', start:'2026-09-11', end:'2026-09-11', label:'Wedding', note:''},
+  {id:4, member:'sam',  start:'2026-09-11', end:'2026-09-11', label:'Wedding', note:''},
+  {id:5, member:'alex', start:'2026-09-17', end:'2026-09-17', label:'Doctor', note:''},
+];
+let requests = [
+  {id:1, date:'2026-09-10', requestedOf:'sam',  status:'Open',     raisedAt:new Date(2026,8,3,7,0,0)},
+  {id:2, date:'2026-09-07', requestedOf:'alex', status:'Accepted', raisedAt:new Date(2026,8,5,9,0,0)},
+  {id:3, date:'2026-09-08', requestedOf:'alex', status:'Open',     raisedAt:new Date(2026,8,1,7,0,0)},
+];
+let assignments = {
+  '2026-09-07': {assignee:'alex', source:'accepted-request'},
+  '2026-09-16': {assignee:'sam',  source:'direct-claim'},
+  '2026-09-17': {assignee:'alex', source:'accepted-request'},
+};
+
+const SCENARIO_NOTES = [
+  ['2026-09-03', 'Today. No absence, no claim — see "quiet" assumption below.'],
+  ['2026-09-10', 'Alex absent, request → Sam, raised 2h ago, day is 7 days out ⇒ Pending.'],
+  ['2026-09-07', 'Sam absent; Alex already Accepted ⇒ Resolved (via accepted request).'],
+  ['2026-09-08', 'Sam absent, request → Alex raised 50h ago ⇒ At-risk (escalated: 48h-since-raised).'],
+  ['2026-09-11', 'Both absent ⇒ At-risk immediately, no request ever raised.'],
+  ['2026-09-16', 'Nobody absent; Sam direct-claimed ahead of time ⇒ Resolved (via direct claim).'],
+  ['2026-09-17', 'Alex accepted this day earlier, then declared a later absence covering it ⇒ re-flags to At-risk live, assignment record untouched (ADR-0003).'],
+  ['2026-09-21', 'Public holiday closure on a normal weekday ⇒ N/A, not a childcare day at all.'],
+];
+
+/* ---------------- date + derivation helpers ---------------- */
+function pad(n){ return String(n).padStart(2,'0'); }
+function keyOf(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function addDays(d,n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function windowDates(){ return Array.from({length:WINDOW_DAYS}, (_,i)=>addDays(WINDOW_START,i)); }
+function isChildcareDay(d){ return PATTERN_WEEKDAYS.includes(d.getDay()) && !CLOSURES[keyOf(d)]; }
+function fmtHuman(key){ const [y,m,dd]=key.split('-').map(Number); const d=new Date(y,m-1,dd);
+  return d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'}); }
+function absentMembersOn(key){ return MEMBERS.map(m=>m.id).filter(id => absences.some(a=>a.member===id && key>=a.start && key<=a.end)); }
+function latestRequestFor(key){ const rs = requests.filter(r=>r.date===key); return rs.length ? rs[rs.length-1] : null; }
+function hoursSince(d){ return (SIM_NOW - d)/3600000; }
+function hoursUntilMidnight(key){ const [y,m,dd]=key.split('-').map(Number); return (new Date(y,m-1,dd) - SIM_NOW)/3600000; }
+
+function computeDay(d){
+  const key = keyOf(d);
+  if(!isChildcareDay(d)) return {key, state:'na', closureReason: CLOSURES[key]};
+  const absent = absentMembersOn(key);
+  const assignment = assignments[key];
+  const req = latestRequestFor(key);
+  if(assignment){
+    if(absent.includes(assignment.assignee)) return {key, state:'at-risk', reason:'assignee-absent', assignment, absent, req};
+    return {key, state:'resolved', assignment, absent, req};
+  }
+  if(absent.length>=2) return {key, state:'at-risk', reason:'both-absent', absent, req};
+  if(absent.length===1){
+    if(req && req.status==='Open'){
+      const escalated = hoursSince(req.raisedAt)>=48 || hoursUntilMidnight(key)<=48;
+      return {key, state: escalated?'at-risk':'pending', reason: escalated?'escalated':undefined, absent, req};
+    }
+    return {key, state:'pending', absent, req:null};
+  }
+  return {key, state:'quiet', absent};
+}
+
+const STATE_LABEL = {resolved:'Resolved', pending:'Pending', 'at-risk':'At-risk', na:'N/A', quiet:'No action needed'};
+
+/* ---------------- mutations ---------------- */
+function declareAbsence(member, start, end, label, note){
+  absences.push({id: nextAbsenceId++, member, start, end, label, note});
+  windowDates().forEach(d=>{
+    const key = keyOf(d);
+    if(key<start || key>end || !isChildcareDay(d) || assignments[key]) return;
+    const absent = absentMembersOn(key);
+    if(absent.length===1){
+      const existing = latestRequestFor(key);
+      if(!existing || existing.status!=='Open'){
+        requests.push({id: nextRequestId++, date:key, requestedOf: other(absent[0]), status:'Open', raisedAt:new Date(SIM_NOW)});
+      }
+    }
+  });
+}
+function cancelAbsence(id){
+  const a = absences.find(a=>a.id===id);
+  absences = absences.filter(x=>x.id!==id);
+  windowDates().forEach(d=>{
+    const key = keyOf(d);
+    if(key<a.start || key>a.end) return;
+    const absent = absentMembersOn(key);
+    const req = latestRequestFor(key);
+    if(req && req.status==='Open' && absent.length!==1) req.status='Withdrawn';
+  });
+}
+function acceptRequest(id){ const r = requests.find(r=>r.id===id); r.status='Accepted'; assignments[r.date] = {assignee:r.requestedOf, source:'accepted-request'}; }
+function declineRequest(id){ const r = requests.find(r=>r.id===id); r.status='Declined'; }
+function claimDay(key, member){
+  assignments[key] = {assignee:member, source:'direct-claim'};
+  const req = latestRequestFor(key);
+  if(req && req.status==='Open') req.status='Withdrawn';
+}
+function advanceClock(hrs){ SIM_NOW = new Date(SIM_NOW.getTime()+hrs*3600000); }
+function resetScenario(){ location.href = location.pathname; }
+
+/* ---------------- global UI state ---------------- */
+let currentUser = 'sam';
+let modal = null; // {type:'day'|'absence'|'inbox', key?}
+let bTab = 'feed';
+let bFlowStep = 0;
+let cSelected = TODAY_KEY;
+let cFormOpen = false;
+let guideOpen = false;
+
+function esc(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- shared chrome ---------------- */
+function renderTopbar(){
+  const openToMe = requests.filter(r=>r.status==='Open' && r.requestedOf===currentUser).length;
+  document.getElementById('topbar').innerHTML = `
+    <h1>WhoCares</h1>
+    <span class="smallmuted">Viewing as</span>
+    ${MEMBERS.map(m=>`<button class="pillbtn ${currentUser===m.id?'active':''}" onclick="currentUser='${m.id}'; render()">${m.name}</button>`).join('')}
+    <span class="spacer"></span>
+    <span class="smallmuted">Sim time: ${SIM_NOW.toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+    <button class="pillbtn" onclick="advanceClock(24); render()">+24h</button>
+    <button class="guidebtn" onclick="guideOpen=true; render()">Scenario guide</button>
+    ${openToMe && getVariant()!=='B' ? `<button class="bell" onclick="modal={type:'inbox'}; render()">🔔<span class="bellcount">${openToMe}</span></button>` : ''}
+  `;
+}
+
+function dayBadgeColorVar(state){ return {resolved:'var(--resolved)',pending:'var(--pending)','at-risk':'var(--at-risk)',na:'var(--na)',quiet:'var(--quiet)'}[state]; }
+
+function legendHtml(){
+  return `<div class="legend">
+    <span><i class="dot resolved"></i>Resolved — covered, assignee not absent</span>
+    <span><i class="dot pending"></i>Pending — open request, within threshold</span>
+    <span><i class="dot at-risk"></i>At-risk — uncovered or escalated</span>
+    <span><i class="dot na"></i>N/A — not a childcare day</span>
+    <span><i class="dot quiet"></i>No action needed <em>(not one of the 4 formal states — see guide)</em></span>
+  </div>`;
+}
+
+function dayNarrative(info){
+  const d = info;
+  if(d.state==='na') return d.closureReason ? `Closed: ${esc(d.closureReason)}.` : `Weekend — not a childcare day.`;
+  if(d.state==='quiet') return `Nobody absent, nothing claimed. Domain question: does this default to Resolved, or is it simply untracked until someone acts? (flagged for ticket discussion)`;
+  if(d.state==='resolved') return `${nameOf(d.assignment.assignee)} is covering, via ${d.assignment.source==='direct-claim'?'a direct claim':'an accepted request'}.`;
+  if(d.state==='pending') return `${nameOf(d.absent[0])} is absent. Waiting on ${nameOf(other(d.absent[0]))} to respond.`;
+  if(d.state==='at-risk'){
+    if(d.reason==='both-absent') return `Both parents absent — no request was ever raised.`;
+    if(d.reason==='escalated') return `${nameOf(d.absent[0])} is absent and the request to ${nameOf(other(d.absent[0]))} has gone unanswered past the 48h threshold.`;
+    if(d.reason==='assignee-absent') return `${nameOf(d.assignment.assignee)} was covering, but has since declared themself absent this day — re-flagged live, assignment untouched.`;
+  }
+  return '';
+}
+
+function actionButtonsHtml(key, info, ctx){
+  const req = info.req;
+  const canRespond = req && req.status==='Open' && req.requestedOf===currentUser;
+  const myAbsence = absences.find(a=>a.member===currentUser && key>=a.start && key<=a.end);
+  let html = '<div class="actions">';
+  if(canRespond){
+    html += `<button class="btn accept" onclick="acceptRequest(${req.id}); closeAndRerender('${ctx}')">Accept</button>`;
+    html += `<button class="btn decline" onclick="declineRequest(${req.id}); closeAndRerender('${ctx}')">Decline</button>`;
+  }
+  if(info.state!=='na'){
+    html += `<button class="btn" onclick="claimDay('${key}','${currentUser}'); closeAndRerender('${ctx}')">Claim this day</button>`;
+  }
+  if(myAbsence){
+    html += `<button class="btn danger" onclick="cancelAbsence(${myAbsence.id}); closeAndRerender('${ctx}')">Cancel my absence</button>`;
+  }
+  html += '</div>';
+  if(!canRespond && !myAbsence && info.state==='na') html = '';
+  return html;
+}
+function closeAndRerender(){ modal=null; render(); }
+
+function guideHtml(){
+  if(!guideOpen) return '';
+  return `<div class="overlay" onclick="if(event.target===this){guideOpen=false; render();}">
+    <div class="sheet"><button class="closex" onclick="guideOpen=false; render()">✕</button>
+    <h2>Scenario guide</h2>
+    <p class="smallmuted">Seeded dates worth clicking, and what each demonstrates.</p>
+    <ul class="guide">
+      ${SCENARIO_NOTES.map(([k,note])=>`<li><code>${fmtHuman(k)}</code> — ${esc(note)}</li>`).join('')}
+    </ul>
+    </div></div>`;
+}
+
+function absenceFormHtml(onSubmitFn, onCancelFn){
+  return `
+    <label>Date range</label>
+    <div class="row"><input type="date" id="af-start" value="${TODAY_KEY}"><input type="date" id="af-end" value="${TODAY_KEY}"></div>
+    <label>Label (optional)</label><input id="af-label" placeholder="e.g. Work trip">
+    <label>Note (optional)</label><textarea id="af-note" rows="2" placeholder="Cosmetic only — doesn't change behaviour"></textarea>
+    <div class="actions">
+      <button class="btn primary" onclick="${onSubmitFn}">Declare absence</button>
+      <button class="btn ghost" onclick="${onCancelFn}">Cancel</button>
+    </div>`;
+}
+function submitAbsenceForm(after){
+  const start = document.getElementById('af-start').value, end = document.getElementById('af-end').value;
+  const label = document.getElementById('af-label').value, note = document.getElementById('af-note').value;
+  if(!start || !end || end<start) return alert('Pick a valid date range');
+  declareAbsence(currentUser, start, end, label, note);
+  after();
+}
+
+/* ================= VARIANT A: calendar-first, grid + modals ================= */
+function renderVariantA(){
+  const dates = windowDates();
+  const openToMe = requests.filter(r=>r.status==='Open' && r.requestedOf===currentUser);
+  let html = `<div class="a-head">
+    <div><strong>${WINDOW_START.toLocaleDateString(undefined,{month:'long'})} – ${addDays(WINDOW_START,27).toLocaleDateString(undefined,{month:'long', year:'numeric'})}</strong></div>
+    <button class="fab" onclick="modal={type:'absence'}; render()">＋ I'm out</button>
+  </div>`;
+  html += legendHtml();
+  html += `<div class="a-grid">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>`<div class="weekday-hd">${w}</div>`).join('')}`;
+  dates.forEach(d=>{
+    const info = computeDay(d);
+    const key = info.key;
+    const cls = info.state==='na' ? 'a-cell na' : 'a-cell';
+    const isToday = key===TODAY_KEY;
+    html += `<div class="${cls} ${isToday?'today':''}" onclick="modal={type:'day', key:'${key}'}; render()" style="cursor:pointer;">
+        <div class="num">${d.getDate()}</div>
+        ${info.state!=='na' ? `<div class="a-badge" style="background:${dayBadgeColorVar(info.state)}">${info.state==='resolved'?'✓':info.state==='pending'?'…':info.state==='at-risk'?'!':'–'}</div>` : ''}
+        ${info.state==='resolved' ? `<div class="a-who">${nameOf(info.assignment.assignee)}</div>` : ''}
+        ${(info.state==='pending'||info.state==='at-risk') && info.absent && info.absent.length===1 ? `<div class="a-who">${nameOf(info.absent[0])} out</div>` : ''}
+        ${info.reason==='both-absent' ? `<div class="a-who">both out</div>` : ''}
+      </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+function variantAModals(){
+  if(!modal) return '';
+  if(modal.type==='absence'){
+    return `<div class="overlay bottom" onclick="if(event.target===this){modal=null; render();}"><div class="sheet full">
+      <button class="closex" onclick="modal=null; render()">✕</button>
+      <h2>Declare an absence</h2>
+      <p class="smallmuted">As ${nameOf(currentUser)}. Any covered childcare day with no existing claim raises a request to ${nameOf(other(currentUser))} automatically.</p>
+      ${absenceFormHtml("submitAbsenceForm(()=>{modal=null; render();})", "modal=null; render()")}
+    </div></div>`;
+  }
+  if(modal.type==='inbox'){
+    const mine = requests.filter(r=>r.status==='Open' && r.requestedOf===currentUser);
+    return `<div class="overlay right" onclick="if(event.target===this){modal=null; render();}"><div class="sheet side">
+      <button class="closex" onclick="modal=null; render()">✕</button>
+      <h2>Pickup requests</h2>
+      ${mine.length===0?'<p class="smallmuted">Nothing waiting on you.</p>':''}
+      ${mine.map(r=>{
+        const escalated = hoursSince(r.raisedAt)>=48 || hoursUntilMidnight(r.date)<=48;
+        return `<div class="reqcard ${escalated?'escalated':''}">
+          <strong>${fmtHuman(r.date)}</strong><br>
+          <span class="smallmuted">${nameOf(other(currentUser))} is absent · raised ${Math.round(hoursSince(r.raisedAt))}h ago ${escalated?'· <strong style="color:var(--at-risk)">escalated</strong>':''}</span>
+          <div class="actions">
+            <button class="btn accept" onclick="acceptRequest(${r.id}); render()">Accept</button>
+            <button class="btn decline" onclick="declineRequest(${r.id}); render()">Decline</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div></div>`;
+  }
+  if(modal.type==='day'){
+    const info = computeDay(dateFromKey(modal.key));
+    return `<div class="overlay" onclick="if(event.target===this){modal=null; render();}"><div class="sheet">
+      <button class="closex" onclick="modal=null; render()">✕</button>
+      <h2>${fmtHuman(modal.key)}</h2>
+      <p><span class="dot ${info.state}" style="display:inline-block;"></span> <strong>${STATE_LABEL[info.state]}</strong></p>
+      <p class="smallmuted">${dayNarrative(info)}</p>
+      ${actionButtonsHtml(modal.key, info, 'A')}
+    </div></div>`;
+  }
+  return '';
+}
+function dateFromKey(key){ const [y,m,d]=key.split('-').map(Number); return new Date(y,m-1,d); }
+
+/* ================= VARIANT B: action-feed-first, tabs ================= */
+function renderVariantB(){
+  const dates = windowDates();
+  const infos = dates.map(computeDay);
+  let html = `<div class="b-tabs">
+    ${['feed','calendar','absences'].map(t=>`<button class="b-tab ${bTab===t?'active':''}" onclick="bTab='${t}'; render()">${t==='feed'?'Needs attention':t==='calendar'?'Calendar':'My absences'}</button>`).join('')}
+  </div>`;
+
+  if(bTab==='feed'){
+    const atRisk = infos.filter(i=>i.state==='at-risk');
+    const toMe = infos.filter(i=>i.req && i.req.status==='Open' && i.req.requestedOf===currentUser && i.state==='pending');
+    const mine = infos.filter(i=>i.absent && i.absent.includes(currentUser) && i.state!=='at-risk');
+    html += `<div class="b-section-title">At-risk (${atRisk.length})</div>`;
+    html += atRisk.length ? atRisk.map(i=>feedCard(i,'at-risk')).join('') : `<p class="smallmuted">None right now.</p>`;
+    html += `<div class="b-section-title">Waiting on your answer (${toMe.length})</div>`;
+    html += toMe.length ? toMe.map(i=>feedCard(i,'pending')).join('') : `<p class="smallmuted">Nothing waiting on you.</p>`;
+    html += `<div class="b-section-title">Your upcoming days (${mine.length})</div>`;
+    html += mine.length ? mine.map(i=>feedCard(i,'')).join('') : `<p class="smallmuted">Nothing to show.</p>`;
+    html += `<div class="b-fabbar"><button class="b-fab" onclick="bFlowStep=1; render()">＋ Declare absence</button></div>`;
+  }
+  if(bTab==='calendar'){
+    html += legendHtml();
+    html += `<div class="b-grid">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>`<div class="weekday-hd">${w}</div>`).join('')}`;
+    infos.forEach(info=>{
+      html += `<div class="b-cell ${info.state==='na'?'na':''}" onclick="modal={type:'day', key:'${info.key}'}; render()" style="cursor:pointer;">
+        <div>${dateFromKey(info.key).getDate()}</div>
+        ${info.state!=='na' ? `<span class="b-chip" style="background:${dayBadgeColorVar(info.state)}">${STATE_LABEL[info.state]}</span>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  if(bTab==='absences'){
+    const mine = absences.filter(a=>a.member===currentUser);
+    html += mine.length===0 ? '<p class="smallmuted">No absences declared.</p>' : mine.map(a=>`
+      <div class="b-card">
+        <div class="title">${fmtHuman(a.start)}${a.end!==a.start?' – '+fmtHuman(a.end):''}</div>
+        <div class="sub">${esc(a.label||'(no label)')} ${a.note?'· '+esc(a.note):''}</div>
+        <button class="btn danger" onclick="cancelAbsence(${a.id}); render()">Cancel</button>
+      </div>`).join('');
+    html += `<div class="b-fabbar"><button class="b-fab" onclick="bFlowStep=1; render()">＋ Declare absence</button></div>`;
+  }
+  return html;
+}
+function feedCard(info, kind){
+  const req = info.req;
+  let actions = '';
+  if(kind==='pending' && req){
+    actions = `<div class="actions">
+      <button class="btn accept" onclick="acceptRequest(${req.id}); render()">Accept</button>
+      <button class="btn decline" onclick="declineRequest(${req.id}); render()">Decline</button>
+    </div>`;
+  } else {
+    actions = `<div class="actions"><button class="btn" onclick="claimDay('${info.key}','${currentUser}'); render()">Claim this day</button>
+      <button class="btn ghost" onclick="modal={type:'day', key:'${info.key}'}; render()">Details</button></div>`;
+  }
+  return `<div class="b-card ${kind}">
+    <div class="title">${fmtHuman(info.key)} · ${STATE_LABEL[info.state]}</div>
+    <div class="sub">${dayNarrative(info)}</div>
+    ${actions}
+  </div>`;
+}
+function variantBOverlay(){
+  let out = '';
+  if(bFlowStep>0){
+    const steps = ['','Pick dates','Add detail','Review & submit'];
+    out += `<div class="overlay bottom" onclick="if(event.target===this){bFlowStep=0; render();}"><div class="sheet full">
+      <button class="closex" onclick="bFlowStep=0; render()">✕</button>
+      <div class="b-step">Step ${bFlowStep} of 3 — ${steps[bFlowStep]}</div>
+      <h2>Declare absence</h2>`;
+    if(bFlowStep<3){
+      out += absenceFormHtml(`bFlowStep=3; render()`, `bFlowStep=0; render()`);
+    } else {
+      out += `<p class="smallmuted">As ${nameOf(currentUser)}. Any newly-uncovered childcare day in range will raise a pickup request to ${nameOf(other(currentUser))}.</p>
+        <div class="actions">
+          <button class="btn primary" onclick="submitAbsenceForm(()=>{bFlowStep=0; render();})">Confirm</button>
+          <button class="btn ghost" onclick="bFlowStep=1; render()">Back</button>
+        </div>`;
+    }
+    out += `</div></div>`;
+  }
+  if(modal && modal.type==='day'){
+    const info = computeDay(dateFromKey(modal.key));
+    out += `<div class="overlay" onclick="if(event.target===this){modal=null; render();}"><div class="sheet">
+      <button class="closex" onclick="modal=null; render()">✕</button>
+      <h2>${fmtHuman(modal.key)}</h2>
+      <p><strong>${STATE_LABEL[info.state]}</strong></p>
+      <p class="smallmuted">${dayNarrative(info)}</p>
+      ${actionButtonsHtml(modal.key, info, 'B')}
+    </div></div>`;
+  }
+  return out;
+}
+
+/* ================= VARIANT C: master-detail split, no modals ================= */
+function renderVariantC(){
+  const dates = windowDates();
+  const infos = dates.map(computeDay);
+  const pinned = infos.filter(i=>i.req && i.req.status==='Open' && i.req.requestedOf===currentUser);
+  let list = '';
+  list += `<button class="c-addbtn" onclick="cFormOpen=!cFormOpen; render()">＋ Declare an absence</button>`;
+  if(cFormOpen){
+    list += `<div class="c-inlineform">${absenceFormHtml("submitAbsenceForm(()=>{cFormOpen=false; render();})", "cFormOpen=false; render()")}</div>`;
+  }
+  if(pinned.length){
+    list += `<div class="c-pinned">Needs your answer</div>`;
+    pinned.forEach(i=>{ list += cRow(i); });
+  }
+  infos.forEach(i=>{ list += cRow(i); });
+
+  const selInfo = computeDay(dateFromKey(cSelected));
+  let detail = `<h2 style="margin-top:0;">${fmtHuman(cSelected)}</h2>
+    <p><span class="dot ${selInfo.state}" style="display:inline-block;"></span> <strong>${STATE_LABEL[selInfo.state]}</strong></p>
+    <p class="smallmuted">${dayNarrative(selInfo)}</p>
+    ${actionButtonsHtml(cSelected, selInfo, 'C')}`;
+
+  return `${legendHtml()}<div class="c-wrap">
+    <div class="c-list">${list}</div>
+    <div class="c-detail">${detail}</div>
+  </div>`;
+}
+function cRow(info){
+  const sel = info.key===cSelected;
+  const short = info.state==='na' ? (info.closureReason||'Weekend') : dayNarrative(info).split('.')[0];
+  return `<div class="c-row ${sel?'selected':''}" onclick="cSelected='${info.key}'; render()">
+    <span class="dot ${info.state}"></span>
+    <span class="d">${fmtHuman(info.key)}</span>
+    <span class="t status">${short}</span>
+  </div>`;
+}
+
+/* ---------------- variant switcher plumbing ---------------- */
+const VARIANTS = {
+  A: {name:'Calendar-first (grid + modals)', render: renderVariantA, overlay: variantAModals},
+  B: {name:'Action-feed-first (tabs)', render: renderVariantB, overlay: variantBOverlay},
+  C: {name:'Master-detail split (no modals)', render: renderVariantC, overlay: ()=>''},
+};
+function getVariant(){
+  const v = new URLSearchParams(location.search).get('variant');
+  return VARIANTS[v] ? v : 'A';
+}
+function setVariant(v){
+  modal=null; bTab='feed'; bFlowStep=0; cFormOpen=false;
+  const url = new URL(location.href); url.searchParams.set('variant', v);
+  history.pushState({}, '', url); render();
+}
+function cycleVariant(dir){
+  const keys = Object.keys(VARIANTS); const i = keys.indexOf(getVariant());
+  setVariant(keys[(i+dir+keys.length)%keys.length]);
+}
+function renderSwitcher(){
+  const v = getVariant();
+  document.getElementById('switcherbar').innerHTML = `
+    <button onclick="cycleVariant(-1)">←</button>
+    <span class="label">${v} — ${VARIANTS[v].name}</span>
+    <button onclick="cycleVariant(1)">→</button>`;
+}
+document.addEventListener('keydown', e=>{
+  const tag = (e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||e.target.isContentEditable) return;
+  if(e.key==='ArrowLeft') cycleVariant(-1);
+  if(e.key==='ArrowRight') cycleVariant(1);
+});
+window.addEventListener('popstate', render);
+
+/* ---------------- main render ---------------- */
+function render(){
+  renderTopbar();
+  const v = getVariant();
+  document.getElementById('app').innerHTML = VARIANTS[v].render();
+  document.getElementById('modal-root').innerHTML = VARIANTS[v].overlay() + guideHtml();
+  renderSwitcher();
+}
+render();
+</script>
+</body>
+</html>
