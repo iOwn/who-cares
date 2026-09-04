@@ -1,5 +1,12 @@
 # WhoCares
 
+## Git hooks
+
+Never bypass git hooks. On a `lefthook` pre-commit or pre-push failure, fix the underlying
+issue or report it to the user — do **not** pass `--no-verify` / `-n` to `git commit` or
+`git push`. (Humans may; agents may not. See `docs/contributing.md`.) A `PreToolUse` hook
+enforces this, but the rule stands regardless.
+
 ## Agent skills
 
 ### Issue tracker

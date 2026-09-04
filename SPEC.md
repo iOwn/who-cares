@@ -25,6 +25,10 @@ are load-bearing.
 | [ADR-0002](./docs/adr/0002-childcare-pattern-is-effective-dated.md) | The childcare pattern is versioned by effective date (`{weekdays, effectiveFrom}[]`), not a single mutable value, so past childcare-day derivation stays stable across schedule changes. |
 | [ADR-0003](./docs/adr/0003-at-risk-escalates-on-earlier-of-two-thresholds.md) | At-risk fires on whichever comes first — 48h since the request was raised or 48h before the childcare day — and day state is always derived live, never cached from the Assignment record. |
 | [ADR-0004](./docs/adr/0004-serverless-vercel-stack-over-always-on-fly-io.md) | Runtime stack: Next.js (App Router) on Vercel Hobby, Neon Postgres, Resend email, once-daily Vercel Cron as an at-risk backstop (live computation is the real safety net). |
+| [ADR-0005](./docs/adr/0005-domain-logic-is-framework-free-and-that-line-is-the-test-boundary.md) | Domain logic sits in framework-free modules (no `next/*` imports, DB behind a repo interface); that import/runtime line *is* the Vitest/Playwright test boundary, so the Next layer is never unit-tested in-framework. |
+| [ADR-0006](./docs/adr/0006-integration-tests-run-on-in-process-pglite.md) | Integration tests run against in-process PGlite, not a Neon branch or Docker; domain logic is tested with fake repositories and no DB at all. |
+| [ADR-0007](./docs/adr/0007-biome-all-in-for-lint-format-and-import-sorting.md) | Biome (all-in) for lint + format + import-sorting, over ESLint-flat + Prettier — one tool, one config, one dep, at the cost of a few Next-specific lint rules. |
+| [ADR-0008](./docs/adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-deploy.md) | E2E is one Playwright smoke path against the Vercel preview deployment via an `E2E_TEST_MODE`-gated auth/seed seam; production is never smoke-tested. |
 
 ## Stack & hosting plan
 
@@ -52,6 +56,17 @@ All-serverless, $0/mo:
 
 Research backing these picks: `docs/research/auth-options.md` (branch `research/auth-options`)
 and `docs/research/platform-hosting.md` (branch `research/platform-hosting`).
+
+## Testing & tooling
+
+[`docs/testing.md`](./docs/testing.md) is the dev-setup doc: Vitest as the runner with a
+framework-free domain / Playwright boundary (ADR-0005), PGlite for DB-integration tests
+(ADR-0006), Biome for lint/format (ADR-0007), one Playwright smoke path against the Vercel
+preview deploy (ADR-0008), plus what deserves a test, the local hook layers, the CI pipeline
+shape, and the fixture module. [`docs/contributing.md`](./docs/contributing.md) covers the
+commit convention. Assembled from the test & tooling wayfinder map
+([iOwn/who-cares#15](https://github.com/iOwn/who-cares/issues/15)); planning-only, no config
+committed yet.
 
 ## Screens / information architecture
 
