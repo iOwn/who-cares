@@ -1,0 +1,232 @@
+/*
+ * WhoCares design tokens — SPEC FORM
+ * ---------------------------------------------------------------------------
+ * Assembled from decision ticket #29 (token extraction from the Toybox
+ * screens) on the design-system wayfinder map (#27). This is the documented
+ * specification; the build effort wires the final file (import order, @layer
+ * placement, any tooling). See docs/design-system.md and ADR-0010.
+ *
+ * Two layers:
+ *   1. PRIMITIVE tokens  — raw palette / scales, no meaning. `--<hue>-<step>`.
+ *   2. SEMANTIC tokens   — role-based, category-prefixed. Components consume
+ *                          ONLY these, never a primitive directly.
+ *
+ * Contrast policy: WCAG 2.2 AA (4.5:1 body text, 3:1 large text & UI borders).
+ * Placeholder + disabled text are exempt, with a self-imposed 3:1 floor.
+ * All values below are the AA-corrected set from #29 (5 muted greys collapsed
+ * to 2; all state-text colours darkened except at-risk).
+ *
+ * The viewport meta MUST allow pinch-zoom (no user-scalable=no /
+ * maximum-scale=1) — WCAG 1.4.4.
+ */
+
+@layer tokens {
+  :root {
+    /* ===================================================================
+     * PRIMITIVE TOKENS — raw values, no semantics
+     * =================================================================== */
+
+    /* neutral — warm sand */
+    --sand-50:  #fbfaf7;
+    --sand-100: #f4f1ea;
+    --sand-150: #efece4;
+    --sand-200: #e6e0d2;
+    --sand-300: #ded7c8;
+    --sand-400: #cfc7b6;
+    --sand-500: #b3ab9b;
+    --sand-600: #8a8378;
+    --sand-700: #7a7468;
+    --sand-750: #6f6a5f;   /* AA-corrected, off-ramp */
+    --sand-800: #6b655b;
+    --ink-900:  #23201b;
+    --white:    #ffffff;
+
+    /* blue — accent */
+    --blue-100: #e9f1fb;
+    --blue-200: #cadff5;
+    --blue-500: #3d7dd8;
+    --blue-600: #2f63ad;
+    --blue-700: #2f5f9e;
+
+    /* amber — highlight / pending */
+    --amber-400: #f5c443;
+    --amber-900: #8a6220;  /* AA-corrected pending text, off-ramp */
+
+    /* green — resolved */
+    --green-300: #b6dcb9;
+    --green-500: #55a863;
+    --green-800: #356b3f;
+
+    /* red — at-risk */
+    --red-200: #f4c3b7;
+    --red-500: #e8543e;
+    --red-700: #c23f2c;
+
+    /* ===================================================================
+     * SEMANTIC TOKENS (light) — the only tokens components may use
+     * =================================================================== */
+
+    /* --- colour: surfaces & text --- */
+    --color-bg:               var(--sand-50);
+    --color-surface:          var(--white);
+    --color-surface-sunken:   var(--sand-100);
+    --color-surface-track:    var(--sand-150);   /* segmented-control track */
+    --color-border:           var(--sand-300);
+    --color-border-strong:    var(--ink-900);
+    --color-text:             var(--ink-900);
+    --color-text-muted:       var(--sand-800);
+    --color-text-subtle:      var(--sand-700);
+    --color-text-placeholder: var(--sand-600);   /* exempt from AA; >= 3:1 */
+    --color-text-on-accent:   var(--white);
+
+    /* --- colour: accent --- */
+    --color-accent:          var(--blue-500);
+    --color-accent-hover:    var(--blue-600);
+    --color-accent-surface:  var(--blue-100);
+    --color-accent-border:   var(--blue-200);
+    --color-accent-text:     var(--blue-700);    /* text on --color-accent-surface */
+
+    /* --- colour: misc roles --- */
+    --color-highlight:  var(--amber-400);        /* Today pill, FAB — ONLY here */
+    --color-scrim:      rgba(35, 32, 27, 0.5);
+    --color-focus-ring: var(--blue-500);         /* NEW in #29 — designs showed no
+                                                    focus state; #31 mandates a
+                                                    visible ring on every
+                                                    interactive primitive */
+
+    /* --- colour: day-state — resolved --- */
+    --color-resolved-solid:   var(--green-500);
+    --color-resolved-surface: #e8f2e6;
+    --color-resolved-text:    var(--green-800);
+    --color-resolved-border:  var(--green-300);
+
+    /* --- colour: day-state — pending --- */
+    --color-pending-solid:   var(--amber-400);
+    --color-pending-surface: #fdf3d9;
+    --color-pending-text:    var(--amber-900);
+    --color-pending-border:  #f0d488;
+
+    /* --- colour: day-state — at-risk --- */
+    --color-at-risk-solid:       var(--red-500);
+    --color-at-risk-surface:     #fdeee9;
+    --color-at-risk-text:        var(--red-700);
+    --color-at-risk-border:      var(--red-500);
+    --color-at-risk-border-soft: var(--red-200);
+
+    /* --- colour: closed — UI-ONLY affordance, NOT a domain Day state --- */
+    --color-closed-solid:   #c9c2b4;
+    --color-closed-surface: var(--sand-100);
+    --color-closed-text:    var(--sand-750);
+
+    /* --- typography: families ---
+     * --font-nunito / --font-baloo are injected on <html> by next/font/google. */
+    --font-body:    var(--font-nunito), ui-rounded, "Segoe UI", system-ui, sans-serif;
+    --font-display: var(--font-baloo), var(--font-nunito), ui-rounded, system-ui, sans-serif;
+
+    /* --- typography: size scale (rem, root 16px) --- */
+    --text-2xs:  0.625rem;    /* 10 — grid day labels */
+    --text-xs:   0.6875rem;   /* 11 — tags, hints */
+    --text-sm:   0.75rem;     /* 12 — metadata, eyebrows */
+    --text-base: 0.8125rem;   /* 13 — dense secondary text */
+    --text-md:   0.875rem;    /* 14 — BODY DEFAULT (narrative, list rows, request copy) */
+    --text-lg:   1rem;        /* 16 */
+    --text-xl:   1.125rem;    /* 18 — screen headers */
+    --text-2xl:  1.25rem;     /* 20 — sheet titles */
+    --text-3xl:  1.5rem;      /* 24 — wordmark */
+
+    /* --- typography: weight / leading / tracking --- */
+    --font-weight-regular:   400;
+    --font-weight-semibold:  600;
+    --font-weight-bold:      700;
+    --font-weight-extrabold: 800;
+
+    --leading-tight:  1;
+    --leading-snug:   1.3;
+    --leading-normal: 1.5;
+
+    --tracking-tight:  -0.01em;
+    --tracking-normal: 0;
+    --tracking-label:  0.03em;
+    --tracking-caps:   0.06em;
+
+    /* --- space (token number = px; type & space in rem) --- */
+    --space-2:  0.125rem;
+    --space-4:  0.25rem;
+    --space-6:  0.375rem;
+    --space-8:  0.5rem;
+    --space-10: 0.625rem;
+    --space-12: 0.75rem;
+    --space-16: 1rem;      /* screen gutter */
+    --space-20: 1.25rem;
+    --space-24: 1.5rem;
+    --space-32: 2rem;
+
+    /* --- radius / border (px) --- */
+    --radius-sm:   10px;   /* cells, icon buttons */
+    --radius-md:   12px;   /* fields, chips container, control track, weekday keys */
+    --radius-lg:   14px;   /* cards, primary buttons, list rows */
+    --radius-xl:   22px;   /* bottom-sheet top corners */
+    --radius-pill: 999px;
+
+    --border-hair:  1.5px; /* fact dividers */
+    --border:       2px;   /* default */
+    --border-heavy: 3px;   /* Today cell, primary buttons, FAB */
+
+    /* --- shadow: the signature hard offset --- */
+    --shadow-color: var(--ink-900);
+    --shadow-sm:  0 2px 0 var(--shadow-color);   /* icon buttons, mini, weekday-on */
+    --shadow-md:  0 3px 0 var(--shadow-color);   /* buttons, Today cell */
+    --shadow-lg:  0 4px 0 var(--shadow-color);   /* FAB, primary CTA */
+    --shadow-tab: 0 1px 0 var(--sand-300);       /* segmented active tab */
+
+    /* --- z-index --- */
+    --z-raised:  10;
+    --z-sticky:  100;    /* app header */
+    --z-fab:     200;
+    --z-overlay: 1000;   /* modal / sheet scrim */
+    --z-modal:   1010;
+    --z-popover: 1100;   /* RAC menus / popovers portal to <body>, must clear the modal */
+
+    /* --- motion --- */
+    --dur-fast: 120ms;
+    --dur-base: 180ms;
+    --dur-slow: 280ms;
+    --ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+    --ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+    --ease-exit:       cubic-bezier(0.4, 0, 1, 1);
+
+    /* --- breakpoints ---
+     * Custom properties CANNOT be used inside an @media prelude. CSS Module
+     * media queries repeat the literal pixel value and annotate it with a
+     * trailing comment naming the token (e.g. "min-width: 768px" for --bp-md).
+     * src/ui/breakpoints.ts is the single source for JS (matchMedia, RAC
+     * responsive props); a Vitest test asserts parity between the two. */
+    --bp-sm: 480px;
+    --bp-md: 768px;   /* desktop side-panel switch for the inbox */
+    --bp-lg: 1024px;
+  }
+
+  /* Reduced motion: zero the durations globally. Each component ALSO drops
+   * `transform` / `animation` under this same query — not just duration. */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --dur-fast: 0ms;
+      --dur-base: 0ms;
+      --dur-slow: 0ms;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+   * DARK MODE — stub only, OUT OF SCOPE for v1 (#27).
+   * Only the SEMANTIC block is ever redefined; primitive ramps stay as-is.
+   * No component reads a primitive directly, so this is a safe seam.
+   * --------------------------------------------------------------------- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      /* TODO(build): remap semantic colour tokens for dark. */
+    }
+  }
+  :root[data-theme="dark"] {
+    /* TODO(build): same overrides — explicit toggle wins both ways. */
+  }
+}

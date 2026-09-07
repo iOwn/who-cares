@@ -89,16 +89,22 @@ _Avoid_: Responsibility, duty, slot
 **Day state**:
 The derived status a childcare day surfaces as, computed at read time and
 never stored: **Resolved**, **Pending**, **At-risk**, or not applicable (any
-date that isn't a childcare day at all).
+date that isn't a childcare day at all). Code and this glossary keep these
+names; the UI shows friendlier labels (see each entry). The presentation
+layer owns that mapping via a single `dayDisplayState()` function — it also
+widens `n/a` into `Closed` / quiet / off for display only. (See the design
+system doc.)
 _Avoid_: Status, phase
 
 **Resolved**:
 A childcare day with an assignee (via an accepted pickup request or a
 direct claim) who is not themselves absent that day.
+_Surfaced to users as_: **Sorted**
 
 **Pending**:
 A childcare day with an open pickup request that hasn't yet crossed either
 At-risk threshold.
+_Surfaced to users as_: **Waiting**
 
 **At-risk day**:
 A childcare day whose pickup is not safely covered — no assignee, or an
@@ -107,4 +113,12 @@ are absent (no request is ever raised) or an open pickup request has
 crossed whichever escalation threshold comes first: 48h since it was
 raised, or 48h before the childcare day itself. Drives UI highlighting and
 notifications. (See ADR-0003.)
+_Surfaced to users as_: **At risk**
 _Avoid_: Gap, conflict
+
+**Closed** _(UI-only, not a Day state)_:
+How the UI labels a date that has no childcare because of an explicit
+`Closure`. It is a presentation-only affordance — the domain has no
+"Closed" state, only `n/a` for any non-childcare date. `DayDetail` shows
+the closure's free-text reason if one was given; the grid cell and list
+row keep a generic line.

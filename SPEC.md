@@ -29,6 +29,8 @@ are load-bearing.
 | [ADR-0006](./docs/adr/0006-integration-tests-run-on-in-process-pglite.md) | Integration tests run against in-process PGlite, not a Neon branch or Docker; domain logic is tested with fake repositories and no DB at all. |
 | [ADR-0007](./docs/adr/0007-biome-all-in-for-lint-format-and-import-sorting.md) | Biome (all-in) for lint + format + import-sorting, over ESLint-flat + Prettier — one tool, one config, one dep, at the cost of a few Next-specific lint rules. |
 | [ADR-0008](./docs/adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-deploy.md) | E2E is one Playwright smoke path against the Vercel preview deployment via an `E2E_TEST_MODE`-gated auth/seed seam; production is never smoke-tested. |
+| [ADR-0009](./docs/adr/0009-component-tests-are-a-narrow-interaction-contract-tier.md) | A narrow component-test tier covers the interaction / a11y contract of four `src/ui/` primitives only (`Dialog`, `SegmentedControl`, `DateField`, `DateRangeField`) via Vitest browser mode; supersedes ADR-0005's "no component tier" line. |
+| [ADR-0010](./docs/adr/0010-css-modules-and-custom-property-tokens-over-tailwind.md) | Component styling is CSS Modules + a two-layer design-token layer in CSS custom properties (not Tailwind / vanilla-extract); primitives are built on React Aria Components; `cva` + `clsx` map variants to classes. |
 
 ## Stack & hosting plan
 
@@ -67,6 +69,23 @@ shape, and the fixture module. [`docs/contributing.md`](./docs/contributing.md) 
 commit convention. Assembled from the test & tooling wayfinder map
 ([iOwn/who-cares#15](https://github.com/iOwn/who-cares/issues/15)); planning-only, no config
 committed yet.
+
+## Design system
+
+[`docs/design-system.md`](./docs/design-system.md) is the dev-setup doc for `src/ui/` — the
+component library a build agent creates. Direction is **Toybox**: warm off-white ground, Nunito
+(body) + Baloo 2 (display), chunky rounded tiles, hard offset "sticker" shadows, a physical
+"press" affordance. Styling is **CSS Modules + a two-layer CSS-custom-property token system**
+(no Tailwind — ADR-0010); primitives are built on **React Aria Components** (the only headless
+option with a real accessible date-range picker for the 4-week booking cap); `cva` + `clsx` map
+variants to classes. **22 P0 primitives + 13 P1 feature-composed** components inventoried;
+tokens are AA-audited and committed in spec form (`src/ui/tokens.css`, `src/ui/breakpoints.ts`).
+Workbench is **Ladle**, icons `lucide-react` (named imports), fonts `next/font/google`.
+Component testing is a narrow four-primitive tier (ADR-0009). Friendly UI state labels
+(Sorted / Waiting / At risk / Closed) are a presentation concern — the domain keeps
+Resolved / Pending / At-risk (see `CONTEXT.md`). Assembled from the design-system wayfinder map
+([iOwn/who-cares#27](https://github.com/iOwn/who-cares/issues/27)); planning-only, **no
+component code committed**.
 
 ## Screens / information architecture
 
