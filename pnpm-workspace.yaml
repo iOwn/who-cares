@@ -1,6 +1,13 @@
+# pnpm build-script allow-list. pnpm 12 blocks dependency lifecycle scripts by
+# default; each entry here is an explicit yes/no.
 allowBuilds:
-  # esbuild ships with drizzle-kit (the migration generator CLI). Its postinstall
-  # only unpacks the platform binary, so allowing it is what makes `pnpm db:generate`
-  # work at all.
+  # Ladle's SWC transform — the postinstall picks the platform-native binary.
+  '@swc/core': true
+  # esbuild ships with both drizzle-kit (the migration generator CLI) and
+  # Vite/Ladle's bundler. Its postinstall only unpacks the platform binary, so
+  # allowing it is what makes `pnpm db:generate` and the workbench build work.
   esbuild: true
   lefthook: true
+  # Transitive dev-only dep of Ladle; its postinstall only prints a banner and
+  # writes a service-worker shim we never serve.
+  msw: false

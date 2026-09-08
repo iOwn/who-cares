@@ -1,8 +1,8 @@
 /**
  * Breakpoints — the single source of truth for JS (matchMedia, React Aria
  * responsive props). The same values live as `--bp-*` custom properties in
- * tokens.css for CSS; a Vitest test parses tokens.css and asserts parity with
- * this file (cheap drift guard). SPEC form — see docs/design-system.md, #29.
+ * tokens.css for CSS; `breakpoints.test.ts` parses tokens.css and asserts
+ * parity with this file (cheap drift guard). See docs/design-system.md, #29.
  *
  * `md` (768px) is where the pickup-request inbox switches from a full-screen
  * route to a desktop side panel.

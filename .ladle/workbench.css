@@ -1,0 +1,28 @@
+/*
+ * Workbench-only globals. NOT part of the design system and never shipped —
+ * this file exists purely so the Ladle catalogue stands in for what Next does
+ * for the real app.
+ *
+ * `next/font/google` is a Next build-time transform, so in the workbench the
+ * two families arrive as plain webfonts (the <link> in .ladle/config.mjs
+ * `appendToHead`) and the two custom properties Next would have injected on
+ * <html> are declared by hand here. tokens.css then composes --font-body /
+ * --font-display from them exactly as it does in the app.
+ *
+ * Unlayered on purpose: tokens.css lives in `@layer tokens`, so these
+ * declarations win regardless of import order.
+ *
+ * Each value carries its own fallback tail, so it stands up as a complete
+ * stack even if something reads --font-nunito / --font-baloo directly instead
+ * of through --font-body / --font-display. This is the one place the workbench
+ * genuinely diverges from the app: next/font ends these with a generated,
+ * metric-matched face ("Nunito Fallback") that keeps the swap from shifting
+ * layout. There is no such face here, so a plain generic is the honest
+ * substitute — expect a little reflow on font load in the catalogue, and none
+ * in the app.
+ */
+
+:root {
+  --font-nunito: "Nunito", system-ui, sans-serif;
+  --font-baloo: "Baloo 2", system-ui, sans-serif;
+}

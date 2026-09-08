@@ -1,0 +1,32 @@
+/*
+ * The Provider's frame. Every declaration below reads a SEMANTIC token from
+ * tokens.css — nothing here is a raw hex or px — so if the catalogue renders
+ * with the warm sand ground and rounded type, the whole chain is proven live:
+ * CSS Modules compile, the `@layer tokens` sheet is in scope, and the font
+ * custom properties resolve.
+ *
+ * It is also the first consumer of the CSS-Modules pipeline in the repo, which
+ * is the point: a broken Vite/CSS-Modules setup fails visibly on boot instead
+ * of on the first primitive that #42 adds.
+ */
+
+.workbench {
+  min-height: 100vh;
+  padding: var(--space-24);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--leading-normal);
+}
+
+/*
+ * Primitives must show a visible focus ring (docs/design-system.md "API &
+ * authoring conventions" §3). Eyeballing that is easier when the workbench
+ * itself never suppresses one, so make keyboard focus loud here.
+ */
+.workbench :focus-visible {
+  outline: var(--border) solid var(--color-focus-ring);
+  outline-offset: var(--space-2);
+}
