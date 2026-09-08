@@ -51,6 +51,8 @@ async function activeElementIsInside(el: Element) {
   });
 }
 
+// The ADR-0009 / #44 contract covers "modal + sheet", so every assertion below
+// runs for both presentations.
 for (const presentation of ["center", "sheet"] as const) {
   test(`${presentation}: focus moves in on open, Escape closes, focus restores to trigger`, async () => {
     const screen = await render(<Fixture presentation={presentation} />);
@@ -67,16 +69,16 @@ for (const presentation of ["center", "sheet"] as const) {
     await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
     await expect.element(trigger).toHaveFocus();
   });
+
+  test(`${presentation}: dialog exposes role, aria-modal and an accessible name from Dialog.Header`, async () => {
+    const screen = await render(<Fixture presentation={presentation} />);
+    await userEvent.click(screen.getByRole("button", { name: "Open dialog" }));
+
+    const dialog = screen.getByRole("dialog");
+    await expect.element(dialog).toHaveAttribute("aria-modal", "true");
+    await expect.element(dialog).toHaveAccessibleName("Trip details");
+  });
 }
-
-test("center: dialog exposes role, aria-modal and an accessible name from Dialog.Header", async () => {
-  const screen = await render(<Fixture presentation="center" />);
-  await userEvent.click(screen.getByRole("button", { name: "Open dialog" }));
-
-  const dialog = screen.getByRole("dialog");
-  await expect.element(dialog).toHaveAttribute("aria-modal", "true");
-  await expect.element(dialog).toHaveAccessibleName("Trip details");
-});
 
 test("a headerless dialog takes its accessible name from aria-label on our wrapper", async () => {
   const screen = await render(
