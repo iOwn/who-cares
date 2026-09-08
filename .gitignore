@@ -7,6 +7,9 @@
 
 # testing
 /coverage
+# Vitest browser-mode artifacts: failure screenshots (browser.screenshotFailures
+# defaults on in headless mode) and trace-view output.
+/.vitest
 
 # next.js
 /.next/
