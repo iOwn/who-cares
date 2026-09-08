@@ -1,0 +1,24 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",      "title": "Home · Grid",        "x": 0,    "y": 0,   "w": 390, "h": 844, "page": "screens" },
+    { "file": "List.dc.html",      "title": "Home · List",        "x": 480,  "y": 0,   "w": 390, "h": 844, "page": "screens" },
+    { "file": "DayDetail.dc.html", "title": "Day detail",         "x": 960,  "y": 0,   "w": 390, "h": 844, "page": "screens" },
+    { "file": "Inbox.dc.html",     "title": "Requests inbox",     "x": 1440, "y": 0,   "w": 390, "h": 844, "page": "screens" },
+    { "file": "ImOut.dc.html",     "title": "I'm out · one-off",  "x": 0,    "y": 984, "w": 390, "h": 844, "page": "screens" },
+    { "file": "Recurring.dc.html", "title": "I'm out · recurring","x": 480,  "y": 984, "w": 390, "h": 844, "page": "screens" },
+    { "file": "Settings.dc.html",  "title": "Childcare setup",    "x": 960,  "y": 984, "w": 390, "h": 844, "page": "screens" },
+
+    { "file": "Brick.dc.html",     "title": "B · Brick Board",         "x": 0,   "y": 0, "w": 390, "h": 844, "page": "directions" },
+    { "file": "Nordic.dc.html",    "title": "C · Nordic Ledger",       "x": 480, "y": 0, "w": 390, "h": 844, "page": "directions" },
+    { "file": "Material.dc.html",  "title": "D · Material Playground", "x": 960, "y": 0, "w": 390, "h": 844, "page": "directions" }
+  ],
+  "annotations": [
+    { "id": "brief", "x": 0, "y": -220, "w": 1200, "text": "WhoCares — Toybox, built out. Carlito's calendar: chunky rounded tiles, warm off-white, friendly primaries. Top row is the core loop (calendar → day detail → requests); bottom row is absence entry + childcare setup.", "page": "screens" },
+    { "id": "dir-note", "x": 0, "y": -150, "w": 900, "text": "The three alternates not picked — kept here for reference, not developed further.", "page": "directions" }
+  ],
+  "pages": [
+    { "id": "screens", "name": "Screens" },
+    { "id": "directions", "name": "Other directions" }
+  ],
+  "launch": { "view": "canvas", "page": "screens" }
+}

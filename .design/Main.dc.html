@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: #23201b; }
+    a { color: #3d7dd8; } a:hover { color: #2f63ad; }
+    .disp { font-family: "Baloo 2", sans-serif; }
+    .cell { position: relative; min-height: 60px; border-radius: 10px; background: #fff; border: 2px solid #ded7c8; padding: 5px; }
+    .cell.off { background: #f4f1ea; border: none; }
+    .cell.today { border: 3px solid #23201b; box-shadow: 0 3px 0 #23201b; }
+    .cell.risk { background: #fdeee9; border-color: #e8543e; }
+    .cell.closed { background: repeating-linear-gradient(45deg,#f1ede4,#f1ede4 5px,#e9e4d8 5px,#e9e4d8 10px); }
+    .cn { font-weight: 800; font-size: 12px; }
+    .cn.mut { color: #b3ab9b; font-weight: 700; }
+    .badge { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .cwho { position: absolute; left: 5px; bottom: 4px; font-size: 9px; font-weight: 800; }
+    .qdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #e6e0d2; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fbfaf7; overflow: hidden; position: relative; padding: 18px 16px 0;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+    <div>
+      <div class="disp" style="font-weight: 800; font-size: 22px; line-height: 1; letter-spacing: -0.01em;">WhoCares</div>
+      <div style="font-size: 12px; font-weight: 700; color: #8a8378; margin-top: 3px;">Carlito &middot; who&rsquo;s on pickup</div>
+    </div>
+    <div style="position: relative; width: 40px; height: 40px; border: 2px solid #23201b; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 #23201b;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#23201b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span style="position: absolute; top: -8px; right: -8px; background: #e8543e; color: #fff; font-weight: 800; font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 2px solid #fbfaf7;">2</span>
+    </div>
+  </div>
+
+  <!-- at-risk nudge -->
+  <div style="display: flex; align-items: center; gap: 8px; background: #fdeee9; border: 2px solid #f4c3b7; border-radius: 12px; padding: 8px 10px; margin-bottom: 12px;">
+    <span style="width: 10px; height: 10px; border-radius: 50%; background: #e8543e; flex: none;"></span>
+    <span style="font-size: 12px; font-weight: 800; color: #c23f2c; flex-grow: 1;">2 days need someone for Carlito</span>
+    <span class="disp" style="font-weight: 700; font-size: 12px; color: #c23f2c;">Review &rsaquo;</span>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <button style="width: 34px; height: 34px; border: 2px solid #23201b; border-radius: 10px; background: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer;">&lsaquo;</button>
+    <div class="disp" style="font-weight: 700; font-size: 17px; flex-grow: 1; text-align: center;">September 2026</div>
+    <button style="width: 34px; height: 34px; border: 2px solid #23201b; border-radius: 10px; background: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer;">&rsaquo;</button>
+    <button class="disp" style="height: 34px; padding: 0 12px; border: 2px solid #23201b; border-radius: 10px; background: #f5c443; font-weight: 700; font-size: 13px; cursor: pointer;">Today</button>
+  </div>
+
+  <div style="display: flex; gap: 6px; background: #efece4; border-radius: 12px; padding: 4px; margin-bottom: 12px;">
+    <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 800; font-size: 13px; padding: 6px; border-radius: 9px; background: #fff; box-shadow: 0 1px 0 #d9d3c6;">Grid</div>
+    <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 700; font-size: 13px; padding: 6px; border-radius: 9px; color: #8a8378;">List</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 11px; font-weight: 800; color: #6b655b; margin-bottom: 10px;">
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 10px; height: 10px; border-radius: 50%; background: #55a863; display: inline-block;"></i>Sorted</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 10px; height: 10px; border-radius: 50%; background: #f5c443; display: inline-block;"></i>Waiting</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 10px; height: 10px; border-radius: 50%; background: #e8543e; display: inline-block;"></i>At risk</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 10px; height: 10px; border-radius: 50%; background: #c9c2b4; display: inline-block;"></i>Closed</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; margin-bottom: 5px;">
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #a49c8d;">M</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #a49c8d;">T</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #a49c8d;">W</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #a49c8d;">T</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #a49c8d;">F</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #d0c9ba;">S</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 800; color: #d0c9ba;">S</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px;">
+    <div class="cell off"></div>
+    <div class="cell"><span class="cn">1</span><span class="badge" style="background: #55a863;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cwho" style="color: #3d7a48;">Inki</span></div>
+    <div class="cell"><span class="cn">2</span><span class="badge" style="background: #55a863;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cwho" style="color: #3d7a48;">Honi</span></div>
+    <div class="cell"><span class="cn">3</span><span class="qdot"></span></div>
+    <div class="cell off"><span class="cn mut">4</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">5</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">6</span></div>
+
+    <div class="cell"><span class="cn">7</span><span class="badge" style="background: #55a863;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cwho" style="color: #3d7a48;">Honi</span></div>
+    <div class="cell today"><span class="cn">8</span><span class="badge" style="background: #f5c443;"><svg width="10" height="10" viewBox="0 0 24 24" fill="#23201b"><circle cx="5" cy="12" r="2.4"/><circle cx="12" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/></svg></span><span class="cwho" style="color: #a9822a;">asked Honi</span></div>
+    <div class="cell risk"><span class="cn">9</span><span class="badge" style="background: #e8543e;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="14"/><line x1="12" y1="18.5" x2="12" y2="18.7"/></svg></span><span class="cwho" style="color: #c23f2c;">both out</span></div>
+    <div class="cell closed"><span class="cn mut" style="color: #9c9484;">10</span><span class="cwho" style="color: #9c9484;">closed</span></div>
+    <div class="cell off"><span class="cn mut">11</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">12</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">13</span></div>
+
+    <div class="cell"><span class="cn">14</span><span class="qdot"></span></div>
+    <div class="cell"><span class="cn">15</span><span class="badge" style="background: #55a863;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cwho" style="color: #3d7a48;">Inki</span></div>
+    <div class="cell"><span class="cn">16</span><span class="qdot"></span></div>
+    <div class="cell risk"><span class="cn">17</span><span class="badge" style="background: #e8543e;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="14"/><line x1="12" y1="18.5" x2="12" y2="18.7"/></svg></span><span class="cwho" style="color: #c23f2c;">no one</span></div>
+    <div class="cell off"><span class="cn mut">18</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">19</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">20</span></div>
+
+    <div class="cell"><span class="cn">21</span><span class="qdot"></span></div>
+    <div class="cell"><span class="cn">22</span><span class="qdot"></span></div>
+    <div class="cell"><span class="cn">23</span><span class="qdot"></span></div>
+    <div class="cell"><span class="cn">24</span><span class="qdot"></span></div>
+    <div class="cell off"><span class="cn mut">25</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">26</span></div>
+    <div class="cell off"><span class="cn mut" style="color: #cfc8b8;">27</span></div>
+
+    <div class="cell"><span class="cn">28</span><span class="badge" style="background: #55a863;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cwho" style="color: #3d7a48;">Honi</span></div>
+    <div class="cell"><span class="cn">29</span><span class="qdot"></span></div>
+    <div class="cell"><span class="cn">30</span><span class="qdot"></span></div>
+    <div class="cell off"></div>
+    <div class="cell off"></div>
+    <div class="cell off"></div>
+    <div class="cell off"></div>
+  </div>
+
+  <!-- FAB -->
+  <button class="disp" style="position: absolute; right: 18px; bottom: 26px; padding: 13px 18px; border: 3px solid #23201b; border-radius: 999px; background: #f5c443; font-weight: 800; font-size: 14px; box-shadow: 0 4px 0 #23201b; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#23201b" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    I&rsquo;m out
+  </button>
+
+</div>
+</x-dc>
+</body>
+</html>
