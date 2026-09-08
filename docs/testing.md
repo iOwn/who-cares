@@ -256,8 +256,8 @@ earliest → last:
 2. **lefthook pre-commit** (any committer) — `biome check --write --staged`, staged files
    only, re-stages fixes. Sub-second. Nothing else on pre-commit.
 3. **lefthook pre-push** (optional, documented as safe to delete) — `tsc --noEmit` +
-   `vitest run` + `node --test` over the `.claude/hooks/` scripts. Same checks CI runs,
-   earlier.
+   `vitest run --project node` (node project only, to stay fast; CI runs node + browser +
+   coverage) + `node --test` over the `.claude/hooks/` scripts. Same checks CI runs, earlier.
 4. **commit-msg** — none.
 5. **CI** — the actual gate, non-bypassable (see next section).
 
@@ -283,15 +283,16 @@ From [issue #24](https://github.com/iOwn/who-cares/issues/24). No ADR — pipeli
 
 ### `ci.yml` — on `pull_request` and `push` to `main`
 
-`concurrency` with `cancel-in-progress` per ref. A shared pnpm-install/setup, then four
-**parallel** jobs:
+`concurrency` with `cancel-in-progress` per ref. A shared pnpm-install/setup (the
+`.github/actions/setup` composite action — pnpm + Node-from-`.nvmrc` + frozen install), then
+four **parallel** jobs:
 
 | Job | Command | Notes |
 | --- | --- | --- |
 | `check` | `biome ci` | lint + format + import-sort |
 | `typecheck` | `tsc --noEmit` | |
 | `test` | `vitest run --coverage` | runs the `node` + `browser` workspace projects in one pass; includes the PGlite integration layer — **no service container**; job also runs `pnpm test:browser:setup` (`playwright install chromium`, binary cached for `e2e.yml`) for the ADR-0009 component tier; coverage → the GitHub step summary. A dedicated `test:browser` job is the escape hatch if browser tests slow this one materially |
-| `build` | `next build` | loads a committed `.env.ci` of transparently-fake values |
+| `build` | `next build` | `cp .env.ci .env` first — Next 16 auto-loads `.env` / `.env.production`, never `.env.ci` — then build against the committed transparently-fake values |
 
 - **Node 22**, single version, no matrix. `.nvmrc` is the single source of truth;
   `package.json` `engines` mirrors it.
@@ -299,15 +300,22 @@ From [issue #24](https://github.com/iOwn/who-cares/issues/24). No ADR — pipeli
   dummy auth secret, dummy VAPID keypair). Safe because nothing in it is real and authed
   routes are dynamic (no build-time DB connection); doubles as a local `next build`
   sanity-check env.
-- **Caching**: pnpm store (keyed on `pnpm-lock.yaml`), `.next/cache` (lockfile + source hash),
-  Playwright browsers (Playwright version) in `e2e.yml`.
+- **Caching**: pnpm store (keyed on `pnpm-lock.yaml`, via `actions/setup-node`), `.next/cache`
+  (lockfile + source hash), Playwright browsers (keyed on the Playwright version) in both
+  `e2e.yml` and the `test` job, which installs Chromium for the `browser` project.
 
 ### `e2e.yml` — separate workflow
 
-- Triggered on `deployment_status == success` for the **preview** deployment.
+- Triggered on `deployment_status`; the job is gated on `state == 'success'` and the
+  `Preview` environment. The preview URL comes from
+  `github.event.deployment_status.environment_url` (the deployed site), falling back to
+  `target_url` (the Vercel inspector page), exported as `PLAYWRIGHT_BASE_URL`.
 - Runs the one Chromium smoke spec against the preview URL.
 - **Posts a PR comment only on failure** (run link + failing step). Green is silent — the
-  commit status carries it.
+  commit status carries it. The comment resolves the PR from the deployment commit SHA.
+- `deployment_status` workflows only run from the copy of the file on the default branch, so
+  `e2e.yml` **cannot be exercised from its own PR** — a follow-up validation run against a
+  real preview deploy is needed once it lands on `main`.
 
 ### CI ↔ Vercel
 

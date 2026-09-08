@@ -1,0 +1,115 @@
+# CI gate for WhoCares. See docs/testing.md "CI pipeline shape".
+#
+# Four parallel jobs (check / typecheck / test / build) — all four are the
+# required status checks for `main`. E2E smoke lives in e2e.yml and is NOT
+# required (it runs post-deploy against the Vercel preview).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One run per PR (or per commit on a branch push); a new push to a PR cancels the
+# in-flight run. `push` to `main` is NOT cancelled — those runs always finish, so
+# the post-merge history stays complete.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check (biome ci)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm exec biome ci
+
+  typecheck:
+    name: typecheck (tsc --noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm exec tsc --noEmit
+
+  test:
+    name: test (vitest --coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Playwright Chromium — used by the Vitest `browser` project (ADR-0009) and
+      # cached here so e2e.yml can reuse the same binary. Keyed on the Playwright
+      # version so a bump busts the cache.
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -e "console.log(require('playwright/package.json').version)")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium
+        run: |
+          pnpm test:browser:setup
+          pnpm exec playwright install-deps chromium
+
+      # node + browser projects (incl. the PGlite integration layer) in one pass.
+      - name: Run tests with coverage
+        run: pnpm exec vitest run --coverage
+
+      # Best-effort: never fail the job over the summary (the step is `always()`
+      # and the coverage file may be absent or partial after a test failure).
+      - name: Coverage summary
+        if: always()
+        continue-on-error: true
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = "coverage/coverage-summary.json";
+            let note = "_No coverage summary produced._";
+            try {
+              const t = JSON.parse(fs.readFileSync(path, "utf8")).total;
+              const metrics = ["lines", "statements", "functions", "branches"];
+              if (t && metrics.every((k) => t[k] && typeof t[k].pct === "number")) {
+                const row = (k) => `| ${k} | ${t[k].pct}% | ${t[k].covered}/${t[k].total} |`;
+                note = [
+                  "| Metric | % | Covered/Total |",
+                  "| --- | --- | --- |",
+                  ...metrics.map(row),
+                ].join("\n");
+              }
+            } catch { /* fall through to the note */ }
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Coverage\n\n${note}\n`);
+          '
+
+  build:
+    name: build (next build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Next 16 auto-loads `.env` / `.env.production`, never `.env.ci`, so copy it.
+      - name: Load CI env
+        run: cp .env.ci .env
+
+      # `.next/cache` — keyed on the lockfile plus a hash of everything that feeds
+      # the build, with a lockfile-only restore key for partial reuse.
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts', 'tsconfig.json', '.env.ci', 'package.json') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            next-${{ runner.os }}-
+
+      - name: Build
+        run: pnpm build

@@ -1,0 +1,22 @@
+name: Setup
+description: >-
+  Shared pnpm + Node toolchain for every ci.yml job. Installs pnpm (version from
+  the package.json `packageManager` field), Node from .nvmrc, restores the pnpm
+  store cache (keyed on pnpm-lock.yaml by actions/setup-node), and runs a frozen
+  install. Call it after actions/checkout.
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
