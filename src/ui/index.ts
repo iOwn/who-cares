@@ -21,6 +21,13 @@ export { Button, type ButtonProps } from "./Button";
 export { type Breakpoint, breakpoints, mq } from "./breakpoints";
 export { cx } from "./cx";
 export {
+  Dialog,
+  type DialogHeaderProps,
+  type DialogPresentation,
+  type DialogProps,
+  DialogTrigger,
+} from "./Dialog";
+export {
   type DayDisplayInput,
   type DayDisplayState,
   type DomainDayState,
@@ -28,4 +35,10 @@ export {
 } from "./dayDisplayState";
 export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
+export {
+  SegmentedControl,
+  type SegmentedControlItemProps,
+  type SegmentedControlProps,
+} from "./SegmentedControl";
 export { Surface, type SurfaceProps } from "./Surface";
+export { ToggleGroup, type ToggleGroupItemProps, type ToggleGroupProps } from "./ToggleGroup";
