@@ -7,6 +7,10 @@ issue or report it to the user — do **not** pass `--no-verify` / `-n` to `git 
 `git push`. (Humans may; agents may not. See `docs/contributing.md`.) A `PreToolUse` hook
 enforces this, but the rule stands regardless.
 
+## Developing
+
+When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR.
+
 ## Agent skills
 
 ### Issue tracker
