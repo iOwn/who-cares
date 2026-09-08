@@ -27,8 +27,12 @@ the at-risk logic compares `now()` against two 48h thresholds (ADR-0003) and dri
 of its own, so an explicit parameter beats `vi.setSystemTime`.
 
 **Consequences**: the Next layer is never unit-tested in-framework; RSC and App-Router coverage
-is Playwright-only. A single `environment: 'node'` Vitest config is enough; a jsdom project is
-added lazily if a component test is ever written. Component tests have no standing tier in v1 —
-non-trivial *pure* display logic is extracted into functions and unit-tested, React components
-themselves are left to manual review plus the smoke path. `*.test.ts` files are colocated with
-source; Playwright specs live in a top-level `e2e/`.
+is Playwright-only. A single `environment: 'node'` Vitest config was the starting point; the
+design-system effort adds a second `browser` Vitest project (Playwright provider, Chromium) as a
+workspace alongside it. Non-trivial *pure* display logic is extracted into functions and
+unit-tested in the `node` project. This ADR's original line — "Component tests have no standing
+tier in v1" — is **superseded by [ADR-0009](./0009-component-tests-are-a-narrow-interaction-contract-tier.md)**,
+which adds a narrow component-test tier for four `src/ui/` primitives whose RAC wiring carries a
+real interaction / a11y contract; the mechanical import boundary here is unchanged (`src/ui/`
+primitives import zero `next/*`, so they sit on the Vitest side of the line). `*.test.ts` files
+are colocated with source; Playwright specs live in a top-level `e2e/`.

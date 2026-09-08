@@ -12,7 +12,7 @@ The decisions behind all of it are on the wayfinder map
 
 | Concern | Choice | Notes |
 | --- | --- | --- |
-| Unit / integration runner | **Vitest** | single `environment: 'node'` config; jsdom added lazily |
+| Unit / integration runner | **Vitest** | `node` + `browser` projects (workspace); `browser` = Playwright/Chromium for the component-test tier (ADR-0009) |
 | E2E | **Playwright** | Chromium only, one smoke spec in `e2e/` |
 | Integration DB | **PGlite** (`@electric-sql/pglite`) | in-process PG17 WASM; no Docker, no CI service |
 | Lint + format + import-sort | **Biome** (`@biomejs/biome`) | one tool, one `biome.json` |
@@ -42,9 +42,10 @@ See **[ADR-0005](./adr/0005-domain-logic-is-framework-free-and-that-line-is-the-
   **No MSW in v1.**
 - **Clock is an injected port** (`now(): Date`), not fake timers. At-risk logic compares
   `now()` against two 48h thresholds (ADR-0003) and drives no timers itself.
-- **Config & layout**: one Vitest config, `environment: 'node'`; a jsdom project is added
-  only when the first component test is written. `*.test.ts` colocated with source;
-  Playwright specs in a top-level `e2e/`.
+- **Config & layout**: a Vitest workspace with two projects — `node` (`environment: 'node'`,
+  the bulk) and `browser` (Playwright provider, Chromium) for the narrow component-test tier
+  (ADR-0009). `*.test.ts` → `node`, `*.test.tsx` → `browser`; both colocated with source.
+  Playwright E2E specs stay in a top-level `e2e/`.
 
 ## DB-integration approach
 
@@ -69,7 +70,8 @@ Two layers:
 
 From [issue #22](https://github.com/iOwn/who-cares/issues/22). No ADR — this is strategy, not
 architecture. Through-line: **exhaustive where the logic is derived and load-bearing,
-targeted elsewhere, nothing below the E2E smoke for rendering.**
+targeted elsewhere, and a narrow component tier only where our React Aria wiring carries a
+real interaction / a11y contract (ADR-0009).**
 
 1. **Derived day-state (ADR-0003) — exhaustive, table-driven.** A pure function over fake
    data. Input space:
@@ -93,13 +95,18 @@ targeted elsewhere, nothing below the E2E smoke for rendering.**
    request; absent on non-childcare day / closure → nothing; one bundled digest per
    absence-creation action. Recurring generator: idempotent re-run skips covered days; end
    date hard-capped at 4 weeks from today.
-5. **No component-test tier.** Manual review + the single Playwright smoke path is enough for
-   rendering. The one rule: non-trivial **pure** display logic (rolling-window date math,
-   calendar-cell → presentation mapping, relative-time formatting) is extracted into pure
-   functions and unit-tested. React components stay untested in v1.
+5. **A narrow component-test tier.** Vitest **browser mode** (Playwright provider, Chromium) +
+   `vitest-browser-react`, covering the interaction / a11y contract of four primitives only —
+   `Dialog` (focus trap, Escape, focus restore), `SegmentedControl` (roving tabindex),
+   `DateField` / `DateRangeField` (min/max + the 4-week cap). No tests for feature-composed
+   components or pages; no visual, variant, or snapshot coverage; no `axe-core`. Non-trivial
+   **pure** display logic (rolling-window date math, calendar-cell → presentation mapping,
+   relative-time formatting) is still extracted into pure functions and unit-tested in the
+   `node` project. See **[ADR-0009](./adr/0009-component-tests-are-a-narrow-interaction-contract-tier.md)**
+   and [`docs/design-system.md`](./design-system.md).
 6. **Coverage is signal, not gate.** CI reports a text summary; no threshold fails the build.
-   Domain logic (`src/domain/**`) is expected near-complete; thin adapters are deliberately
-   left uncovered. Revisit only if coverage visibly drifts.
+   Domain logic (`src/domain/**`) is expected near-complete; thin adapters and `src/ui/**` are
+   deliberately left uncovered. Revisit only if coverage visibly drifts.
 
 ## E2E smoke scope
 
@@ -210,7 +217,7 @@ From [issue #24](https://github.com/iOwn/who-cares/issues/24). No ADR — pipeli
 | --- | --- | --- |
 | `check` | `biome ci` | lint + format + import-sort |
 | `typecheck` | `tsc --noEmit` | |
-| `test` | `vitest run --coverage` | includes the PGlite integration layer — **no service container**; coverage → the GitHub step summary, no external service |
+| `test` | `vitest run --coverage` | runs the `node` + `browser` workspace projects in one pass; includes the PGlite integration layer — **no service container**; job also runs `npx playwright install chromium` (binary cached for `e2e.yml`) for the ADR-0009 component tier; coverage → the GitHub step summary. A dedicated `test:browser` job is the escape hatch if browser tests slow this one materially |
 | `build` | `next build` | loads a committed `.env.ci` of transparently-fake values |
 
 - **Node 22**, single version, no matrix. `.nvmrc` is the single source of truth;
@@ -252,7 +259,8 @@ self-merge. Chosen over Renovate (more config) and manual bumping (rots between 
 
 None of this is committed in the planning effort. When the build starts:
 
-- `vitest.config.ts` — one `environment: 'node'` config.
+- `vitest.config.ts` + `vitest.workspace.ts` — the `node` (`environment: 'node'`) and `browser`
+  (Playwright/Chromium) projects. See also `docs/design-system.md` for what `src/ui/` adds.
 - `src/testing/factories.ts`, `src/testing/seed.ts` — the shared fixture module.
 - `app/api/test/login/route.ts`, `app/api/test/seed/route.ts` — `E2E_TEST_MODE`-gated seam.
 - `e2e/` — one Playwright spec + `playwright.config.ts` + global setup.
