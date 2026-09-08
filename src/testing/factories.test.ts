@@ -3,8 +3,16 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { PICKUP_REQUEST_STATES } from '@/domain';
 import {
   ANCHOR_DATE,
+  CHILD_ID,
+  HOUSEHOLD_ID,
+  MEMBER_1_ID,
+  MEMBER_2_ID,
   absence,
+  makeAssignment,
+  makeClosure,
+  makePickupRequest,
   makeTypicalHousehold,
+  nextId,
   pattern,
   resetIdCounter,
 } from './factories';
@@ -88,6 +96,63 @@ describe('absence', () => {
 
     expect(a.startDate).toBe('2025-01-30');
     expect(a.endDate).toBe('2025-02-01');
+  });
+});
+
+describe('per-entity factories', () => {
+  it('default to the sentinel household and the anchor date', () => {
+    expect(makeClosure()).toMatchObject({
+      householdId: HOUSEHOLD_ID,
+      date: ANCHOR_DATE,
+    });
+    expect(makeAssignment()).toMatchObject({
+      householdId: HOUSEHOLD_ID,
+      date: ANCHOR_DATE,
+      assigneeId: MEMBER_1_ID,
+      source: 'direct-claim',
+    });
+    expect(makePickupRequest()).toMatchObject({
+      householdId: HOUSEHOLD_ID,
+      date: ANCHOR_DATE,
+      requesterId: MEMBER_1_ID,
+      recipientId: MEMBER_2_ID,
+      state: 'Open',
+    });
+  });
+
+  it('apply shallow Partial overrides', () => {
+    const closure = makeClosure({ date: '2025-02-14', reason: 'snow day' });
+    expect(closure.date).toBe('2025-02-14');
+    expect(closure.reason).toBe('snow day');
+
+    const request = makePickupRequest({ state: 'Accepted' });
+    expect(request.state).toBe('Accepted');
+  });
+
+  it('give bulk rows distinct counter-based ids that reset', () => {
+    resetIdCounter();
+    expect(makeClosure().id).toBe('closure-1');
+    expect(makeClosure().id).toBe('closure-2');
+    expect(nextId('absence')).toBe('absence-3');
+
+    resetIdCounter();
+    expect(makeClosure().id).toBe('closure-1');
+  });
+
+  it('use Date instants for timestamp fields, calendar strings for dates', () => {
+    expect(makePickupRequest().raisedAt).toBeInstanceOf(Date);
+    expect(typeof makeAssignment().date).toBe('string');
+  });
+});
+
+describe('sentinel ids', () => {
+  it('are the fixed values the seed layer and E2E route rely on', () => {
+    expect([HOUSEHOLD_ID, MEMBER_1_ID, MEMBER_2_ID, CHILD_ID]).toEqual([
+      'household-1',
+      'm1',
+      'm2',
+      'child-1',
+    ]);
   });
 });
 
