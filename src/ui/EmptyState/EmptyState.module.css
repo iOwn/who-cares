@@ -1,0 +1,48 @@
+/*
+ * EmptyState — benign "nothing here" panel. Semantic tokens only. No
+ * interaction state, no motion.
+ */
+
+.base {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-32) var(--space-24);
+  text-align: center;
+  font-family: var(--font-body);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-subtle);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.description {
+  margin: 0;
+  max-width: 22rem;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+.action {
+  margin-top: var(--space-8);
+}

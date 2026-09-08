@@ -1,0 +1,38 @@
+/*
+ * Avatar — monochrome member initial. Semantic tokens only. No interaction
+ * state, no motion. The colour pair is fixed for every member (no per-member
+ * hue in v1).
+ */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-surface);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.sizeSm {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: var(--text-sm);
+}
+
+.sizeMd {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: var(--text-base);
+}
+
+.sizeLg {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--text-md);
+}

@@ -1,0 +1,79 @@
+/*
+ * TextArea — the TextField shell, multi-line. Consumes ONLY semantic tokens
+ * (tokens.css). Interaction state via RAC's `[data-*]` attributes.
+ */
+
+.field {
+  display: grid;
+  gap: var(--space-6);
+  font-family: var(--font-body);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-subtle);
+}
+
+.input {
+  width: 100%;
+  /* 4.5rem: ~3 lines at this font-size/leading before the user drags to resize —
+     a control dimension, like Button's rem-literal sizes (Button.module.css). */
+  min-height: 4.5rem;
+  padding-block: var(--space-8);
+  padding-inline: var(--space-12);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  resize: vertical;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+/* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
+.input[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-border-strong);
+}
+
+.input[data-invalid] {
+  border-color: var(--color-at-risk-solid);
+}
+
+.input[data-disabled] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  resize: none;
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-at-risk-text);
+}
+
+/* MOTION GATE — drop the transition entirely, not just its duration (§9). */
+@media (prefers-reduced-motion: reduce) {
+  .input {
+    transition: none;
+  }
+}

@@ -26,6 +26,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@internationalized/date": "3.12.4",
     "@react-aria/live-announcer": "3.5.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
