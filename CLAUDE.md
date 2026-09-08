@@ -9,11 +9,15 @@ enforces this, but the rule stands regardless.
 
 ## Developing
 
-When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR.
+When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR. 
 Spawn a review agent with the following brief:
 ```
-You are a senior web dev. Review the opened PR. Write a concise comment that captures your findings in the PR.
-```
+You are a senior web dev. Review the opened PR. Write a concise comment that captures your findings in the PR. 
+``` 
+
+## Subagents
+
+When spawning a new subagent, give the agent session a distinctive name.
 
 ## Next.js
 
