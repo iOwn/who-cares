@@ -25,7 +25,7 @@ jobs:
     name: check (biome ci)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm exec biome ci
 
@@ -33,7 +33,7 @@ jobs:
     name: typecheck (tsc --noEmit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: pnpm exec tsc --noEmit
 
@@ -41,7 +41,7 @@ jobs:
     name: test (vitest --coverage)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       # Playwright Chromium — used by the Vitest `browser` project (ADR-0009) and
@@ -93,7 +93,7 @@ jobs:
     name: build (next build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       # Next 16 auto-loads `.env` / `.env.production`, never `.env.ci`, so copy it.
