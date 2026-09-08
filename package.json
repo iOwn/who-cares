@@ -14,9 +14,12 @@
     "format": "biome check --write",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:node": "vitest run --project node",
+    "test:browser": "vitest run --project browser",
+    "test:browser:setup": "playwright install chromium",
+    "test:hooks": "node --test \".claude/hooks/**/*.test.mjs\"",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "drizzle-kit generate --custom",
-    "test:hooks": "node --test \".claude/hooks/**/*.test.mjs\"",
     "prepare": "lefthook install"
   },
   "dependencies": {
@@ -31,9 +34,12 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitest/browser-playwright": "5.0.0",
     "drizzle-kit": "0.31.10",
     "lefthook": "2.1.12",
+    "playwright": "1.63.0",
     "typescript": "^5.7.0",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "vitest-browser-react": "2.3.0"
   }
 }
