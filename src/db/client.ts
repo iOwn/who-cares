@@ -8,8 +8,7 @@
  */
 
 import type { PGlite } from "@electric-sql/pglite";
-import type { PgDatabase } from "drizzle-orm/pg-core";
-import type { PgliteQueryResultHKT } from "drizzle-orm/pglite";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "./schema";
 
@@ -24,8 +23,12 @@ export type Database = ReturnType<typeof createDatabase>;
  * rather than `Database` so a caller can compose several writes into one
  * transaction — which creating a household actually requires, since the
  * "exactly two members / one child" triggers only fire at `COMMIT`.
+ *
+ * Deliberately driver-agnostic (`PgQueryResultHKT`, not PGlite's): the
+ * repositories are production code and must not be typed against the test
+ * driver. A Neon-backed `Database` satisfies this same type.
  */
-export type DbExecutor = PgDatabase<PgliteQueryResultHKT, typeof schema>;
+export type DbExecutor = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 /** Wrap an existing PGlite client. The caller owns the client's lifetime. */
 export function createDatabase(client: PGlite) {

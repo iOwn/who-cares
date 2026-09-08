@@ -99,6 +99,22 @@ describe("HouseholdRepository", () => {
     expect((await repos.households.findById(HOUSEHOLD_ID))?.name).toBe("Renamed");
   });
 
+  it("ignores memberIds and childId on save — membership is the other repos'", async () => {
+    // `Household` is a view over three tables; `save()` owns only its own row.
+    // Handing it a different membership must not rewrite, reorder or orphan the
+    // member and child rows.
+    await repos.households.save(
+      makeHousehold({ memberIds: [MEMBER_2_ID, MEMBER_1_ID], childId: "child-2" }),
+    );
+
+    expect(await repos.households.findById(HOUSEHOLD_ID)).toEqual({
+      id: HOUSEHOLD_ID,
+      name: "The Test Household",
+      memberIds: [MEMBER_1_ID, MEMBER_2_ID],
+      childId: CHILD_ID,
+    });
+  });
+
   it("creates a whole household in one transaction", async () => {
     await db.transaction(async (tx) => {
       const txRepos = createRepositories(tx);
