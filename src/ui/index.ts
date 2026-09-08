@@ -20,6 +20,7 @@ export {
 export { Button, type ButtonProps } from "./Button";
 export { type Breakpoint, breakpoints, mq } from "./breakpoints";
 export { cx } from "./cx";
+export { DateField, type DateFieldProps } from "./DateField";
 export {
   type DayDisplayInput,
   type DayDisplayState,
@@ -29,3 +30,5 @@ export {
 export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Surface, type SurfaceProps } from "./Surface";
+export { TextArea, type TextAreaProps } from "./TextArea";
+export { TextField, type TextFieldProps } from "./TextField";
