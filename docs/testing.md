@@ -15,6 +15,7 @@ The decisions behind all of it are on the wayfinder map
 | Unit / integration runner | **Vitest** | `node` + `browser` projects (workspace); `browser` = Playwright/Chromium for the component-test tier (ADR-0009) |
 | E2E | **Playwright** | Chromium only, one smoke spec in `e2e/` |
 | Integration DB | **PGlite** (`@electric-sql/pglite`) | in-process PG17 WASM; no Docker, no CI service |
+| ORM + migrations | **Drizzle** (`drizzle-orm`, `drizzle-kit`) | plain `.sql` migrations on disk, replayed into PGlite ([below](#orm-drizzle)) |
 | Lint + format + import-sort | **Biome** (`@biomejs/biome`) | one tool, one `biome.json` |
 | Git hooks | **lefthook** | one binary, one `lefthook.yml` |
 | Agent lint loop | Claude Code `PostToolUse` hook | `biome check --write` on edited files |
@@ -24,8 +25,8 @@ The decisions behind all of it are on the wayfinder map
 
 Net new dev-dependencies for the whole test/tooling layer: `vitest`,
 `@vitest/browser-playwright`, `vitest-browser-react`, `playwright` / `@playwright/test`,
-`@electric-sql/pglite`, `@biomejs/biome`, `lefthook`. No `eslint`, no `prettier`, no MSW,
-no commitlint, no Testcontainers.
+`@electric-sql/pglite`, `drizzle-orm`, `drizzle-kit`, `@biomejs/biome`, `lefthook`. No
+`eslint`, no `prettier`, no MSW, no commitlint, no Testcontainers.
 
 ## Test runner & the Vitest / Playwright boundary
 
@@ -78,7 +79,58 @@ Two layers:
 - **Not covered on purpose**: no two-concurrent-session write test (ADR-0001 overwrite is a
   plain `UPDATE`); no Neon-branch CI job (the preview-deploy smoke path covers real-Neon
   fidelity).
-- ORM choice (Drizzle vs Prisma) is a build-effort call; both ship PGlite drivers.
+
+### ORM: Drizzle
+
+Settled in [issue #38](https://github.com/iOwn/who-cares/issues/38); no ADR, because ADR-0006
+already scoped this as a build-effort call that the PGlite decision does not depend on.
+
+**Drizzle** (`drizzle-orm` + `drizzle-kit`), over Prisma, because it fits the harness ADR-0006
+describes rather than working around it:
+
+- Migrations are **plain `.sql` files on disk**, so "build the schema by running the actual
+  migration files" is literally what happens — `drizzle-orm/pglite/migrator` reads the same
+  files a deploy would. Prisma's migration engine wants a live database and a shadow database
+  even to diff, which is exactly the Docker-shaped dependency ADR-0006 rejected.
+- Anything the schema diff cannot express is a **hand-written migration** in the same folder
+  and the same journal (`pnpm db:generate:custom`). That is how the deferred constraint
+  triggers land — Prisma would need the same escape hatch, but Prisma's client could not then
+  see the result.
+- **No codegen step and no separate schema language**: the schema is TypeScript
+  (`src/db/schema.ts`), so `tsc --noEmit` covers it and there is no generated client to keep
+  in sync, install-time or in CI.
+- The runtime is a thin query builder with no engine binary — it stays in-process alongside
+  PGlite, and imposes nothing on the framework-free domain layer (ADR-0005): repositories are
+  adapters behind the ports, and nothing above them imports Drizzle.
+
+Accepted losses: no Prisma Studio, and no `prisma migrate diff`-grade drift detection — a
+migration that contradicts `schema.ts` is caught by the integration tests failing, not by a
+dedicated drift check.
+
+### Migration convention
+
+- Files live in `src/db/migrations/` as `NNNN_snake_case_name.sql`, ordered by
+  `migrations/meta/_journal.json`. Both are written by `drizzle-kit`, never by hand:
+  `pnpm db:generate --name <name>` for a schema diff, `pnpm db:generate:custom --name <name>`
+  for triggers, functions, and backfills.
+- Statements within a file are separated by `--> statement-breakpoint`.
+- Migrations are **append-only** — Drizzle records each file's hash, so editing an applied
+  file corrupts the history.
+- `src/db/migrate.ts` (`applyMigrations`) is the only thing that builds a schema. There is no
+  `CREATE TABLE` in test setup, and no `db:push` script pointing at a live database.
+
+### The harness in practice
+
+```ts
+const db = await createTestDatabase(); // fresh PGlite + every migration applied
+afterAll(() => closeTestDatabase(db));
+beforeEach(() => truncateAll(db));
+```
+
+`createTestDatabase()` lives in `src/testing/database.ts`; `seed(db, graph)` in
+`src/testing/seed.ts` does raw `INSERT`s through `db.$client` and returns a `SeedReport` whose
+`skipped` list names the `HouseholdGraph` entity kinds that have no table yet. A test pins that
+list, so the migration that adds a table cannot land without extending `seed()`.
 
 ## What deserves a test
 
