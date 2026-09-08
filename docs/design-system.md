@@ -354,7 +354,8 @@ catalogue in `build/` (gitignored). Config lives in `.ladle/`.
   self-hosted at build time — the browser never requests Google.
 - Both are variable fonts, but the weights are pinned as an explicit array anyway, so only the
   seven faces above ship. Adding a weight means editing `layout.tsx` **and**
-  `.ladle/config.mjs`'s font URL, or the workbench silently synthesises it.
+  `.ladle/config.mjs`'s font URL, or the workbench silently synthesises it. A parity test
+  (`src/app/fonts.test.ts`) ensures drift is caught.
 
 ## Testing
 

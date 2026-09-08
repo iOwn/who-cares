@@ -26,8 +26,13 @@
 npm-debug.log*
 pnpm-debug.log*
 
-# env files — .env.ci is committed on purpose (see docs/testing.md); ignore only local overrides
+# env files — .env.ci is committed on purpose (see docs/testing.md); ignore only
+# local overrides and the throwaway .env the `build` job / a local sanity-check
+# copies from .env.ci (`cp .env.ci .env`).
 .env*.local
+/.env
+/.env.production
+/.env.development
 
 # vercel
 .vercel

@@ -27,10 +27,9 @@ pre-commit:
 # pre-push — OPTIONAL. Safe to delete this whole block: CI (`ci.yml`) runs the
 # same checks and is the real gate. It only moves the feedback earlier.
 #
-# NOTE: `vitest` is not a dependency yet — it lands with issue #37. Until then
-# the `test` job is a no-op: `pnpm exec vitest` exits non-zero "command not
-# found", which we swallow with `|| true` so a missing vitest never blocks a
-# push. Drop the `|| true` once #37 is merged.
+# The `test` job runs the `node` Vitest project only — fast, no browser binary.
+# The `browser` project and coverage are left to `ci.yml`'s `test` job, which is
+# the required check.
 # ---------------------------------------------------------------------------
 pre-push:
   parallel: true
@@ -44,5 +43,5 @@ pre-push:
       run: pnpm run test:hooks
 
     - name: test
-      # Becomes a real gate after #37 (remove the `|| true` then).
-      run: pnpm exec vitest run || true
+      # Node project only — keep pre-push fast. CI runs node + browser + coverage.
+      run: pnpm exec vitest run --project node

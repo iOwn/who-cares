@@ -1,0 +1,34 @@
+# Dependency freshness. See docs/testing.md "Dependency freshness".
+#
+# One grouped weekly PR for non-major (minor + patch) bumps; every major bump
+# gets its own PR (majors are excluded from the groups, so Dependabot opens them
+# individually). Security updates stay on — they are enabled by default and are
+# not disabled here. Every PR rides the same CI gate, so a bad bump can't
+# self-merge.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
