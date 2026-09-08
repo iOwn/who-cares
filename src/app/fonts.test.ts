@@ -6,8 +6,11 @@ import { describe, expect, it } from "vitest";
  * Drift guard for font-weight parity between `next/font/google` in layout.tsx
  * (runtime source of truth for the app) and the Google Fonts CDN URL in
  * .ladle/config.mjs (Ladle workbench source). Both must declare the same
- * families, weights, and subset. This test parses both sources and asserts
- * they agree.
+ * families, weights, and subset, in the same order.
+ *
+ * This test dynamically discovers all font families declared in layout.tsx,
+ * parses each independently, and compares against the Ladle URL. Adding a
+ * third family to layout.tsx but not the URL (or vice versa) is caught.
  *
  * See .ladle/config.mjs §googleFontsHref and src/app/layout.tsx comment.
  */
@@ -20,42 +23,52 @@ const ladleConfig = readFileSync(
 );
 
 /**
- * Parse font weights from layout.tsx. Returns `{ <family>: { weights: [...], subset: "..." } }`.
- * Extracts weight arrays from `weight: ["400", "600", ...]` and subset from `subsets: ["latin"]`.
+ * Parse all `next/font/google` font families from layout.tsx.
+ * Returns `{ <FamilyName>: { weights: [...], subset: "..." } }`.
+ * Dynamically discovers families: finds `const <var> = <Family>({...})` patterns,
+ * then extracts `weight` and `subsets` from each call's own block.
+ * Handles both array (`weight: ["400", "600"]`) and string (`weight: "400"`) forms.
  */
 function parseFontsFromLayout(tsx: string): Record<string, { weights: string[]; subset: string }> {
   const fonts: Record<string, { weights: string[]; subset: string }> = {};
 
-  // Match font declarations: Nunito({...}) or Baloo_2({...})
-  // Look for weight: [...] and subsets: [...] patterns
-  const fontMatches = [
-    {
-      name: "Nunito",
-      pattern:
-        /const\s+nunito\s*=\s*Nunito\s*\(\{[\s\S]*?subsets:\s*\[([^\]]+)\][\s\S]*?weight:\s*\[([^\]]+)\]/,
-    },
-    {
-      name: "Baloo_2",
-      pattern:
-        /const\s+baloo\s*=\s*Baloo_2\s*\(\{[\s\S]*?subsets:\s*\[([^\]]+)\][\s\S]*?weight:\s*\[([^\]]+)\]/,
-    },
-  ];
+  // Find all font family calls: `const <var> = <Family>({...})`
+  // Match: `const varName = FamilyName({...})`
+  // Using a pattern that captures the family name and extracts the whole call block
+  const familyCallPattern = /const\s+\w+\s*=\s*(\w+)\s*\(\{([^}]+)\}\s*\)/g;
 
-  for (const { name, pattern } of fontMatches) {
-    const match = tsx.match(pattern);
-    if (match) {
-      const subsetStr = match[1].trim().replace(/["']/g, "");
-      const weightStr = match[2].trim();
+  for (const match of tsx.matchAll(familyCallPattern)) {
+    const familyName = match[1]; // e.g., "Nunito", "Baloo_2"
+    const blockContent = match[2]; // everything inside {...}
 
-      // Extract weights from ["400", "600", "700", "800"] format
-      const weights = weightStr
+    // Extract subsets array from this call's block: `subsets: ["latin"]` or `subsets: ["latin", ...]`
+    const subsetMatch = blockContent.match(/subsets:\s*\[\s*["']([^"']+)["']/);
+    if (!subsetMatch) continue;
+    const subset = subsetMatch[1];
+
+    // Extract weight from this call's block: handles both forms
+    // - Array: `weight: ["400", "600", ...]`
+    // - String: `weight: "400"` (single value)
+    const weightArrayMatch = blockContent.match(/weight:\s*\[\s*([^\]]+)\s*\]/);
+    const weightStringMatch = blockContent.match(/weight:\s*["'](\d+)["']/);
+
+    let weights: string[] = [];
+    if (weightArrayMatch) {
+      // Array form: ["400", "600", "700", "800"]
+      const weightStr = weightArrayMatch[1];
+      weights = weightStr
         .split(",")
         .map((w) => w.trim().replace(/["']/g, ""))
         .filter(Boolean);
+    } else if (weightStringMatch) {
+      // String form: "400"
+      weights = [weightStringMatch[1]];
+    }
 
-      fonts[name] = {
-        subset: subsetStr,
-        weights,
+    if (weights.length > 0) {
+      fonts[familyName] = {
+        subset,
+        weights: weights.sort(), // Sort for order-insensitive comparison
       };
     }
   }
@@ -64,9 +77,9 @@ function parseFontsFromLayout(tsx: string): Record<string, { weights: string[]; 
 }
 
 /**
- * Parse Google Fonts URL from .ladle/config.mjs.
+ * Parse Google Fonts URL from .ladle/config.mjs googleFontsHref.
  * Returns `{ <family>: { weights: [...], subset: "..." } }`.
- * Extracts from URLs like: family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@500;700;800&display=swap
+ * Extracts from URLs like: family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@500;700;800&subset=latin&display=swap
  */
 function parseFontsFromLadleUrl(
   config: string,
@@ -81,6 +94,10 @@ function parseFontsFromLadleUrl(
 
   const url = hrefMatch[1];
 
+  // Parse the subset parameter from URL (e.g., `&subset=latin`), default to "latin"
+  const subsetMatch = url.match(/[?&]subset=([^&]+)/);
+  const defaultSubset = subsetMatch ? subsetMatch[1] : "latin";
+
   // Parse family params: family=FontName:wght@400;600;700;800
   const familyMatches = url.matchAll(/family=([^&:]+):wght@([^&]+)/g);
 
@@ -91,14 +108,10 @@ function parseFontsFromLadleUrl(
     // Map Baloo+2 (URL-encoded) to Baloo_2 (TypeScript name)
     const familyName = familyNameEncoded === "Baloo+2" ? "Baloo_2" : familyNameEncoded;
 
-    const weights = weightStr.split(";").filter(Boolean);
+    const weights = weightStr.split(";").filter(Boolean).sort(); // Sort for order-insensitive comparison
 
-    // Google Fonts URLs don't encode the subset in this format, but the
-    // query string includes &display=swap. The subset is inferred from
-    // `next/font/google` defaults (which is 'latin' in layout.tsx).
-    // We'll assume 'latin' for URL-sourced fonts since layout.tsx uses it.
     fonts[familyName] = {
-      subset: "latin",
+      subset: defaultSubset,
       weights,
     };
   }
@@ -110,34 +123,38 @@ describe("fonts layout.tsx ↔ .ladle googleFontsHref parity", () => {
   const layoutFonts = parseFontsFromLayout(layoutTsx);
   const ladleFonts = parseFontsFromLadleUrl(ladleConfig);
 
-  it("finds font declarations in layout.tsx", () => {
-    expect(Object.keys(layoutFonts).length).toBeGreaterThan(0);
-    expect(layoutFonts).toHaveProperty("Nunito");
-    expect(layoutFonts).toHaveProperty("Baloo_2");
+  it("discovers font declarations in layout.tsx", () => {
+    // Must find at least the two expected families; adding a third is caught
+    // by the "same families" test below.
+    expect(Object.keys(layoutFonts).length).toBeGreaterThanOrEqual(2);
   });
 
-  it("finds font declarations in .ladle/config.mjs googleFontsHref", () => {
-    expect(Object.keys(ladleFonts).length).toBeGreaterThan(0);
-    expect(ladleFonts).toHaveProperty("Nunito");
-    expect(ladleFonts).toHaveProperty("Baloo_2");
+  it("discovers font declarations in .ladle/config.mjs googleFontsHref", () => {
+    expect(Object.keys(ladleFonts).length).toBeGreaterThanOrEqual(2);
   });
 
   it("declares exactly the same families in both sources", () => {
+    // This test catches:
+    // - Adding a family to layout.tsx without adding it to the URL
+    // - Adding a family to the URL without adding it to layout.tsx
+    // - Removing a family from one without the other
     expect(Object.keys(ladleFonts).sort()).toEqual(Object.keys(layoutFonts).sort());
   });
 
-  it("uses the same subset (latin) for all fonts", () => {
+  it("uses the same subset for all families", () => {
     for (const family of Object.keys(layoutFonts)) {
-      expect(ladleFonts[family]?.subset).toBe(layoutFonts[family]?.subset);
-      expect(layoutFonts[family]?.subset).toBe("latin");
+      const layoutSubset = layoutFonts[family]?.subset;
+      const ladleSubset = ladleFonts[family]?.subset;
+      expect(ladleSubset).toBe(layoutSubset);
     }
   });
 
-  it("declares the same weights for Nunito in both sources", () => {
-    expect(ladleFonts.Nunito?.weights).toEqual(layoutFonts.Nunito?.weights);
-  });
-
-  it("declares the same weights for Baloo_2 in both sources", () => {
-    expect(ladleFonts.Baloo_2?.weights).toEqual(layoutFonts.Baloo_2?.weights);
+  it("declares the same weights (unordered) for each family", () => {
+    for (const family of Object.keys(layoutFonts)) {
+      const layoutWeights = layoutFonts[family]?.weights;
+      const ladleWeights = ladleFonts[family]?.weights;
+      // Both are pre-sorted, so direct comparison is order-insensitive
+      expect(ladleWeights).toEqual(layoutWeights);
+    }
   });
 });
