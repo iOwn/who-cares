@@ -7,10 +7,11 @@
  *
  * Contract under test — `minValue` blocks / flags past dates:
  *
- *   1. BLOCKS — with `minValue` = today, opening the calendar cannot page to a
- *      past month (the "Previous" button is disabled) and the day-cell button
- *      before today (when visible) is `aria-disabled`, while today's cell stays
- *      selectable. Asserted via role + accessible name, not DOM structure.
+ *   1. BLOCKS — with a fixed mid-month `minValue`, opening the calendar cannot
+ *      page to an earlier month (the "Previous" button is disabled), an earlier
+ *      same-month day cell is `aria-disabled`, and the `minValue` day itself
+ *      stays selectable. Fixed date (not `today()`) so the assertion always
+ *      runs. Asserted via role + accessible name, not DOM structure.
  *
  *   2. FLAGS — with `minValue` = today and a controlled `value` three days in
  *      the past, the field enters `data-invalid` on the date-input group and
@@ -24,7 +25,7 @@
  * of the test runner's browser locale.
  */
 import type { DateValue } from "@internationalized/date";
-import { getLocalTimeZone, today } from "@internationalized/date";
+import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date";
 import type { ReactNode } from "react";
 import { I18nProvider } from "react-aria-components";
 import { afterEach, describe, expect, test } from "vitest";
@@ -35,6 +36,9 @@ afterEach(cleanup);
 
 const tz = getLocalTimeZone();
 const ERROR = "Pick a date from today onward.";
+
+/** Fixed mid-month boundary — keeps the "blocks" assertions calendar-deterministic. */
+const MID_MONTH_MIN = new CalendarDate(2026, 6, 15);
 
 function EnUs({ children }: { children: ReactNode }) {
   return <I18nProvider locale="en-US">{children}</I18nProvider>;
@@ -54,34 +58,30 @@ const cellName = (d: DateValue) =>
   }).format(new Date(d.year, d.month - 1, d.day));
 
 describe("DateField — minValue", () => {
-  test("blocks paging to past months and disables past day cells", async () => {
-    const min = today(tz);
+  test("blocks dates before minValue in the calendar", async () => {
     const screen = await render(
-      <DateField label="Effective from" defaultValue={min} minValue={min} />,
-      {
-        wrapper: EnUs,
-      },
+      <DateField label="Effective from" defaultValue={MID_MONTH_MIN} minValue={MID_MONTH_MIN} />,
+      { wrapper: EnUs },
     );
 
     // The sole button before the popover opens is the calendar trigger.
     await screen.getByRole("button").click();
     await expect.element(screen.getByRole("grid")).toBeInTheDocument();
 
-    // Cannot page back to a month that is entirely before minValue.
+    // The previous month is entirely before minValue → paging back is blocked.
     await expect.element(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
 
-    // Today's cell (== minValue) stays selectable.
+    // An earlier day in the same visible month is not selectable.
     await expect
-      .element(screen.getByRole("button", { name: new RegExp(cellName(min)) }))
-      .not.toHaveAttribute("aria-disabled", "true");
+      .element(
+        screen.getByRole("button", { name: new RegExp(cellName(MID_MONTH_MIN.set({ day: 10 }))) }),
+      )
+      .toHaveAttribute("aria-disabled", "true");
 
-    // The day before today, when it falls in the visible month, is blocked.
-    const before = min.subtract({ days: 1 });
-    if (before.month === min.month) {
-      await expect
-        .element(screen.getByRole("button", { name: new RegExp(cellName(before)) }))
-        .toHaveAttribute("aria-disabled", "true");
-    }
+    // The minValue day itself stays selectable.
+    await expect
+      .element(screen.getByRole("button", { name: new RegExp(cellName(MID_MONTH_MIN)) }))
+      .not.toHaveAttribute("aria-disabled", "true");
   });
 
   test("flags a value before minValue and shows the passed-through errorMessage", async () => {

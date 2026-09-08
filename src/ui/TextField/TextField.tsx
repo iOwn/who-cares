@@ -30,6 +30,11 @@ import styles from "./TextField.module.css";
  *
  * `isRequired` / `isOptional` — see `../fieldRequirement`: only optional fields
  * carry a visible marker ("— optional"); the two props are mutually exclusive.
+ *
+ * TODO(#74): the label / optional / description / error shell + the
+ * `validationBehavior` / `composeRenderProps` wiring is copied verbatim across
+ * TextField / TextArea / DateField — extract a shared field shell (best done
+ * with or before #51's DateRangeField, the fourth copy).
  */
 
 export interface TextFieldProps extends Omit<RACTextFieldProps, "className" | "children"> {
