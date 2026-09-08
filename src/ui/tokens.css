@@ -33,6 +33,7 @@
     --sand-200: #e6e0d2;
     --sand-300: #ded7c8;
     --sand-400: #cfc7b6;
+    --sand-450: #c9c2b4;   /* closed-state solid */
     --sand-500: #b3ab9b;
     --sand-600: #8a8378;
     --sand-700: #7a7468;
@@ -49,15 +50,19 @@
     --blue-700: #2f5f9e;
 
     /* amber — highlight / pending */
+    --amber-100: #fdf3d9;  /* pending surface tint */
+    --amber-300: #f0d488;  /* pending border */
     --amber-400: #f5c443;
     --amber-900: #8a6220;  /* AA-corrected pending text, off-ramp */
 
     /* green — resolved */
+    --green-100: #e8f2e6;  /* resolved surface tint */
     --green-300: #b6dcb9;
     --green-500: #55a863;
     --green-800: #356b3f;
 
     /* red — at-risk */
+    --red-100: #fdeee9;    /* at-risk surface tint */
     --red-200: #f4c3b7;
     --red-500: #e8543e;
     --red-700: #c23f2c;
@@ -88,7 +93,8 @@
 
     /* --- colour: misc roles --- */
     --color-highlight:  var(--amber-400);        /* Today pill, FAB — ONLY here */
-    --color-scrim:      rgba(35, 32, 27, 0.5);
+    --color-scrim:      rgba(35, 32, 27, 0.5);   /* = --ink-900 at 50% (kept literal —
+                                                    no alpha primitive layer in v1) */
     --color-focus-ring: var(--blue-500);         /* NEW in #29 — designs showed no
                                                     focus state; #31 mandates a
                                                     visible ring on every
@@ -96,25 +102,25 @@
 
     /* --- colour: day-state — resolved --- */
     --color-resolved-solid:   var(--green-500);
-    --color-resolved-surface: #e8f2e6;
+    --color-resolved-surface: var(--green-100);
     --color-resolved-text:    var(--green-800);
     --color-resolved-border:  var(--green-300);
 
     /* --- colour: day-state — pending --- */
     --color-pending-solid:   var(--amber-400);
-    --color-pending-surface: #fdf3d9;
+    --color-pending-surface: var(--amber-100);
     --color-pending-text:    var(--amber-900);
-    --color-pending-border:  #f0d488;
+    --color-pending-border:  var(--amber-300);
 
     /* --- colour: day-state — at-risk --- */
     --color-at-risk-solid:       var(--red-500);
-    --color-at-risk-surface:     #fdeee9;
+    --color-at-risk-surface:     var(--red-100);
     --color-at-risk-text:        var(--red-700);
     --color-at-risk-border:      var(--red-500);
     --color-at-risk-border-soft: var(--red-200);
 
     /* --- colour: closed — UI-ONLY affordance, NOT a domain Day state --- */
-    --color-closed-solid:   #c9c2b4;
+    --color-closed-solid:   var(--sand-450);
     --color-closed-surface: var(--sand-100);
     --color-closed-text:    var(--sand-750);
 

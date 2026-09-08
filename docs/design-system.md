@@ -50,9 +50,10 @@ See **[ADR-0010](./adr/0010-css-modules-and-custom-property-tokens-over-tailwind
 
 ## Primitive library: React Aria Components
 
-See **[ADR-0010](./adr/0010-css-modules-and-custom-property-tokens-over-tailwind.md)** and the
-research at `docs/research/primitive-library.md` (branch `research/primitive-library`, linked
-from [iOwn/who-cares#28](https://github.com/iOwn/who-cares/issues/28)).
+See **[ADR-0011](./adr/0011-primitives-are-built-on-react-aria-components.md)**. Backing
+research lives on the unmerged `research/primitive-library` branch
+(`docs/research/primitive-library.md`), linked from decision ticket
+[iOwn/who-cares#28](https://github.com/iOwn/who-cares/issues/28).
 
 - **`react-aria-components`** (RAC) — the deciding factor was the **date-range picker**: RAC is
   the only headless option with a real screen-reader-tested `DateField` + `RangeCalendar`. Radix
@@ -63,9 +64,10 @@ from [iOwn/who-cares#28](https://github.com/iOwn/who-cares/issues/28)).
   — it also disables the calendar's next-month paging button at the boundary.
 - **Bundle cost**: ~80–110 KB gzip for the ~6 primitives that need RAC (heaviest of the three
   candidates by ~50 KB, on a screen 2 users hit occasionally — a tie-breaker, not a blocker).
-  Mitigate with `experimental.optimizePackageImports: ['react-aria-components']` in
-  `next.config` and keep **every** RAC import inside a `'use client'` file (Next.js
-  [#60246](https://github.com/vercel/next.js/issues/60246)).
+  Mitigate by **merging** `experimental.optimizePackageImports: ['react-aria-components']` into
+  the existing `next.config.ts` (which already carries `agentRules: false` from #35 — add the
+  key, don't replace the file) and keeping **every** RAC import inside a `'use client'` file
+  (Next.js [#60246](https://github.com/vercel/next.js/issues/60246)).
 - **Styling fit**: RAC exposes interaction state as data-attributes (`data-pressed`,
   `data-focus-visible`, `data-selected`, …) and a render-prop `className`. Style state in
   `*.module.css` via `&[data-pressed]` selectors — never with render-prop booleans.
@@ -114,10 +116,11 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
 
 ## Component inventory
 
-Full spec (purpose, screens used, variants + states, rough prop sketch) in the resolution
-comment on [iOwn/who-cares#30](https://github.com/iOwn/who-cares/issues/30). **22 P0 primitives +
-13 P1 feature-composed.** The build effort turns the sketches into final signatures — this doc
-does **not** pin 22 prop signatures.
+Full spec (purpose, screens used, variants + states, rough prop sketch) in
+**[`design-system-inventory.md`](./design-system-inventory.md)**, assembled from the resolution
+of [iOwn/who-cares#30](https://github.com/iOwn/who-cares/issues/30). **22 P0 primitives + 13 P1
+feature-composed.** The build effort turns the sketches into final signatures — neither doc
+pins 22 prop signatures.
 
 ### Library location
 

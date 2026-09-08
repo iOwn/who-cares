@@ -4,7 +4,9 @@ Charting the design-system map (issue #27) needed a styling technology before an
 decision could be made. The candidates were Tailwind (v4), CSS Modules with design tokens as
 CSS custom properties, vanilla-extract, and plain global CSS. The choice was provisionally made
 while charting and confirmed by the primitive-library research (issue #28), which found that
-React Aria Components (RAC) styles cleanly either way and forces nothing.
+React Aria Components (RAC) styles cleanly either way and forces nothing. The primitive-library
+pick itself is **[ADR-0011](./0011-primitives-are-built-on-react-aria-components.md)**; this ADR
+covers only the styling technology.
 
 **CSS Modules for component styles.** Each primitive owns a `<Component>.module.css` next to its
 `.tsx`. Locally-scoped class names, no naming convention to police, zero runtime, and nothing

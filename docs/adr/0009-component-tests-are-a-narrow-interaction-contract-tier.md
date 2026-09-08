@@ -1,7 +1,8 @@
 # A narrow component-test tier covers the interaction & a11y contract of a named set of primitives
 
 The design-system effort (issue #27) introduces `src/ui/` — a component library built on React
-Aria Components (RAC). ADR-0005 concluded that component tests had "no standing tier in v1":
+Aria Components (RAC, [ADR-0011](./0011-primitives-are-built-on-react-aria-components.md)).
+ADR-0005 concluded that component tests had "no standing tier in v1":
 React components were left to manual review plus the one Playwright smoke path, with only
 non-trivial *pure* display logic extracted and unit-tested. A component library changes that
 calculus for a small, specific set of primitives.
