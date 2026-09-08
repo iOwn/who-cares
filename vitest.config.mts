@@ -42,8 +42,9 @@ export default defineConfig({
             // Chromium only, matching the E2E browser matrix (ADR-0008).
             instances: [{ browser: "chromium" }],
             // Always headless, locally as well as in CI: `pnpm test` should
-            // never pop a browser window. Use `pnpm test:watch` + the Vitest UI
-            // when you want to look at the rendered DOM.
+            // never pop a browser window. To watch a test render, override it
+            // per-run: `pnpm exec vitest --project browser --browser.headless=false`.
+            // Failures leave a screenshot under `.vitest/` (gitignored) either way.
             headless: true,
             // The Chromium binary is not vendored — run `pnpm test:browser:setup`
             // (`playwright install chromium`) once after cloning.
