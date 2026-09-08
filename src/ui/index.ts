@@ -10,6 +10,7 @@
  * layout (and the Ladle Provider) — never from here, never from a component.
  */
 
+export { Avatar, type AvatarProps } from "./Avatar";
 export {
   type AnnounceMessage,
   announce,
@@ -19,13 +20,23 @@ export {
 } from "./announce";
 export { Button, type ButtonProps } from "./Button";
 export { type Breakpoint, breakpoints, mq } from "./breakpoints";
+export { Callout, type CalloutProps } from "./Callout";
+export { CountBadge, type CountBadgeProps } from "./CountBadge";
 export { cx } from "./cx";
 export {
   type DayDisplayInput,
   type DayDisplayState,
   type DomainDayState,
   dayDisplayState,
+  type StatusDisplayState,
 } from "./dayDisplayState";
+export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
+export { Legend, type LegendProps } from "./Legend";
+export { PersonChip, type PersonChipProps } from "./PersonChip";
+export { SectionHeading, type SectionHeadingProps } from "./SectionHeading";
+export { Spinner, type SpinnerProps } from "./Spinner";
+export { StateDot, type StateDotProps } from "./StateDot";
+export { STATUS_LABELS, StatePill, type StatePillProps } from "./StatePill";
 export { Surface, type SurfaceProps } from "./Surface";

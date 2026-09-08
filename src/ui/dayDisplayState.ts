@@ -21,6 +21,17 @@ export type DomainDayState = "Resolved" | "Pending" | "At-risk" | "n/a";
 /** The UI display states. `StatePill` / `StateDot` / `Legend` use the first four; `DayCell` uses all six. */
 export type DayDisplayState = "resolved" | "pending" | "at-risk" | "closed" | "quiet" | "off";
 
+/**
+ * The four display states the status vocabulary primitives (`StatePill`,
+ * `StateDot`, `Legend`) speak — the meaningful subset of `DayDisplayState`
+ * without the grid-only `quiet` / `off`. Kept as an `Extract` so it stays in
+ * lock-step with the mapper's output.
+ */
+export type StatusDisplayState = Extract<
+  DayDisplayState,
+  "resolved" | "pending" | "at-risk" | "closed"
+>;
+
 export interface DayDisplayInput {
   /** The domain-computed Day state for the date — passed through untouched. */
   readonly dayState: DomainDayState;

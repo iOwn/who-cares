@@ -1,0 +1,74 @@
+/*
+ * StatePill — dot + label, tinted background. Semantic tokens only. No
+ * interaction state, no motion.
+ */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: var(--radius-pill);
+  background: currentcolor;
+  flex: none;
+}
+
+/* --- size (the list / day-detail delta is padding + type) --- */
+.sizeSm {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-8);
+  font-size: var(--text-2xs);
+}
+
+.sizeMd {
+  padding-block: var(--space-4);
+  padding-inline: var(--space-10);
+  font-size: var(--text-xs);
+}
+
+/* --- state recolour --- */
+.resolved {
+  background: var(--color-resolved-surface);
+  color: var(--color-resolved-text);
+}
+
+.pending {
+  background: var(--color-pending-surface);
+  color: var(--color-pending-text);
+}
+
+.atRisk {
+  background: var(--color-at-risk-surface);
+  color: var(--color-at-risk-text);
+}
+
+.closed {
+  background: var(--color-closed-surface);
+  color: var(--color-closed-text);
+}
+
+/* The dot uses the state's solid, not the (darkened) text colour. */
+.resolved .dot {
+  background: var(--color-resolved-solid);
+}
+
+.pending .dot {
+  background: var(--color-pending-solid);
+}
+
+.atRisk .dot {
+  background: var(--color-at-risk-solid);
+}
+
+.closed .dot {
+  background: var(--color-closed-solid);
+}

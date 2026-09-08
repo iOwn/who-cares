@@ -1,0 +1,34 @@
+/*
+ * PersonChip — Avatar + name pill. Display-only: semantic tokens, no
+ * interaction state, no motion.
+ */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  color: var(--color-text);
+}
+
+.sizeSm {
+  padding: var(--space-4) var(--space-10) var(--space-4) var(--space-4);
+}
+
+.sizeMd {
+  padding: var(--space-6) var(--space-12) var(--space-6) var(--space-6);
+}
+
+.name {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-extrabold);
+  white-space: nowrap;
+}
+
+.you {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}

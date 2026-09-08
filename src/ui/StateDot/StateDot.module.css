@@ -1,0 +1,38 @@
+/*
+ * StateDot — bare coloured circle. Semantic tokens only. No interaction state,
+ * no motion.
+ */
+
+.base {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  flex: none;
+}
+
+/* --- size (8 / 10px per the inventory sketch) --- */
+.sizeSm {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.sizeMd {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* --- state colour (the solid, not the darkened text token) --- */
+.resolved {
+  background: var(--color-resolved-solid);
+}
+
+.pending {
+  background: var(--color-pending-solid);
+}
+
+.atRisk {
+  background: var(--color-at-risk-solid);
+}
+
+.closed {
+  background: var(--color-closed-solid);
+}
