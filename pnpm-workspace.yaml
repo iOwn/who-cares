@@ -1,2 +1,11 @@
+# pnpm build-script allow-list. pnpm 12 blocks dependency lifecycle scripts by
+# default; each entry here is an explicit yes/no.
 allowBuilds:
+  # Ladle's SWC transform — the postinstall picks the platform-native binary.
+  '@swc/core': true
+  # Vite/Ladle's bundler — its postinstall installs the platform binary.
+  esbuild: true
   lefthook: true
+  # Transitive dev-only dep of Ladle; its postinstall only prints a banner and
+  # writes a service-worker shim we never serve.
+  msw: false

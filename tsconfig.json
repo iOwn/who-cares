@@ -20,6 +20,10 @@
   },
   "include": [
     "next-env.d.ts",
+    // TypeScript's wildcards skip dot-directories, so the Ladle workbench has
+    // to be named explicitly or `tsc --noEmit` silently ignores it.
+    ".ladle/**/*.ts",
+    ".ladle/**/*.tsx",
     "**/*.ts",
     "**/*.tsx",
     "**/*.mts",

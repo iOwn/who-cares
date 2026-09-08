@@ -12,7 +12,7 @@
 /.next/
 /out/
 
-# production
+# production — also Ladle's default outDir (`pnpm workbench:build`)
 /build
 
 # misc

@@ -1,10 +1,16 @@
 /*
- * WhoCares design tokens — SPEC FORM
+ * WhoCares design tokens
  * ---------------------------------------------------------------------------
  * Assembled from decision ticket #29 (token extraction from the Toybox
- * screens) on the design-system wayfinder map (#27). This is the documented
- * specification; the build effort wires the final file (import order, @layer
- * placement, any tooling). See docs/design-system.md and ADR-0010.
+ * screens) on the design-system wayfinder map (#27); promoted from spec form
+ * to live CSS by #41. See docs/design-system.md and ADR-0010.
+ *
+ * IMPORT SITES — this file is a global stylesheet and is imported EXACTLY once
+ * per runtime:
+ *   - the Next app:      src/app/layout.tsx (the root layout)
+ *   - the Ladle catalogue: .ladle/components.tsx (the Provider)
+ * Nothing else imports it. Components reach tokens through the cascade, never
+ * by importing this file.
  *
  * Two layers:
  *   1. PRIMITIVE tokens  — raw palette / scales, no meaning. `--<hue>-<step>`.
@@ -125,7 +131,11 @@
     --color-closed-text: var(--sand-750);
 
     /* --- typography: families ---
-     * --font-nunito / --font-baloo are injected on <html> by next/font/google. */
+     * --font-nunito / --font-baloo are injected on <html> by next/font/google
+     * (src/app/layout.tsx). The Ladle workbench is a Vite app with no Next
+     * build step, so .ladle/workbench.css defines the same two properties from
+     * webfont families instead — see that file. Either way the two stacks
+     * below compose identically. */
     --font-body: var(--font-nunito), ui-rounded, "Segoe UI", system-ui, sans-serif;
     --font-display: var(--font-baloo), var(--font-nunito), ui-rounded, system-ui, sans-serif;
 
@@ -206,7 +216,9 @@
      * media queries repeat the literal pixel value and annotate it with a
      * trailing comment naming the token (e.g. "min-width: 768px" for --bp-md).
      * src/ui/breakpoints.ts is the single source for JS (matchMedia, RAC
-     * responsive props); a Vitest test asserts parity between the two. */
+     * responsive props); src/ui/breakpoints.test.ts parses the values below and
+     * asserts parity between the two. Keep the `--bp-<name>: <n>px;` shape —
+     * that test's regex depends on it. */
     --bp-sm: 480px;
     --bp-md: 768px; /* desktop side-panel switch for the inbox */
     --bp-lg: 1024px;

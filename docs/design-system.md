@@ -4,10 +4,12 @@ How WhoCares looks and how its component library is built. This is the dev-setup
 agent follows when it creates `src/ui/`. The hard-to-reverse picks each have an ADR (linked per
 section); the rest is settled here.
 
-**Planning-only.** This effort commits **no component code** — no `.tsx`, no `.module.css`, no
-story files, no `package.json` entries. `src/ui/tokens.css` and `src/ui/breakpoints.ts` are
-committed in **spec form** (documented, ready to wire); everything else below is a description,
-not a file in the tree yet. Every "the build effort creates …" note is a to-do, not done. The
+**Mostly planning, now being built out.** The doc was written ahead of the code, so read every
+"the build effort creates …" note as a to-do unless
+[What the build effort creates](#what-the-build-effort-creates) marks it done — that section is
+the running ledger. Landed so far: the token layer, the fonts, and the Ladle workbench
+([iOwn/who-cares#41](https://github.com/iOwn/who-cares/issues/41)). Still unbuilt: every
+primitive under `src/ui/<Component>/` and the component-test tier. The
 decisions behind all of it are on the wayfinder map
 ([iOwn/who-cares#27](https://github.com/iOwn/who-cares/issues/27)); see its Decisions-so-far for
 the one-line gist + link behind each choice.
@@ -76,7 +78,7 @@ research lives on the unmerged `research/primitive-library` branch
 
 ## Token model
 
-`src/ui/tokens.css` (committed in spec form) + `src/ui/breakpoints.ts` (the JS mirror). Full
+`src/ui/tokens.css` (live) + `src/ui/breakpoints.ts` (the JS mirror). Full
 extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/issues/29).
 
 - **Two layers.** **Primitive** tokens (`--<hue>-<step>`, raw palette / scale, no meaning) feed
@@ -85,7 +87,9 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
   **Components consume only semantic tokens**, never a primitive directly. Verified: no
   component needs to read a primitive.
 - **One file**, `src/ui/tokens.css`, wrapped in `@layer tokens`, order primitives → semantic
-  (light) → dark stubs. Imported **once** in the root layout.
+  (light) → dark stubs. Imported **once per runtime** and nowhere else: `src/app/layout.tsx`
+  for the app, `.ladle/components.tsx` for the workbench. Components reach tokens through the
+  cascade — a component that imports `tokens.css` is a bug.
 - **Units**: type + space in `rem` (root 16px); radius / border-width / shadow-offset in `px`.
 - **Categories**: colour, type scale, weight / leading / tracking, space, radius, border-width,
   shadow, z-index, motion (duration + easing), breakpoints. Token number = px for space /
@@ -96,14 +100,18 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
   corrected hexes are what's in `tokens.css`. **Body default is `--text-md` (14px)** — one step
   up from the designs' 13px.
 - **Viewport meta MUST allow pinch-zoom** — no `user-scalable=no` / `maximum-scale=1` (WCAG
-  1.4.4).
+  1.4.4). Set explicitly via the `viewport` export in `src/app/layout.tsx`
+  (`maximumScale: 5`, `userScalable: true`), not left to Next's default, so the requirement has
+  a comment to argue with.
 - **`--color-focus-ring`** is a token the designs didn't have — the Toybox screens show no
   focus-visible state, and RAC surfaces focus via `[data-focus-visible]` which **must** be
   styled. See [API & authoring conventions](#api--authoring-conventions) §3.
 - **Breakpoints wart**: CSS custom properties can't appear in an `@media` prelude. CSS Module
   media queries repeat the literal pixel value with a `/* --bp-md */` comment;
-  `src/ui/breakpoints.ts` is the single source for JS (`matchMedia`, RAC responsive props). A
-  cheap Vitest test parses `tokens.css` for `--bp-*` and asserts parity with `breakpoints.ts`.
+  `src/ui/breakpoints.ts` is the single source for JS (`matchMedia`, RAC responsive props).
+  `src/ui/breakpoints.test.ts` (the `node` project) parses `tokens.css` for `--bp-*` and asserts
+  parity with `breakpoints.ts` — names, values, and the derived `mq` strings. Its regex expects
+  the literal `--bp-<name>: <n>px;` shape, so keep the declarations plain.
 - **Dark mode is out of scope for v1** — `tokens.css` carries commented stubs
   (`@media (prefers-color-scheme: dark)` + `:root[data-theme="dark"]`); only the semantic block
   is ever redefined, primitive ramps stay as-is.
@@ -288,7 +296,10 @@ A PR adding a `src/ui/` primitive must:
 
 ## Workbench: Ladle
 
-- **Ladle** (Vite-based, CSF, minimal) — decided, **not built by this map**. Chosen over
+**`pnpm workbench`** serves it at `localhost:61000`; **`pnpm workbench:build`** produces a static
+catalogue in `build/` (gitignored). Config lives in `.ladle/`.
+
+- **Ladle** (Vite-based, CSF, minimal). Chosen over
   Storybook (heavier, its own webpack/vite config surface) for a 22-primitive catalogue.
 - Colocated `<Component>.stories.tsx`, default export `{ title: 'Primitives/…' }` or
   `'Composed/…'`.
@@ -296,14 +307,38 @@ A PR adding a `src/ui/` primitive must:
 - **Coverage bar**: one story per `variant`, one per `tone`, all `size`s, a `Disabled` story,
   and a decorator that makes keyboard focus easy to eyeball. **No interaction assertions** in
   stories — that is the component-test tier's job (see [Testing](#testing)).
-- Ladle ↔ Next + CSS Modules + `next/font` integration specifics are a **build-effort detail**,
-  not a decision (fog — see the map's Not-yet-specified).
+- **Ladle ↔ Next parity.** Ladle is a Vite app, so two Next-isms are re-supplied in `.ladle/`:
+  - *CSS Modules and the `@/*` alias*: nothing to configure. Vite compiles `*.module.css` with
+    the same default-export shape Next uses, and Ladle injects `vite-tsconfig-paths`, so
+    `tsconfig.json`'s `@/*` resolves in stories exactly as in the app.
+    `.ladle/workbench.module.css` exercises both on boot, so a regression here surfaces
+    immediately rather than on the first primitive.
+  - *`next/font`*: a Next build-time transform that cannot run under Vite.
+    `.ladle/config.mjs` `appendToHead` pulls the same two families, same pinned weights, same
+    `latin` subset from the Google CDN, and `.ladle/workbench.css` re-declares `--font-nunito` /
+    `--font-baloo` so `tokens.css` composes `--font-body` / `--font-display` identically. This
+    is the only place in the repo that talks to Google Fonts at runtime, and it is dev tooling
+    — never shipped.
+- **`.ladle/components.tsx`** exports the `Provider`: the workbench's answer to the root layout.
+  It imports `tokens.css` once, supplies the two font properties, and frames each story in a
+  wrapper styled purely from semantic tokens — which is why the catalogue is worth booting even
+  while it is empty.
+- `.ladle/` is a dot-directory, which TypeScript's wildcard includes skip, so `tsconfig.json`
+  names `.ladle/**/*.ts{,x}` explicitly. Drop that and `tsc --noEmit` stops seeing the
+  workbench.
 
 ## Icons
 
-- **`lucide-react`**, **named imports only** (`import { Bell } from 'lucide-react'`), ~10 icons,
-  tree-shaken. No barrel import, no dynamic icon-by-name. No bundle ticket — the named-import
-  discipline is the whole mitigation.
+- **`lucide-react`** (a runtime dependency), ~10 icons, tree-shaken.
+- **Named imports only** — `import { Bell } from 'lucide-react'`. All three of these pull the
+  whole ~1,600-icon barrel into the bundle and are banned:
+  - `import * as icons from 'lucide-react'`,
+  - a local re-export barrel (`src/ui/icons.ts` that fans out every icon),
+  - dynamic icon-by-name (`icons[props.name]`) — an icon prop takes the *component*
+    (`icon={Bell}`), never a string.
+- Nothing enforces this mechanically: there is no bundle-size ticket and no lint rule, so the
+  discipline **is** the mitigation. `optimizePackageImports` covers `react-aria-components`
+  only; `lucide-react` does not need it as long as the rule above holds.
 
 ## Fonts
 
@@ -311,8 +346,12 @@ A PR adding a `src/ui/` primitive must:
   700 / 800. `latin` subset. Explicit fallback stacks:
   - `--font-body: var(--font-nunito), ui-rounded, "Segoe UI", system-ui, sans-serif`
   - `--font-display: var(--font-baloo), var(--font-nunito), ui-rounded, system-ui, sans-serif`
-- `next/font` injects `--font-nunito` / `--font-baloo` on `<html>`; `tokens.css` composes the
-  full stacks from them.
+- `next/font` injects `--font-nunito` / `--font-baloo` on `<html>` (the `variable` class pair in
+  `src/app/layout.tsx`); `tokens.css` composes the full stacks from them. Both families are
+  self-hosted at build time — the browser never requests Google.
+- Both are variable fonts, but the weights are pinned as an explicit array anyway, so only the
+  seven faces above ship. Adding a weight means editing `layout.tsx` **and**
+  `.ladle/config.mjs`'s font URL, or the workbench silently synthesises it.
 
 ## Testing
 
@@ -350,18 +389,25 @@ See **[ADR-0009](./adr/0009-component-tests-are-a-narrow-interaction-contract-ti
 
 ## What the build effort creates
 
-None of this is committed in the planning effort. When the build starts:
+The running ledger. **Done** items are in the tree; the rest is still a to-do.
 
-- **Dependencies**: `react-aria-components`, `react-aria` / `@internationalized/date` (as RAC
-  pulls them), `class-variance-authority`, `clsx`, `lucide-react`; dev: `@ladle/react`,
+- **Done (#41)** — the token layer, the fonts, and the workbench:
+  - `lucide-react` (runtime) and `@ladle/react` (dev) added; `pnpm-workspace.yaml` `allowBuilds`
+    opts `esbuild` + `@swc/core` in (Ladle's toolchain) and `msw` out.
+  - `next.config.ts` — `experimental.optimizePackageImports: ['react-aria-components']`,
+    merged alongside the existing `agentRules: false`.
+  - `src/app/layout.tsx` — `next/font/google` for both families at the pinned weights, their
+    `variable` classes on `<html>`, the single `tokens.css` import, and an explicit `viewport`
+    export that keeps pinch-zoom available.
+  - `src/ui/tokens.css` — promoted from spec form (`@layer tokens`, primitives → semantic →
+    dark stubs). The dark stubs stay empty until a dark theme is actually designed.
+  - `src/ui/breakpoints.test.ts` — the `tokens.css` ↔ `breakpoints.ts` parity test.
+  - `.ladle/` — `config.mjs`, the `Provider` in `components.tsx`, `workbench.css`,
+    `workbench.module.css`; `pnpm workbench` / `pnpm workbench:build`.
+- **Dependencies still to add**: `react-aria-components`, `react-aria` /
+  `@internationalized/date` (as RAC pulls them), `class-variance-authority`, `clsx`; dev:
   `vitest-browser-react`, `@vitest/browser`.
-- **`next.config`**: `experimental.optimizePackageImports: ['react-aria-components']`; `next/font`
-  setup for Nunito + Baloo 2 with the pinned weights.
-- **`src/ui/tokens.css`** — promote from spec form: confirm `@layer` placement + the single
-  root-layout import; wire the dark-mode stub when a theme is actually designed.
 - **`src/ui/mixins.css`** (optional) — the shared `focus-ring` utility if it wants its own file.
-- **`src/ui/breakpoints.ts`** — already in spec form; add the `tokens.css` ↔ `breakpoints.ts`
-  parity Vitest test.
 - **`src/ui/announce.ts`** — the `@react-aria/live-announcer` re-export.
 - **`src/ui/index.ts`** — the plain barrel (no `'use client'`).
 - **`src/ui/<Component>/`** — for each of the 22 P0 primitives: `<Component>.tsx`
@@ -371,8 +417,7 @@ None of this is committed in the planning effort. When the build starts:
   project).
 - **Component tests** — `Dialog`, `SegmentedControl`, `DateField`, `DateRangeField`
   `*.test.tsx` in the `browser` project.
-- **`vitest.workspace.ts`** — `node` + `browser` projects.
-- **`.ladle/`** — Ladle config wired to Next's CSS Modules + `next/font`.
+- **`vitest.config.mts`** — gains the `browser` project alongside the existing `node` one.
 - **CI**: `test` job gains `npx playwright install chromium` and runs the Vitest workspace.
 - **P1 feature-composed components** — built alongside the features that own them, per the #30
   notes.
