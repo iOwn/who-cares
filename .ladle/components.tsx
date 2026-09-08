@@ -1,5 +1,6 @@
 import type { GlobalProvider } from "@ladle/react";
 import "@/ui/tokens.css";
+import "@/ui/mixins.css";
 import "./workbench.css";
 import styles from "./workbench.module.css";
 
@@ -14,9 +15,9 @@ import styles from "./workbench.module.css";
  *      .ladle/config.mjs about why next/font can't run here);
  *   3. paints a token-only frame around the story (workbench.module.css).
  *
- * The catalogue is empty until #42 lands the first primitives; booting it now
- * still proves the whole pipeline, because the frame below is styled purely
- * from semantic tokens.
+ * It also imports mixins.css once, right after tokens.css — the same order the
+ * root layout uses — so the shared `.focus-ring` utility and the token `@layer`
+ * are in scope for every story.
  */
 export const Provider: GlobalProvider = ({ children }) => (
   <div className={styles.workbench}>{children}</div>

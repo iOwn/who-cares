@@ -1,0 +1,27 @@
+/*
+ * Surface — bordered container. Semantic tokens only. No interaction state, no
+ * motion. `--radius-lg` (cards / list rows), 2px border.
+ */
+
+.base {
+  display: block;
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.default {
+  background: var(--color-surface);
+}
+
+.sunken {
+  border-color: var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+/* danger — the at-risk / escalating card (RequestCard escalating, error rows). */
+.danger {
+  border-color: var(--color-at-risk-solid);
+  background: var(--color-at-risk-surface);
+}

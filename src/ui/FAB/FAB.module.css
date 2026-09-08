@@ -1,0 +1,61 @@
+/*
+ * FAB — the floating "I'm out" pill. OWNS `--color-highlight` (the amber role);
+ * no other primitive uses it. Semantic tokens only; state via RAC data
+ * attributes; motion gated on reduced-motion. Position is feature-owned.
+ */
+
+.base {
+  z-index: var(--z-fab);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 3rem;
+  padding-block: var(--space-10);
+  padding-inline: var(--space-20);
+  border: var(--border-heavy) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-highlight);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--leading-tight);
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: transform var(--dur-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.base[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.base[data-hovered] {
+  filter: brightness(0.97);
+}
+
+.base[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* PRESS RECIPE: translateY(2px) + step the offset shadow down one (lg -> sm). */
+.base[data-pressed] {
+  transform: translateY(2px);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .base {
+    transition: none;
+  }
+
+  .base[data-pressed] {
+    transform: none;
+  }
+}

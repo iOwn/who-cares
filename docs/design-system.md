@@ -8,8 +8,11 @@ section); the rest is settled here.
 "the build effort creates …" note as a to-do unless
 [What the build effort creates](#what-the-build-effort-creates) marks it done — that section is
 the running ledger. Landed so far: the token layer, the fonts, and the Ladle workbench
-([iOwn/who-cares#41](https://github.com/iOwn/who-cares/issues/41)). Still unbuilt: every
-primitive under `src/ui/<Component>/` and the component-test tier. The
+([iOwn/who-cares#41](https://github.com/iOwn/who-cares/issues/41)); the `src/ui/` authoring
+foundation (`cx` / `mixins.css` / `announce` / the barrel), the first four primitives
+(`Button`, `IconButton`, `FAB`, `Surface`), and the `dayDisplayState()` mapper
+([iOwn/who-cares#42](https://github.com/iOwn/who-cares/issues/42)). Still unbuilt: the
+remaining primitives under `src/ui/<Component>/` and the component-test tier. The
 decisions behind all of it are on the wayfinder map
 ([iOwn/who-cares#27](https://github.com/iOwn/who-cares/issues/27)); see its Decisions-so-far for
 the one-line gist + link behind each choice.
@@ -404,17 +407,32 @@ The running ledger. **Done** items are in the tree; the rest is still a to-do.
   - `src/ui/breakpoints.test.ts` — the `tokens.css` ↔ `breakpoints.ts` parity test.
   - `.ladle/` — `config.mjs`, the `Provider` in `components.tsx`, `workbench.css`,
     `workbench.module.css`; `pnpm workbench` / `pnpm workbench:build`.
-- **Dependencies still to add**: `react-aria-components`, `react-aria` /
-  `@internationalized/date` (as RAC pulls them), `class-variance-authority`, `clsx`; dev:
-  `vitest-browser-react`, `@vitest/browser`.
-- **`src/ui/mixins.css`** (optional) — the shared `focus-ring` utility if it wants its own file.
-- **`src/ui/announce.ts`** — the `@react-aria/live-announcer` re-export.
-- **`src/ui/index.ts`** — the plain barrel (no `'use client'`).
-- **`src/ui/<Component>/`** — for each of the 22 P0 primitives: `<Component>.tsx`
+- **Done (#42)** — the `src/ui/` authoring foundation, the first four primitives, the mapper:
+  - Deps: `class-variance-authority`, `clsx`, `react-aria-components` (pulling `react-aria` /
+    `@internationalized/date`), `@react-aria/live-announcer` — all runtime.
+  - `src/ui/cx.ts` — `clsx` aliased `cx` (the one class-merge helper; no `tailwind-merge`).
+  - `src/ui/mixins.css` — global sheet in `@layer tokens`, imported once right after
+    `tokens.css` in `src/app/layout.tsx` **and** `.ladle/components.tsx`. Carries the shared
+    `.focus-ring` utility (for the button-styled-link recipe — a plain `<a>` gets no RAC
+    data-attributes) and the **press recipe** documented in full as a comment. The
+    `--color-focus-ring` token already existed in `tokens.css` (added by #29/#41); no token
+    change was needed.
+  - `src/ui/announce.ts` — re-exports `@react-aria/live-announcer`; thin wrapper flips the
+    default politeness to `'polite'` to match the §4 signature.
+  - `src/ui/index.ts` — the plain barrel (no `'use client'`; the directive rides on each RAC
+    component file). Also re-exports `breakpoints` and `dayDisplayState`.
+  - `src/ui/{Button,IconButton,FAB,Surface}/` — each `<Component>.tsx` + `.module.css` +
+    `.stories.tsx` + `index.ts`. `Button` is the fully-worked reference (`cva` → imported class
+    refs, press recipe, mandatory `[data-focus-visible]` ring, `className`/`style`/`ref`
+    forwarded and merged last). `Button`/`IconButton`/`FAB` on RAC `Button`; `Surface` a plain
+    `<div>` (no `as` prop — §5). No `.test.tsx` for these four: ADR-0009 scopes the
+    component-test tier to `Dialog`/`SegmentedControl`/`DateField`/`DateRangeField` only.
+  - `src/ui/dayDisplayState.ts` + `.test.ts` — the pure presentation-state mapper (`node`
+    project, TDD). Input is `{ dayState, isPatternWeekday, hasClosure }`; `n/a` widens to
+    `closed` (closure) / `off` (non-pattern weekday) / `quiet` (uncontested childcare day).
+- **`src/ui/<Component>/`** — for each remaining P0 primitive: `<Component>.tsx`
   (`'use client'` when it imports RAC), `<Component>.module.css`, `<Component>.stories.tsx`,
   `index.ts`. Final prop signatures from the #30 sketches.
-- **`src/ui/dayDisplayState.ts` + `.test.ts`** — the presentation-state mapper (pure, `node`
-  project).
 - **Component tests** — `Dialog`, `SegmentedControl`, `DateField`, `DateRangeField`
   `*.test.tsx` in the `browser` project.
 - **`vitest.config.mts`** — gains the `browser` project alongside the existing `node` one.

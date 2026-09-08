@@ -1,0 +1,61 @@
+/*
+ * Shared style utilities for src/ui/ — the bits that would otherwise be copied
+ * verbatim into every primitive's *.module.css.
+ *
+ * IMPORT SITES — like tokens.css, this is a global sheet imported EXACTLY once
+ * per runtime, right after tokens.css:
+ *   - the Next app:        src/app/layout.tsx
+ *   - the Ladle catalogue: .ladle/components.tsx
+ *
+ * Wrapped in `@layer tokens` so it participates in the same low-priority layer
+ * as the token declarations — a component's own *.module.css (unlayered) always
+ * wins over it.
+ */
+
+@layer tokens {
+  /* -----------------------------------------------------------------------
+   * FOCUS RING — MANDATORY on every interactive primitive
+   * (docs/design-system.md "API & authoring conventions" §3).
+   *
+   * The literal rule is `outline: 2px solid var(--color-focus-ring)` +
+   * `outline-offset: 2px`. Each RAC-backed primitive re-declares these two
+   * lines inside its own `&[data-focus-visible]` selector (RAC emits
+   * `[data-focus-visible]` on keyboard focus); non-RAC elements use native
+   * `:focus-visible`. This class is the shared definition for anything that
+   * is styled OUTSIDE a CSS Module — notably the "button-styled link" recipe
+   * (`<Link className={cx(buttonStyles, 'focus-ring')}>`), since a plain
+   * `<a>` gets no RAC data-attributes.
+   *
+   * HARD RULE: no component may set `outline: none` without an
+   * equivalent-or-better indicator in the same rule. Reviewers reject that.
+   * --------------------------------------------------------------------- */
+  .focus-ring:focus-visible,
+  .focus-ring[data-focus-visible] {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* -----------------------------------------------------------------------
+   * PRESS RECIPE — the Toybox "physical button" affordance, shared by
+   * `Button` + `FAB` (docs/design-system.md "API & authoring conventions"
+   * §9 and Token model). It is a documented recipe, NOT a token.
+   *
+   * On `[data-pressed]` (RAC) / `:active` (native), a control:
+   *   1. drops `transform: translateY(2px)`
+   *   2. steps its offset shadow down one rung: --shadow-lg → --shadow-sm,
+   *      --shadow-md → --shadow-sm, --shadow-sm → none
+   *   3. transitions `transform var(--dur-fast) var(--ease-standard)`
+   *
+   * Under `@media (prefers-reduced-motion: reduce)` the component drops the
+   * `transform` and the `transition` entirely (the shadow step is a static
+   * state change, not motion, so it may stay). `--dur-*` is already zeroed
+   * globally by tokens.css under the same query — this recipe additionally
+   * removes the `transform`, per §9.
+   *
+   * Worked reference implementation: src/ui/Button/Button.module.css.
+   * The recipe is duplicated per-component rather than centralised here
+   * because the shadow rung a component starts from differs (Button md,
+   * FAB lg) and CSS custom properties can't parameterise a utility class
+   * cleanly.
+   * --------------------------------------------------------------------- */
+}
