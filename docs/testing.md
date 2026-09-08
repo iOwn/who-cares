@@ -42,10 +42,12 @@ See **[ADR-0005](./adr/0005-domain-logic-is-framework-free-and-that-line-is-the-
   **No MSW in v1.**
 - **Clock is an injected port** (`now(): Date`), not fake timers. At-risk logic compares
   `now()` against two 48h thresholds (ADR-0003) and drives no timers itself.
-- **Config & layout**: a Vitest workspace with two projects — `node` (`environment: 'node'`,
+- **Config & layout**: a Vitest workspace of two projects — `node` (`environment: 'node'`,
   the bulk) and `browser` (Playwright provider, Chromium) for the narrow component-test tier
-  (ADR-0009). `*.test.ts` → `node`, `*.test.tsx` → `browser`; both colocated with source.
-  Playwright E2E specs stay in a top-level `e2e/`.
+  (ADR-0009). Declared via `test.projects` in `vitest.config.ts` (the standalone
+  `vitest.workspace.ts` file is deprecated in Vitest ≥3, removed in ≥4). `*.test.ts` →
+  `node`, `*.test.tsx` → `browser`; both colocated with source. Playwright E2E specs stay in
+  a top-level `e2e/`.
 
 ## DB-integration approach
 
@@ -263,8 +265,9 @@ self-merge. Chosen over Renovate (more config) and manual bumping (rots between 
 
 None of this is committed in the planning effort. When the build starts:
 
-- `vitest.config.ts` + `vitest.workspace.ts` — the `node` (`environment: 'node'`) and `browser`
-  (Playwright/Chromium) projects. See also `docs/design-system.md` for what `src/ui/` adds.
+- `vitest.config.ts` — the `node` (`environment: 'node'`) and `browser` (Playwright/Chromium)
+  projects, declared under `test.projects`. See also `docs/design-system.md` for what
+  `src/ui/` adds.
 - `src/testing/factories.ts`, `src/testing/seed.ts` — the shared fixture module.
 - `app/api/test/login/route.ts`, `app/api/test/seed/route.ts` — `E2E_TEST_MODE`-gated seam.
 - `e2e/` — one Playwright spec + `playwright.config.ts` + global setup.
