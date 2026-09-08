@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome check --write",
+    "test:hooks": "node --test \".claude/hooks/**/*.test.mjs\"",
     "prepare": "lefthook install"
   },
   "dependencies": {

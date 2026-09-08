@@ -38,6 +38,11 @@ pre-push:
     - name: typecheck
       run: pnpm exec tsc --noEmit
 
+    - name: hook-tests
+      # Guards the agent-facing hook scripts under .claude/hooks/ — plain
+      # `node --test`, no test framework needed.
+      run: pnpm run test:hooks
+
     - name: test
       # Becomes a real gate after #37 (remove the `|| true` then).
       run: pnpm exec vitest run || true
