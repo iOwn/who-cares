@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
 import type { ReactNode } from "react";
 import "@/ui/tokens.css";
+import "@/ui/mixins.css";
 
 /**
  * The two families, with the weights pinned in docs/design-system.md "Fonts".

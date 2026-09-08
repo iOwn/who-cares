@@ -1,0 +1,83 @@
+/*
+ * IconButton — icon-only action. Semantic tokens only; state via RAC data
+ * attributes; motion gated on reduced-motion. Square tile, `--radius-sm`.
+ */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: var(--border) solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.base[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.base[data-hovered] {
+  color: var(--color-text);
+}
+
+.base[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* --- size (square) --- */
+.sizeMd {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.sizeSm {
+  width: 2.125rem;
+  height: 2.125rem;
+}
+
+/* --- variant: secondary (white tile + offset shadow) --- */
+.secondary {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondary[data-hovered] {
+  background: var(--color-surface-sunken);
+}
+
+/* PRESS RECIPE: translateY(2px) + step the offset shadow down one (sm -> none). */
+.secondary[data-pressed] {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+/* --- variant: ghost --- */
+.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.ghost[data-hovered] {
+  background: var(--color-surface-sunken);
+}
+
+.ghost[data-pressed] {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .base {
+    transition: none;
+  }
+
+  .base[data-pressed] {
+    transform: none;
+  }
+}
