@@ -40,7 +40,7 @@ jobs:
       (github.event.deployment_status.environment == 'Preview' ||
        github.event.deployment_status.environment == 'preview')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       - name: Resolve Playwright version
