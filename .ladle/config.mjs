@@ -19,15 +19,27 @@
  *   `--font-display` identically. This is the only place in the repo that talks
  *   to Google Fonts at runtime, and it is dev-tooling only — never shipped.
  * */
+
+/**
+ * The webfont URL, deliberately one unbroken literal: it was assembled from a
+ * joined array once, and splitting a URL across array entries is a silent
+ * corruption waiting to happen — a stray separator or a lost fragment yields a
+ * URL that still looks plausible and just serves the wrong faces.
+ *
+ * The weights here MUST match the `next/font/google` calls in
+ * src/app/layout.tsx (Nunito 400/600/700/800, Baloo 2 500/700/800). Nothing
+ * checks that yet; adding a weight in one place and not the other means the
+ * workbench synthesises the face and the app doesn't.
+ */
+const googleFontsHref =
+  "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@500;700;800&display=swap";
+
 export default {
   stories: "src/**/*.stories.{ts,tsx,mdx}",
   appendToHead: [
     '<link rel="preconnect" href="https://fonts.googleapis.com">',
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2',
-    "?family=Nunito:wght@400;600;700;800",
-    "&family=Baloo+2:wght@500;700;800",
-    '&display=swap">',
+    `<link rel="stylesheet" href="${googleFontsHref}">`,
   ].join(""),
   addons: {
     // Every primitive must render a visible focus ring (docs/design-system.md
