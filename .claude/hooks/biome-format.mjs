@@ -6,9 +6,13 @@
  * before continuing. See docs/testing.md "Local guardrails" layer 1.
  *
  * Reads the tool-call payload as JSON on stdin; only acts on JS/TS/JSON/CSS.
+ * Invokes Biome's own Node entrypoint directly (no shell, no `pnpm exec`
+ * resolution) so paths with spaces are safe and the per-edit cost is minimal.
  */
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 
+const require = createRequire(import.meta.url);
 const FIXABLE = /\.(m?[jt]sx?|cjs|jsonc?|css)$/;
 
 let raw = "";
@@ -26,10 +30,18 @@ process.stdin.on("end", () => {
 
   if (!filePath || !FIXABLE.test(filePath)) process.exit(0);
 
+  let biomeBin;
+  try {
+    biomeBin = require.resolve("@biomejs/biome/bin/biome");
+  } catch {
+    // Biome not installed (e.g. deps not yet fetched) — don't block the edit.
+    process.exit(0);
+  }
+
   const result = spawnSync(
-    "pnpm",
-    ["exec", "biome", "check", "--write", "--no-errors-on-unmatched", filePath],
-    { stdio: "inherit", shell: process.platform === "win32" },
+    process.execPath,
+    [biomeBin, "check", "--write", "--no-errors-on-unmatched", filePath],
+    { stdio: "inherit" },
   );
 
   process.exit(result.status === 0 ? 0 : 2);
