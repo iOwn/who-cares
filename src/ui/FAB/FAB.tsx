@@ -27,10 +27,12 @@ export interface FABProps extends Omit<RACButtonProps, "className" | "children">
   children: ReactNode;
   /** Forwarded to the `<button>` and merged LAST. */
   className?: RACButtonProps["className"];
+  /** Forwarded to the `<button>` and merged LAST (the escape hatch). */
+  style?: RACButtonProps["style"];
 }
 
 export const FAB = forwardRef<HTMLButtonElement, FABProps>(function FAB(
-  { icon: Icon, children, className, ...props },
+  { icon: Icon, children, className, style, ...props },
   ref,
 ) {
   return (
@@ -38,6 +40,7 @@ export const FAB = forwardRef<HTMLButtonElement, FABProps>(function FAB(
       {...props}
       ref={ref}
       className={composeRenderProps(className, (resolved) => cx(styles.base, resolved))}
+      style={style}
     >
       <Icon size={18} aria-hidden />
       <span className={styles.label}>{children}</span>

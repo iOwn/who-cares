@@ -32,8 +32,8 @@ export interface SurfaceProps
     VariantProps<typeof surface> {}
 
 export const Surface = forwardRef<HTMLDivElement, SurfaceProps>(function Surface(
-  { variant, className, ...props },
+  { variant, className, style, ...props },
   ref,
 ) {
-  return <div {...props} ref={ref} className={cx(surface({ variant }), className)} />;
+  return <div {...props} ref={ref} className={cx(surface({ variant }), className)} style={style} />;
 });

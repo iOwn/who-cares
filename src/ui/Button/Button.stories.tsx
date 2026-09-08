@@ -27,7 +27,7 @@ export const Variants: Story = () => (
     <Button variant="secondary">Today</Button>
     <Button variant="ghost">Cancel</Button>
     <Button variant="destructive">Decline</Button>
-    <Button variant="dashed" isFullWidth>
+    <Button variant="dashed" fullWidth>
       <Plus size={16} aria-hidden /> Add a closure
     </Button>
   </Row>
@@ -86,7 +86,7 @@ export const WithIcons: Story = () => (
 
 export const FullWidth: Story = () => (
   <div style={{ maxWidth: "20rem" }}>
-    <Button variant="primary" isFullWidth>
+    <Button variant="primary" fullWidth>
       Confirm and continue
     </Button>
   </div>

@@ -121,7 +121,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* --- variant: dashed (typically paired with isFullWidth) --- */
+/* --- variant: dashed (typically paired with fullWidth) --- */
 .dashed {
   border-style: dashed;
   border-color: var(--color-border);

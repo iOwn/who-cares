@@ -110,13 +110,13 @@ importers:
   .:
     dependencies:
       '@react-aria/live-announcer':
-        specifier: ^3.5.1
+        specifier: 3.5.1
         version: 3.5.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 0.7.1
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 2.1.1
         version: 2.1.1
       drizzle-orm:
         specifier: 0.45.2
@@ -131,7 +131,7 @@ importers:
         specifier: 19.2.8
         version: 19.2.8
       react-aria-components:
-        specifier: ^1.21.1
+        specifier: 1.21.1
         version: 1.21.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react-dom:
         specifier: 19.2.8

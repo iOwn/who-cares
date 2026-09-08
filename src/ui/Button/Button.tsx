@@ -15,7 +15,7 @@ import styles from "./Button.module.css";
  * the fully-worked reference primitive for the `src/ui/` authoring conventions:
  *
  *   - `cva` maps the prop-driven axes (`variant` / `tone` / `size` /
- *     `isFullWidth`) to IMPORTED CSS-Module class references — never string
+ *     `fullWidth`) to IMPORTED CSS-Module class references — never string
  *     literals (docs/design-system.md §1).
  *   - interaction STATE (`hover` / `pressed` / `focus-visible` / `disabled`) is
  *     styled in Button.module.css via the `&[data-*]` attributes RAC emits —
@@ -52,7 +52,7 @@ const button = cva(styles.base, {
       sm: styles.sizeSm,
       md: styles.sizeMd,
     },
-    isFullWidth: {
+    fullWidth: {
       true: styles.fullWidth,
     },
   },
@@ -69,10 +69,12 @@ export interface ButtonProps
   children?: ReactNode;
   /** Forwarded to the `<button>` and merged LAST. RAC's function form is supported. */
   className?: RACButtonProps["className"];
+  /** Forwarded to the `<button>` and merged LAST (the escape hatch). */
+  style?: RACButtonProps["style"];
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant, tone, size, isFullWidth, className, ...props },
+  { variant, tone, size, fullWidth, className, style, ...props },
   ref,
 ) {
   return (
@@ -80,8 +82,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...props}
       ref={ref}
       className={composeRenderProps(className, (resolved) =>
-        cx(button({ variant, tone, size, isFullWidth }), resolved),
+        cx(button({ variant, tone, size, fullWidth }), resolved),
       )}
+      style={style}
     />
   );
 });

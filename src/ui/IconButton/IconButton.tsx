@@ -43,10 +43,12 @@ export interface IconButtonProps
   children: ReactNode;
   /** Forwarded to the `<button>` and merged LAST. */
   className?: RACButtonProps["className"];
+  /** Forwarded to the `<button>` and merged LAST (the escape hatch). */
+  style?: RACButtonProps["style"];
 }
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
-  { variant, size, className, ...props },
+  { variant, size, className, style, ...props },
   ref,
 ) {
   return (
@@ -56,6 +58,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       className={composeRenderProps(className, (resolved) =>
         cx(iconButton({ variant, size }), resolved),
       )}
+      style={style}
     />
   );
 });
