@@ -9,6 +9,10 @@ import "@/ui/tokens.css";
  * Google — and exposes each as a CSS custom property on whatever element gets
  * the returned `variable` class. `tokens.css` composes `--font-body` /
  * `--font-display` from these two, together with the fallback stacks.
+ *
+ * The weights here MUST match the Google Fonts URL in .ladle/config.mjs
+ * (`googleFontsHref`). A parity test (src/app/fonts.test.ts) ensures drift is
+ * caught.
  */
 const nunito = Nunito({
   subsets: ["latin"],
