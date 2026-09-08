@@ -27,9 +27,8 @@
  * URL that still looks plausible and just serves the wrong faces.
  *
  * The weights here MUST match the `next/font/google` calls in
- * src/app/layout.tsx (Nunito 400/600/700/800, Baloo 2 500/700/800). Nothing
- * checks that yet; adding a weight in one place and not the other means the
- * workbench synthesises the face and the app doesn't.
+ * src/app/layout.tsx (Nunito 400/600/700/800, Baloo 2 500/700/800). A parity
+ * test (src/app/fonts.test.ts) ensures drift is caught.
  */
 const googleFontsHref =
   "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@500;700;800&display=swap";
