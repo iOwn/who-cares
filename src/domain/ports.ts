@@ -21,7 +21,7 @@ import type {
   Household,
   Member,
   PickupRequest,
-} from './types';
+} from "./types";
 
 /* ------------------------------------------------------------------ *
  * Repository ports — one per persisted entity.

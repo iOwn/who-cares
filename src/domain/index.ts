@@ -4,6 +4,6 @@
  * `src/domain/`.
  */
 
-export * from './types';
-export * from './ports';
-export * as noopAdapters from './adapters/noop';
+export * as noopAdapters from "./adapters/noop";
+export * from "./ports";
+export * from "./types";

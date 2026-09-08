@@ -3,4 +3,4 @@
  * PGlite integration layer (`seed()`, #38), and the E2E seed route.
  */
 
-export * from './factories';
+export * from "./factories";

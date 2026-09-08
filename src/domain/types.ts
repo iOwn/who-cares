@@ -25,7 +25,7 @@
 export type CalendarDate = string;
 
 /** A day of the week the childcare pattern can include. */
-export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 /** The single family unit the app serves; v1 runs exactly one. */
 export interface Household {
@@ -108,12 +108,7 @@ export interface Absence {
  * The lifecycle states of a pickup request. `Open` is the only non-terminal
  * state; a request never reopens and is never re-raised (CONTEXT.md).
  */
-export const PICKUP_REQUEST_STATES = [
-  'Open',
-  'Accepted',
-  'Declined',
-  'Withdrawn',
-] as const;
+export const PICKUP_REQUEST_STATES = ["Open", "Accepted", "Declined", "Withdrawn"] as const;
 
 export type PickupRequestState = (typeof PICKUP_REQUEST_STATES)[number];
 
@@ -143,7 +138,7 @@ export interface PickupRequest {
 }
 
 /** How an assignment came to be. */
-export type AssignmentSource = 'accepted-request' | 'direct-claim';
+export type AssignmentSource = "accepted-request" | "direct-claim";
 
 /**
  * The record of who is responsible for collecting the child on a given

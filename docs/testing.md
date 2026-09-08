@@ -189,7 +189,8 @@ earliest → last:
 2. **lefthook pre-commit** (any committer) — `biome check --write --staged`, staged files
    only, re-stages fixes. Sub-second. Nothing else on pre-commit.
 3. **lefthook pre-push** (optional, documented as safe to delete) — `tsc --noEmit` +
-   `vitest run`. Same checks CI runs, earlier.
+   `vitest run` + `node --test` over the `.claude/hooks/` scripts. Same checks CI runs,
+   earlier.
 4. **commit-msg** — none.
 5. **CI** — the actual gate, non-bypassable (see next section).
 
@@ -202,9 +203,12 @@ lint-staged, simple-git-hooks.
 - **Humans**: `git commit --no-verify` / `git push --no-verify` is fine in a hurry — CI
   re-checks everything. `LEFTHOOK=0` disables in bulk.
 - **Agents**: **must not** use `--no-verify` — fix-or-report on a hook failure (CLAUDE.md
-  rule). A `.claude/settings.json` `PreToolUse` hook on `Bash` denies commands matching
-  `--no-verify` / `-n` on `git commit` / `git push`, so the rule is enforced, not merely
-  trusted.
+  rule). A `.claude/settings.json` `PreToolUse` hook on `Bash` denies commands that carry
+  `--no-verify` / `-n` (including combined short clusters like `-nm`) or a `LEFTHOOK=0`
+  prefix on `git commit` / `git push`, so the rule is enforced, not merely trusted. The
+  hook's flag detection is scoped to the `git commit` / `git push` segment, so an unrelated
+  `-n` elsewhere in a compound command (`find . -name … && git commit …`) is not a false
+  positive. Covered by `.claude/hooks/deny-git-hook-bypass.test.mjs`.
 
 ## CI pipeline shape
 
@@ -270,7 +274,8 @@ None of this is committed in the planning effort. When the build starts:
 - `biome.json` — lint + format + import-sort config.
 - `lefthook.yml` — the pre-commit / pre-push layers.
 - `.claude/settings.json` — the `PostToolUse` (biome) and `PreToolUse` (`--no-verify` deny)
-  hook entries.
+  hook entries. `.claude/hooks/*.mjs` — the scripts they run, with
+  `deny-git-hook-bypass.test.mjs` covering the deny logic.
 - `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`, `.github/dependabot.yml`.
 - `.env.ci` — committed fake build-time env.
 - `.nvmrc` — `22`.

@@ -15,7 +15,7 @@ import type {
   Notifier,
   PushMessage,
   PushSender,
-} from '../ports';
+} from "../ports";
 
 /** The real wall clock. Not a fake — the honest default `Clock`. */
 export const systemClock: Clock = {
@@ -35,7 +35,7 @@ const silent: Logger = () => {};
 export function noopMailer(log: Logger = silent): Mailer {
   return {
     async send(message: EmailMessage): Promise<void> {
-      log('noopMailer.send', message);
+      log("noopMailer.send", message);
     },
   };
 }
@@ -44,7 +44,7 @@ export function noopMailer(log: Logger = silent): Mailer {
 export function noopPushSender(log: Logger = silent): PushSender {
   return {
     async send(message: PushMessage): Promise<void> {
-      log('noopPushSender.send', message);
+      log("noopPushSender.send", message);
     },
   };
 }
@@ -53,7 +53,7 @@ export function noopPushSender(log: Logger = silent): PushSender {
 export function noopNotifier(log: Logger = silent): Notifier {
   return {
     async notify(notification: Notification): Promise<void> {
-      log('noopNotifier.notify', notification);
+      log("noopNotifier.notify", notification);
     },
   };
 }
