@@ -51,7 +51,7 @@ jobs:
         id: pw
         run: echo "version=$(node -e "console.log(require('playwright/package.json').version)")" >> "$GITHUB_OUTPUT"
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -103,7 +103,7 @@ jobs:
       # `.next/cache` — keyed on the lockfile plus a hash of everything that feeds
       # the build, with a lockfile-only restore key for partial reuse.
       - name: Cache Next.js build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .next/cache
           key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts', 'tsconfig.json', '.env.ci', 'package.json') }}
