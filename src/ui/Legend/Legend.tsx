@@ -1,8 +1,7 @@
 import { forwardRef, type HTMLAttributes } from "react";
 import { cx } from "../cx";
-import type { StatusDisplayState } from "../dayDisplayState";
-import { StateDot } from "../StateDot";
-import { STATUS_LABELS } from "../StatePill";
+import { STATUS_LABELS, type StatusDisplayState } from "../dayDisplayState";
+import { StateDot, type StateDotProps } from "../StateDot";
 import styles from "./Legend.module.css";
 
 /**
@@ -20,7 +19,7 @@ export interface LegendProps extends Omit<HTMLAttributes<HTMLUListElement>, "chi
   /** Which states to show, in order. Default: all 4 in canonical order. */
   states?: readonly StatusDisplayState[];
   /** Dot size — forwarded to `StateDot`. Default `sm`. */
-  size?: "sm" | "md";
+  size?: StateDotProps["size"];
 }
 
 export const Legend = forwardRef<HTMLUListElement, LegendProps>(function Legend(

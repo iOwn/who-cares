@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { cx } from "../cx";
-import type { StatusDisplayState } from "../dayDisplayState";
+import { STATUS_LABELS, type StatusDisplayState } from "../dayDisplayState";
 import styles from "./StatePill.module.css";
 
 /**
@@ -15,15 +15,6 @@ import styles from "./StatePill.module.css";
  * unless `children` overrides it. The leading dot is decorative
  * (`aria-hidden`) — the label carries the meaning.
  */
-
-/** Friendly labels for the status vocabulary, shared with `Legend`. */
-export const STATUS_LABELS = {
-  resolved: "Sorted",
-  pending: "Waiting",
-  "at-risk": "At risk",
-  closed: "Closed",
-} as const satisfies Record<StatusDisplayState, string>;
-
 const pill = cva(styles.base, {
   variants: {
     state: {

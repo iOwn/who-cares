@@ -32,6 +32,19 @@ export type StatusDisplayState = Extract<
   "resolved" | "pending" | "at-risk" | "closed"
 >;
 
+/**
+ * The friendly, user-facing label for each status-vocabulary state — shared by
+ * `StatePill` (default label) and `Legend`. Kept here next to
+ * `StatusDisplayState` (pure data, no React) so the two primitives don't have to
+ * import from each other.
+ */
+export const STATUS_LABELS = {
+  resolved: "Sorted",
+  pending: "Waiting",
+  "at-risk": "At risk",
+  closed: "Closed",
+} as const satisfies Record<StatusDisplayState, string>;
+
 export interface DayDisplayInput {
   /** The domain-computed Day state for the date — passed through untouched. */
   readonly dayState: DomainDayState;

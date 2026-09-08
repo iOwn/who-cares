@@ -1,1 +1,1 @@
-export { STATUS_LABELS, StatePill, type StatePillProps } from "./StatePill";
+export { StatePill, type StatePillProps } from "./StatePill";

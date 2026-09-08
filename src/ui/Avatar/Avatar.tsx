@@ -35,8 +35,8 @@ export interface AvatarProps
 }
 
 function initial(name: string): string {
-  const trimmed = name.trim();
-  return trimmed ? trimmed[0].toUpperCase() : "?";
+  const [first] = Array.from(name.trim());
+  return first ? first.toUpperCase() : "?";
 }
 
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(

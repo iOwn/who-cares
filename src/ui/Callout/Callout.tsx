@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { type ComponentType, forwardRef, type HTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { cx } from "../cx";
+import type { IconComponent } from "../icon";
 import styles from "./Callout.module.css";
 
 /**
@@ -40,11 +41,6 @@ const callout = cva(styles.base, {
     tone: "neutral",
   },
 });
-
-type IconComponent = ComponentType<{
-  size?: number | string;
-  "aria-hidden"?: boolean | "true" | "false";
-}>;
 
 export interface CalloutProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "title" | "children">,
