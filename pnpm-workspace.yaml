@@ -1,2 +1,6 @@
 allowBuilds:
+  # esbuild ships with drizzle-kit (the migration generator CLI). Its postinstall
+  # only unpacks the platform binary, so allowing it is what makes `pnpm db:generate`
+  # work at all.
+  esbuild: true
   lefthook: true

@@ -15,7 +15,8 @@
       "!**/*.tsbuildinfo",
       "!tsconfig.tsbuildinfo",
       "!**/*.dc.html",
-      "!.design"
+      "!.design",
+      "!src/db/migrations/meta"
     ]
   },
   "formatter": {
