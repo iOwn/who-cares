@@ -308,10 +308,14 @@ four **parallel** jobs:
 
 - Triggered on `deployment_status`; the job is gated on `state == 'success'` and the
   `Preview` environment. The preview URL comes from
-  `github.event.deployment_status.target_url`, exported as `PLAYWRIGHT_BASE_URL`.
+  `github.event.deployment_status.environment_url` (the deployed site), falling back to
+  `target_url` (the Vercel inspector page), exported as `PLAYWRIGHT_BASE_URL`.
 - Runs the one Chromium smoke spec against the preview URL.
 - **Posts a PR comment only on failure** (run link + failing step). Green is silent — the
   commit status carries it. The comment resolves the PR from the deployment commit SHA.
+- `deployment_status` workflows only run from the copy of the file on the default branch, so
+  `e2e.yml` **cannot be exercised from its own PR** — a follow-up validation run against a
+  real preview deploy is needed once it lands on `main`.
 
 ### CI ↔ Vercel
 

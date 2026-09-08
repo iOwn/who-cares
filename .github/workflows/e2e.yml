@@ -4,6 +4,15 @@
 # check: it runs post-deploy, asynchronously, against the preview URL rather than
 # the PR head commit. Green is silent (the commit status carries it); a failure
 # posts one PR comment with the run link.
+#
+# NOTE: `deployment_status` workflows only run from the copy of this file on the
+# repo's default branch. This workflow therefore cannot be exercised from a PR —
+# it needs a follow-up validation run against a real preview deploy once #40 is
+# merged to `main`.
+#
+# The deployed site URL is `deployment_status.environment_url`. For the Vercel
+# GitHub integration `target_url` / `log_url` is the vercel.com inspector page,
+# not the site — so prefer `environment_url` and fall back to `target_url`.
 name: E2E smoke
 
 on:
@@ -11,12 +20,13 @@ on:
 
 # Supersede an older preview run for the same deployment target.
 concurrency:
-  group: e2e-${{ github.event.deployment_status.target_url }}
+  group: e2e-${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
   cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   smoke:
@@ -47,7 +57,7 @@ jobs:
       - name: Run smoke spec
         id: smoke
         env:
-          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
+          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
         run: pnpm exec playwright test --project chromium
 
       # Failure only — green stays silent.
@@ -58,7 +68,8 @@ jobs:
           script: |
             const sha = context.payload.deployment.sha;
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const previewUrl = context.payload.deployment_status.target_url;
+            const ds = context.payload.deployment_status;
+            const previewUrl = ds.environment_url || ds.target_url;
 
             const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
