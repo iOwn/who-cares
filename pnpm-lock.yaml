@@ -109,6 +109,9 @@ importers:
 
   .:
     dependencies:
+      '@internationalized/date':
+        specifier: 3.12.4
+        version: 3.12.4
       '@react-aria/live-announcer':
         specifier: 3.5.1
         version: 3.5.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

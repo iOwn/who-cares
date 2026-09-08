@@ -1,0 +1,264 @@
+/*
+ * DateField — segmented date input + calendar popover. The worked reference for
+ * the src/ui/ FIELD styling conventions (counterpart of Button.module.css for
+ * actions). Consumes ONLY semantic tokens (tokens.css). Interaction state via
+ * RAC's `[data-*]` attributes, never render-prop booleans. Field control height
+ * matches Button (2.5rem). The popover sits at `--z-popover` so it clears the
+ * modal / scrim layer (docs/design-system.md Token model).
+ */
+
+.field {
+  display: grid;
+  gap: var(--space-6);
+  font-family: var(--font-body);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-subtle);
+}
+
+/* --- the input row: segments + calendar trigger --- */
+.group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  /* 2.5rem: the shared 40px control height — same rem literal Button uses for
+     its `md` size (Button.module.css); the token scale has no control-height
+     step. */
+  min-height: 2.5rem;
+  padding-block: var(--space-4);
+  padding-inline: var(--space-12);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+/* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
+.group[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-border-strong);
+}
+
+.group[data-invalid] {
+  border-color: var(--color-at-risk-solid);
+}
+
+.group[data-disabled] {
+  background: var(--color-surface-sunken);
+  cursor: not-allowed;
+}
+
+.input {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  font-size: var(--text-md);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.segment {
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  text-align: end;
+  color: var(--color-text);
+}
+
+.segment[data-type="literal"] {
+  padding-inline: 0;
+  color: var(--color-text-subtle);
+}
+
+.segment[data-placeholder] {
+  color: var(--color-text-placeholder);
+}
+
+/* The focused segment's indicator is the inverted fill declared in THIS rule
+   (docs/design-system.md §3 allows `outline: none` when an equal-or-better
+   indicator sits in the same rule). --color-accent-text on --color-accent-surface
+   is a WCAG-AA pair from the #29 audit (contrast 5.67:1). */
+.segment[data-focused] {
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  outline: none;
+}
+
+.segment[data-disabled] {
+  color: var(--color-text-muted);
+}
+
+/* --- calendar trigger button --- */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: var(--space-4);
+  margin-inline-end: calc(-1 * var(--space-4));
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+.trigger[data-hovered] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.trigger[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.trigger[data-disabled] {
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-at-risk-text);
+}
+
+/* --- popover + calendar --- */
+.popover {
+  z-index: var(--z-popover);
+  padding: var(--space-12);
+  border: var(--border) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.calendar {
+  width: fit-content;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.calendarTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.navButton[data-hovered] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.navButton[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.navButton[data-disabled] {
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+
+.grid {
+  border-collapse: collapse;
+}
+
+.grid th {
+  padding-block: var(--space-4);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.cell {
+  /* --space-32 == 2rem == a 32px square day cell (a touch target, not spacing —
+     the space scale simply tops out at the size we want here). */
+  width: var(--space-32);
+  height: var(--space-32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.cell[data-hovered] {
+  background: var(--color-surface-sunken);
+}
+
+.cell[data-today] {
+  font-weight: var(--font-weight-bold);
+  box-shadow: inset 0 0 0 var(--border-hair) var(--color-border-strong);
+}
+
+/* Same --color-accent / --color-text-on-accent fill as Button `primary`
+   (Button.module.css); the selected day is also bold. */
+.cell[data-selected] {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-bold);
+}
+
+.cell[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.cell[data-disabled] {
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+
+.cell[data-unavailable] {
+  color: var(--color-text-placeholder);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* MOTION GATE — drop the transitions entirely, not just their duration (§9). */
+@media (prefers-reduced-motion: reduce) {
+  .group,
+  .trigger {
+    transition: none;
+  }
+}

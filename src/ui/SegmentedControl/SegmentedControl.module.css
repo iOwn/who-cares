@@ -1,0 +1,65 @@
+/*
+ * SegmentedControl — exclusive segments on a sunken track.
+ * Semantic tokens only. State via RAC's [data-*] attributes on <Radio>.
+ * Motion (the active-segment settle) gated on prefers-reduced-motion.
+ */
+
+.group {
+  display: inline-flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-track);
+}
+
+.group[data-disabled] {
+  opacity: 0.55;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: var(--space-6);
+  padding-inline: var(--space-12);
+  border: var(--border) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
+.item[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.item[data-hovered] {
+  color: var(--color-text);
+}
+
+.item[data-selected] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-tab);
+}
+
+.item[data-disabled] {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

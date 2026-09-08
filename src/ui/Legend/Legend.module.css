@@ -1,0 +1,22 @@
+/*
+ * Legend — the grid / list key. Semantic tokens only. No interaction, no motion.
+ */
+
+.base {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text-muted);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+}
