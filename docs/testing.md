@@ -22,7 +22,8 @@ The decisions behind all of it are on the wayfinder map
 | Dependency updates | Dependabot | grouped weekly, majors separate |
 | Commit convention | Conventional Commits | documented in `docs/contributing.md`, **not enforced** |
 
-Net new dev-dependencies for the whole test/tooling layer: `vitest`, `@playwright/test`,
+Net new dev-dependencies for the whole test/tooling layer: `vitest`,
+`@vitest/browser-playwright`, `vitest-browser-react`, `playwright` / `@playwright/test`,
 `@electric-sql/pglite`, `@biomejs/biome`, `lefthook`. No `eslint`, no `prettier`, no MSW,
 no commitlint, no Testcontainers.
 
@@ -44,10 +45,21 @@ See **[ADR-0005](./adr/0005-domain-logic-is-framework-free-and-that-line-is-the-
   `now()` against two 48h thresholds (ADR-0003) and drives no timers itself.
 - **Config & layout**: a Vitest workspace of two projects — `node` (`environment: 'node'`,
   the bulk) and `browser` (Playwright provider, Chromium) for the narrow component-test tier
-  (ADR-0009). Declared via `test.projects` in `vitest.config.ts` (the standalone
+  (ADR-0009). Declared via `test.projects` in `vitest.config.mts` (the standalone
   `vitest.workspace.ts` file is deprecated in Vitest ≥3, removed in ≥4). `*.test.ts` →
-  `node`, `*.test.tsx` → `browser`; both colocated with source. Playwright E2E specs stay in
-  a top-level `e2e/`.
+  `node`, `*.test.tsx` → `browser`; both colocated with source. **The file extension is the
+  only selector** — there is no path allow-list, so a `.test.tsx` anywhere under `src/` runs
+  in the browser. `pnpm test` (`vitest run`) executes both projects in one pass;
+  `pnpm test:node` / `pnpm test:browser` run one at a time. Playwright E2E specs stay in a
+  top-level `e2e/`.
+- **Browser-mode setup**: the browser project needs a Chromium binary. Run
+  **`pnpm test:browser:setup`** (`playwright install chromium`) once after cloning —
+  `pnpm test` fails with a Playwright "browser not installed" error until you do. The same
+  binary serves the E2E workflow. Packages: `@vitest/browser-playwright` (the `playwright()`
+  provider — Vitest ≥5 ships each provider as its own package and pulls `@vitest/browser` in
+  transitively, so don't install that one directly), `playwright`, and `vitest-browser-react`
+  for `render` + locators. Browser mode is always **headless**, locally as well as in CI —
+  `pnpm test` never opens a window.
 
 ## DB-integration approach
 
@@ -105,7 +117,10 @@ real interaction / a11y contract (ADR-0009).**
    **pure** display logic (rolling-window date math, calendar-cell → presentation mapping,
    relative-time formatting) is still extracted into pure functions and unit-tested in the
    `node` project. See **[ADR-0009](./adr/0009-component-tests-are-a-narrow-interaction-contract-tier.md)**
-   and [`docs/design-system.md`](./design-system.md).
+   and [`docs/design-system.md`](./design-system.md). `src/ui/browser-mode.test.tsx` is not
+   part of the tier — it is a smoke test for the runner itself (JSX compiles, Chromium boots,
+   `render` + locators work), so a failing primitive test can be told apart from a broken
+   toolchain.
 6. **Coverage is signal, not gate.** CI reports a text summary; no threshold fails the build.
    Domain logic (`src/domain/**`) is expected near-complete; thin adapters and `src/ui/**` are
    deliberately left uncovered. Revisit only if coverage visibly drifts.
@@ -223,7 +238,7 @@ From [issue #24](https://github.com/iOwn/who-cares/issues/24). No ADR — pipeli
 | --- | --- | --- |
 | `check` | `biome ci` | lint + format + import-sort |
 | `typecheck` | `tsc --noEmit` | |
-| `test` | `vitest run --coverage` | runs the `node` + `browser` workspace projects in one pass; includes the PGlite integration layer — **no service container**; job also runs `npx playwright install chromium` (binary cached for `e2e.yml`) for the ADR-0009 component tier; coverage → the GitHub step summary. A dedicated `test:browser` job is the escape hatch if browser tests slow this one materially |
+| `test` | `vitest run --coverage` | runs the `node` + `browser` workspace projects in one pass; includes the PGlite integration layer — **no service container**; job also runs `pnpm test:browser:setup` (`playwright install chromium`, binary cached for `e2e.yml`) for the ADR-0009 component tier; coverage → the GitHub step summary. A dedicated `test:browser` job is the escape hatch if browser tests slow this one materially |
 | `build` | `next build` | loads a committed `.env.ci` of transparently-fake values |
 
 - **Node 22**, single version, no matrix. `.nvmrc` is the single source of truth;
@@ -265,7 +280,7 @@ self-merge. Chosen over Renovate (more config) and manual bumping (rots between 
 
 None of this is committed in the planning effort. When the build starts:
 
-- `vitest.config.ts` — the `node` (`environment: 'node'`) and `browser` (Playwright/Chromium)
+- `vitest.config.mts` — the `node` (`environment: 'node'`) and `browser` (Playwright/Chromium)
   projects, declared under `test.projects`. See also `docs/design-system.md` for what
   `src/ui/` adds.
 - `src/testing/factories.ts`, `src/testing/seed.ts` — the shared fixture module.
