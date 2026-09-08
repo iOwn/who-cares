@@ -45,6 +45,9 @@ import styles from "./Dialog.module.css";
  *   </DialogTrigger>
  */
 
+export type DialogPresentation = "sheet" | "center" | "fullscreen";
+
+/** `presentation` is defaulted once, in the `DialogRoot` destructure. */
 const modal = cva(styles.modal, {
   variants: {
     presentation: {
@@ -53,13 +56,9 @@ const modal = cva(styles.modal, {
       fullscreen: styles.fullscreen,
     },
   },
-  defaultVariants: {
-    presentation: "center",
-  },
 });
 
-export type DialogPresentation = "sheet" | "center" | "fullscreen";
-
+/** Fallback only for a `Dialog.Header` rendered outside a `Dialog` (unsupported). */
 const DialogPresentationContext = createContext<DialogPresentation>("center");
 
 /** The overlay-level props (open state, dismiss behaviour) live on `ModalOverlay`. */
@@ -110,10 +109,17 @@ const DialogRoot = forwardRef<HTMLElement, DialogProps>(function Dialog(
   },
   ref,
 ) {
-  // RAC contains the overlay with `inert` + `ariaHideOutside` rather than
-  // `aria-modal`, and drops any `aria-modal` prop in `filterDOMProps`. We set it
-  // on the dialog node ourselves so assistive tech and tooling that key off the
-  // attribute still recognise the modal boundary (asserted in Dialog.test.tsx).
+  // react-aria DELIBERATELY omits `aria-modal` (see its useDialog.mjs): with
+  // `aria-modal` set, Safari-in-an-iframe force-focuses the first focusable
+  // element on mount regardless of what we focus programmatically
+  // (https://bugs.webkit.org/show_bug.cgi?id=211934). It instead makes the
+  // dialog behave modally by marking every sibling `inert` + `aria-hidden`
+  // (`ariaHideOutside`), and strips any `aria-modal` prop in `filterDOMProps`.
+  //
+  // WhoCares is never iframe-embedded, and issue #44's acceptance criteria ask
+  // for the attribute, so we re-add it on the dialog node via this merged
+  // callback ref (asserted in Dialog.test.tsx). Revisit if the app is ever
+  // embedded.
   const dialogRef = useCallback(
     (node: HTMLElement | null) => {
       node?.setAttribute("aria-modal", "true");

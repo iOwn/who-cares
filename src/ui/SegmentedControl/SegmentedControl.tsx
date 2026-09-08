@@ -27,6 +27,11 @@ import styles from "./SegmentedControl.module.css";
  * (docs/design-system.md §6). State is styled in the CSS Module via the
  * `&[data-selected]` / `&[data-focus-visible]` attributes RAC emits — never
  * render-prop booleans (§1).
+ *
+ * NOTE: RAC 1.21 marks the self-contained `Radio` `@deprecated` in favour of
+ * `RadioField` + `RadioButton` (which wraps each option in an extra element).
+ * `Radio` is not removed and keeps the segment DOM flat, so we stay on it for
+ * now — migration tracked in iOwn/who-cares#73.
  */
 export interface SegmentedControlProps
   extends Pick<
@@ -42,8 +47,8 @@ export interface SegmentedControlProps
   > {
   /** `SegmentedControl.Item`s. */
   children: ReactNode;
-  /** Forwarded to the group element and merged LAST. */
-  className?: string;
+  /** Forwarded to the group element and merged LAST. RAC's function form is supported. */
+  className?: RACRadioGroupProps["className"];
 }
 
 interface SegmentedControlComponent
@@ -60,7 +65,7 @@ const SegmentedControlRoot = forwardRef<HTMLDivElement, SegmentedControlProps>(
         {...props}
         ref={ref}
         orientation="horizontal"
-        className={cx(styles.group, className)}
+        className={composeRenderProps(className, (resolved) => cx(styles.group, resolved))}
       >
         {children}
       </RACRadioGroup>

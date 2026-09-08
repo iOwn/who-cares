@@ -28,6 +28,13 @@
   color: var(--color-text);
   border: var(--border-heavy) solid var(--color-border-strong);
   box-shadow: var(--shadow-lg);
+  /*
+   * NAKED outline:none, justified per design-system.md §3: RAC's focus trap
+   * programmatically focuses the <Modal> / <Dialog> container itself only when
+   * the dialog holds no other focusable child. That focus is transient and
+   * non-interactive (it is not a control), the scrim + panel already signal the
+   * modal context, and every actual control inside keeps its mandatory ring.
+   */
   outline: none;
 }
 
@@ -79,6 +86,7 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-20);
+  /* See the note on `.modal` above — same transient container focus, same §3 justification. */
   outline: none;
 }
 

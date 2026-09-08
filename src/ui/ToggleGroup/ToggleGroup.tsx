@@ -15,9 +15,10 @@ import styles from "./ToggleGroup.module.css";
  * `ToggleGroup` — a generic multi- or single-select key row
  * (docs/design-system-inventory.md §14). The P1 `WeekdayPicker` wraps this.
  *
- * Built on RAC `ToggleButtonGroup` + `ToggleButton` — roving tabindex and
- * arrow-key navigation come from RAC. Not in the ADR-0009 component-test tier
- * (no P0 v1 instance): it ships with stories only.
+ * Built on RAC `ToggleButtonGroup` + `ToggleButton` — arrow-key navigation
+ * comes from RAC (a `toolbar` for `selectionMode="multiple"`, a `radiogroup`
+ * with a roving tabindex for `"single"`). Not in the ADR-0009 component-test
+ * tier (no P0 v1 instance): it ships with stories only.
  *
  * `SegmentedControl` is the sibling primitive for the exclusive, tab-like case.
  *
@@ -45,8 +46,8 @@ export interface ToggleGroupProps
   onChange?: (value: string[]) => void;
   /** `ToggleGroup.Item`s. */
   children: ReactNode;
-  /** Forwarded to the group element and merged LAST. */
-  className?: string;
+  /** Forwarded to the group element and merged LAST. RAC's function form is supported. */
+  className?: RACToggleButtonGroupProps["className"];
 }
 
 interface ToggleGroupComponent
@@ -68,7 +69,7 @@ const ToggleGroupRoot = forwardRef<HTMLDivElement, ToggleGroupProps>(function To
       onSelectionChange={
         onChange ? (keys) => onChange([...keys].map((key) => String(key))) : undefined
       }
-      className={cx(styles.group, className)}
+      className={composeRenderProps(className, (resolved) => cx(styles.group, resolved))}
     >
       {children}
     </RACToggleButtonGroup>
@@ -76,7 +77,12 @@ const ToggleGroupRoot = forwardRef<HTMLDivElement, ToggleGroupProps>(function To
 });
 
 export interface ToggleGroupItemProps extends Pick<RACToggleButtonProps, "isDisabled" | "style"> {
-  /** The item's identifier in the group selection. */
+  /**
+   * The item's identifier in the group selection. RAC uses `id` purely as the
+   * `selectedKeys` key for a grouped `ToggleButton` and strips it from the
+   * rendered `<button>` (verified: two groups sharing item values emit zero
+   * `id` attributes) — so this is NOT a global DOM id and cannot collide.
+   */
   value: string;
   /** The item label — also its accessible name. */
   children: ReactNode;
