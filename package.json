@@ -9,7 +9,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "biome check",
+    "format": "biome check --write",
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "next": "16.3.4",
@@ -17,9 +20,11 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.12",
     "@types/node": "^22.13.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "lefthook": "2.1.12",
     "typescript": "^5.7.0"
   }
 }

@@ -1,0 +1,43 @@
+# lefthook — git hooks for WhoCares. See docs/testing.md "Local guardrails".
+# Installed on clone via the package.json `prepare` script (`lefthook install`).
+#
+# Humans in a hurry may bypass with `git commit --no-verify` / `LEFTHOOK=0` — CI
+# re-checks everything. Agents must NOT bypass (CLAUDE.md); a Claude Code
+# PreToolUse hook enforces that.
+
+pre-commit:
+  jobs:
+    # Format + lint + organize-imports the staged files, restage what got fixed.
+    # Sub-second in practice. This is the only pre-commit job by design.
+    - name: biome
+      run: pnpm exec biome check --write --no-errors-on-unmatched --staged
+      glob:
+        - "*.js"
+        - "*.jsx"
+        - "*.ts"
+        - "*.tsx"
+        - "*.mjs"
+        - "*.cjs"
+        - "*.json"
+        - "*.jsonc"
+        - "*.css"
+      stage_fixed: true
+
+# ---------------------------------------------------------------------------
+# pre-push — OPTIONAL. Safe to delete this whole block: CI (`ci.yml`) runs the
+# same checks and is the real gate. It only moves the feedback earlier.
+#
+# NOTE: `vitest` is not a dependency yet — it lands with issue #37. Until then
+# the `test` job is a no-op: `pnpm exec vitest` exits non-zero "command not
+# found", which we swallow with `|| true` so a missing vitest never blocks a
+# push. Drop the `|| true` once #37 is merged.
+# ---------------------------------------------------------------------------
+pre-push:
+  parallel: true
+  jobs:
+    - name: typecheck
+      run: pnpm exec tsc --noEmit
+
+    - name: test
+      # Becomes a real gate after #37 (remove the `|| true` then).
+      run: pnpm exec vitest run || true
