@@ -11,6 +11,7 @@ import {
   Text,
 } from "react-aria-components";
 import { cx } from "../cx";
+import { showOptionalHint } from "../fieldRequirement";
 import styles from "./TextArea.module.css";
 
 /**
@@ -26,6 +27,9 @@ import styles from "./TextArea.module.css";
  * `"aria"` — forms boundary, docs/design-system.md §11). CSS `resize: vertical`
  * only; no JS auto-grow in v1. State via `&[data-*]`; `className` / `style` merge
  * LAST onto the root; `ref` forwards to the root `<div>`.
+ *
+ * `isRequired` / `isOptional` — see `../fieldRequirement`: only optional fields
+ * carry a visible marker ("— optional"); the two props are mutually exclusive.
  */
 
 export interface TextAreaProps extends Omit<RACTextFieldProps, "className" | "children"> {
@@ -35,7 +39,10 @@ export interface TextAreaProps extends Omit<RACTextFieldProps, "className" | "ch
   description?: ReactNode;
   /** Error copy shown when invalid. Feature-computed — the primitive validates nothing. */
   errorMessage?: ReactNode;
-  /** Appends a muted "optional" hint to the label (display only). */
+  /**
+   * Appends a muted "— optional" hint to the label (display only). Mutually
+   * exclusive with `isRequired` (dev-warns; `isRequired` wins).
+   */
   isOptional?: boolean;
   /** Placeholder text — forwarded to the `<textarea>`. */
   placeholder?: string;
@@ -61,6 +68,7 @@ export const TextArea = forwardRef<HTMLDivElement, TextAreaProps>(function TextA
   },
   ref,
 ) {
+  const optional = showOptionalHint(props.isRequired, isOptional);
   return (
     <RACTextField
       {...props}
@@ -72,7 +80,7 @@ export const TextArea = forwardRef<HTMLDivElement, TextAreaProps>(function TextA
       {label != null && (
         <Label className={styles.label}>
           {label}
-          {isOptional && <span className={styles.optional}> — optional</span>}
+          {optional && <span className={styles.optional}> — optional</span>}
         </Label>
       )}
       <RACTextArea className={styles.input} placeholder={placeholder} rows={rows} />

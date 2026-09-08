@@ -29,6 +29,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  /* 2.5rem: the shared 40px control height — same rem literal Button uses for
+     its `md` size (Button.module.css); the token scale has no control-height
+     step. */
   min-height: 2.5rem;
   padding-block: var(--space-4);
   padding-inline: var(--space-12);
@@ -79,9 +82,13 @@
   color: var(--color-text-placeholder);
 }
 
+/* The focused segment's indicator is the inverted fill declared in THIS rule
+   (docs/design-system.md §3 allows `outline: none` when an equal-or-better
+   indicator sits in the same rule). --color-accent-text on --color-accent-surface
+   is a WCAG-AA pair from the #29 audit (contrast 5.67:1). */
 .segment[data-focused] {
-  background: var(--color-accent);
-  color: var(--color-text-on-accent);
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
   outline: none;
 }
 
@@ -202,8 +209,10 @@
 }
 
 .cell {
-  width: 2rem;
-  height: 2rem;
+  /* --space-32 == 2rem == a 32px square day cell (a touch target, not spacing —
+     the space scale simply tops out at the size we want here). */
+  width: var(--space-32);
+  height: var(--space-32);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,7 +220,6 @@
   font-size: var(--text-sm);
   color: var(--color-text);
   cursor: pointer;
-  outline: none;
 }
 
 .cell[data-hovered] {
@@ -223,6 +231,8 @@
   box-shadow: inset 0 0 0 var(--border-hair) var(--color-border-strong);
 }
 
+/* Same --color-accent / --color-text-on-accent fill as Button `primary`
+   (Button.module.css); the selected day is also bold. */
 .cell[data-selected] {
   background: var(--color-accent);
   color: var(--color-text-on-accent);

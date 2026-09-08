@@ -21,6 +21,7 @@ import {
   Text,
 } from "react-aria-components";
 import { cx } from "../cx";
+import { showOptionalHint } from "../fieldRequirement";
 import styles from "./DateField.module.css";
 
 /**
@@ -70,7 +71,11 @@ export interface DateFieldProps
    * runs no validation. Omit it to fall back to RAC's localized range message.
    */
   errorMessage?: ReactNode;
-  /** Appends a muted "optional" hint to the label (display only). */
+  /**
+   * Appends a muted "— optional" hint to the label (display only). Mutually
+   * exclusive with `isRequired` (dev-warns; `isRequired` wins). See
+   * `../fieldRequirement` for the stance: only optional fields are marked.
+   */
   isOptional?: boolean;
   /** Forwarded to the `DatePicker` root and merged LAST. RAC's function form is supported. */
   className?: RACDatePickerProps<DateValue>["className"];
@@ -82,6 +87,7 @@ export const DateField = forwardRef<HTMLDivElement, DateFieldProps>(function Dat
   { label, description, errorMessage, isOptional, className, style, ...props },
   ref,
 ) {
+  const optional = showOptionalHint(props.isRequired, isOptional);
   return (
     <DatePicker
       {...props}
@@ -93,7 +99,7 @@ export const DateField = forwardRef<HTMLDivElement, DateFieldProps>(function Dat
       {label != null && (
         <Label className={styles.label}>
           {label}
-          {isOptional && <span className={styles.optional}> — optional</span>}
+          {optional && <span className={styles.optional}> — optional</span>}
         </Label>
       )}
       <Group className={styles.group}>

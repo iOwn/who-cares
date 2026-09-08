@@ -22,6 +22,8 @@
 
 .input {
   width: 100%;
+  /* 4.5rem: ~3 lines at this font-size/leading before the user drags to resize —
+     a control dimension, like Button's rem-literal sizes (Button.module.css). */
   min-height: 4.5rem;
   padding-block: var(--space-8);
   padding-inline: var(--space-12);

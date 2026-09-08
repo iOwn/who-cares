@@ -11,6 +11,7 @@ import {
   Text,
 } from "react-aria-components";
 import { cx } from "../cx";
+import { showOptionalHint } from "../fieldRequirement";
 import styles from "./TextField.module.css";
 
 /**
@@ -26,6 +27,9 @@ import styles from "./TextField.module.css";
  * defaults to `"aria"` (forms boundary, docs/design-system.md §11). State is
  * styled via `&[data-*]` selectors in the module; `className` / `style` merge
  * LAST onto the root; `ref` forwards to the root `<div>`.
+ *
+ * `isRequired` / `isOptional` — see `../fieldRequirement`: only optional fields
+ * carry a visible marker ("— optional"); the two props are mutually exclusive.
  */
 
 export interface TextFieldProps extends Omit<RACTextFieldProps, "className" | "children"> {
@@ -35,7 +39,10 @@ export interface TextFieldProps extends Omit<RACTextFieldProps, "className" | "c
   description?: ReactNode;
   /** Error copy shown when invalid. Feature-computed — the primitive validates nothing. */
   errorMessage?: ReactNode;
-  /** Appends a muted "optional" hint to the label (display only). */
+  /**
+   * Appends a muted "— optional" hint to the label (display only). Mutually
+   * exclusive with `isRequired` (dev-warns; `isRequired` wins).
+   */
   isOptional?: boolean;
   /** Placeholder text — forwarded to the `<Input>`. */
   placeholder?: string;
@@ -49,6 +56,7 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
   { label, description, errorMessage, isOptional, placeholder, className, style, ...props },
   ref,
 ) {
+  const optional = showOptionalHint(props.isRequired, isOptional);
   return (
     <RACTextField
       {...props}
@@ -60,7 +68,7 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
       {label != null && (
         <Label className={styles.label}>
           {label}
-          {isOptional && <span className={styles.optional}> — optional</span>}
+          {optional && <span className={styles.optional}> — optional</span>}
         </Label>
       )}
       <Input className={styles.input} placeholder={placeholder} />

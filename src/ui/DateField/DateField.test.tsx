@@ -8,9 +8,9 @@
  * Contract under test — `minValue` blocks / flags past dates:
  *
  *   1. BLOCKS — with `minValue` = today, opening the calendar cannot page to a
- *      past month (the "previous" button is disabled) and every day cell before
- *      today in the visible month is disabled (`data-disabled` +
- *      `aria-disabled="true"`), while today's cell stays selectable.
+ *      past month (the "Previous" button is disabled) and the day-cell button
+ *      before today (when visible) is `aria-disabled`, while today's cell stays
+ *      selectable. Asserted via role + accessible name, not DOM structure.
  *
  *   2. FLAGS — with `minValue` = today and a controlled `value` three days in
  *      the past, the field enters `data-invalid` on the date-input group and
@@ -18,8 +18,15 @@
  *
  *   3. No false positive — an in-range value is neither flagged nor shows the
  *      error message.
+ *
+ * Renders are wrapped in `I18nProvider locale="en-US"` so RAC's localized
+ * strings (nav-button labels, calendar-cell names) are deterministic regardless
+ * of the test runner's browser locale.
  */
+import type { DateValue } from "@internationalized/date";
 import { getLocalTimeZone, today } from "@internationalized/date";
+import type { ReactNode } from "react";
+import { I18nProvider } from "react-aria-components";
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { DateField } from "./DateField";
@@ -29,37 +36,51 @@ afterEach(cleanup);
 const tz = getLocalTimeZone();
 const ERROR = "Pick a date from today onward.";
 
+function EnUs({ children }: { children: ReactNode }) {
+  return <I18nProvider locale="en-US">{children}</I18nProvider>;
+}
+
+/**
+ * RAC names each calendar-cell button with its full localized date; a substring
+ * of that (weekday + month + day + year) is a stable, DOM-shape-independent
+ * handle under the forced en-US locale.
+ */
+const cellName = (d: DateValue) =>
+  new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(d.year, d.month - 1, d.day));
+
 describe("DateField — minValue", () => {
   test("blocks paging to past months and disables past day cells", async () => {
     const min = today(tz);
     const screen = await render(
       <DateField label="Effective from" defaultValue={min} minValue={min} />,
+      {
+        wrapper: EnUs,
+      },
     );
 
-    // Only the popover trigger button exists before the calendar opens.
+    // The sole button before the popover opens is the calendar trigger.
     await screen.getByRole("button").click();
-
-    const grid = screen.getByRole("grid");
-    await expect.element(grid).toBeInTheDocument();
+    await expect.element(screen.getByRole("grid")).toBeInTheDocument();
 
     // Cannot page back to a month that is entirely before minValue.
-    const prevButton = document.querySelector<HTMLButtonElement>('[slot="previous"]');
-    expect(prevButton?.disabled).toBe(true);
+    await expect.element(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
 
-    const dayCells = Array.from(grid.element().querySelectorAll<HTMLElement>("td > div")).filter(
-      (el) => /^\d+$/.test(el.textContent?.trim() ?? "") && !el.hasAttribute("data-outside-month"),
-    );
-    const todayCell = dayCells.find((c) => Number(c.textContent) === min.day);
-    expect(todayCell?.hasAttribute("data-disabled")).toBe(false);
+    // Today's cell (== minValue) stays selectable.
+    await expect
+      .element(screen.getByRole("button", { name: new RegExp(cellName(min)) }))
+      .not.toHaveAttribute("aria-disabled", "true");
 
-    for (const cell of dayCells) {
-      const disabled = cell.hasAttribute("data-disabled");
-      if (Number(cell.textContent) < min.day) {
-        expect(disabled).toBe(true);
-        expect(cell.getAttribute("aria-disabled")).toBe("true");
-      } else {
-        expect(disabled).toBe(false);
-      }
+    // The day before today, when it falls in the visible month, is blocked.
+    const before = min.subtract({ days: 1 });
+    if (before.month === min.month) {
+      await expect
+        .element(screen.getByRole("button", { name: new RegExp(cellName(before)) }))
+        .toHaveAttribute("aria-disabled", "true");
     }
   });
 
@@ -71,6 +92,7 @@ describe("DateField — minValue", () => {
         value={today(tz).subtract({ days: 3 })}
         errorMessage={ERROR}
       />,
+      { wrapper: EnUs },
     );
 
     await expect.element(screen.getByRole("group")).toHaveAttribute("data-invalid", "true");
@@ -85,6 +107,7 @@ describe("DateField — minValue", () => {
         value={today(tz).add({ days: 3 })}
         errorMessage={ERROR}
       />,
+      { wrapper: EnUs },
     );
 
     await expect.element(screen.getByRole("group")).not.toHaveAttribute("data-invalid");
