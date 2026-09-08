@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: #23201b; }
+    a { color: #3d7dd8; } a:hover { color: #2f63ad; }
+    .disp { font-family: "Baloo 2", sans-serif; }
+    .lbl { display: block; font-size: 11px; font-weight: 800; color: #8a8378; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .field { width: 100%; border: 2px solid #ded7c8; border-radius: 11px; padding: 11px 12px; font-family: "Nunito", sans-serif; font-size: 14px; font-weight: 700; background: #fff; color: #23201b; }
+    .field.ph { color: #b3ab9b; font-weight: 600; }
+    .btn { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 15px; border: 3px solid #23201b; border-radius: 14px; background: #3d7dd8; color: #fff; padding: 13px; cursor: pointer; width: 100%; box-shadow: 0 4px 0 #23201b; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fbfaf7; overflow: hidden; position: relative;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 0;">
+    <button class="disp" style="border: none; background: none; font-weight: 700; font-size: 14px; color: #6b655b; cursor: pointer;">Cancel</button>
+    <div class="disp" style="font-weight: 800; font-size: 16px;">I&rsquo;m out</div>
+    <div style="width: 48px;"></div>
+  </div>
+
+  <div style="padding: 14px 16px 0;">
+
+    <!-- mode toggle -->
+    <div style="display: flex; gap: 6px; background: #efece4; border-radius: 12px; padding: 4px;">
+      <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 800; font-size: 13px; padding: 8px; border-radius: 9px; background: #fff; box-shadow: 0 1px 0 #d9d3c6;">One-off</div>
+      <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 700; font-size: 13px; padding: 8px; border-radius: 9px; color: #8a8378;">Recurring</div>
+    </div>
+
+    <span class="lbl">Who&rsquo;s out</span>
+    <div style="display: inline-flex; align-items: center; gap: 8px; border: 2px solid #ded7c8; border-radius: 999px; padding: 6px 12px 6px 6px; background: #fff;">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: #3d7dd8; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center;">H</span>
+      <span style="font-weight: 800; font-size: 13px;">Honi (you)</span>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div style="flex-grow: 1;"><span class="lbl">From</span><div class="field">Wed 9 Sep 2026</div></div>
+      <div style="flex-grow: 1;"><span class="lbl">To</span><div class="field">Fri 11 Sep 2026</div></div>
+    </div>
+
+    <span class="lbl">Label <span style="text-transform: none; font-weight: 600; color: #b3ab9b;">&mdash; optional</span></span>
+    <div class="field">Berlin, work trip</div>
+
+    <span class="lbl">Note <span style="text-transform: none; font-weight: 600; color: #b3ab9b;">&mdash; optional</span></span>
+    <div class="field ph" style="min-height: 58px;">Anything Inki should know&hellip;</div>
+
+    <!-- impact -->
+    <div style="display: flex; gap: 9px; background: #e9f1fb; border: 2px solid #cadff5; border-radius: 12px; padding: 11px; margin-top: 16px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7dd8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <div style="font-size: 12px; font-weight: 700; color: #2f5f9e; line-height: 1.45;">Covers <b>2 childcare days</b> &mdash; Wed 9 &amp; Thu 10. Inki gets a pickup request for each. Fri 11 isn&rsquo;t a childcare day.</div>
+    </div>
+
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px 20px; background: linear-gradient(180deg, rgba(251,250,247,0), #fbfaf7 24%);">
+    <button class="btn">Save &mdash; I&rsquo;m out those days</button>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

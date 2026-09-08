@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: #23201b; }
+    a { color: #3d7dd8; } a:hover { color: #2f63ad; }
+    .disp { font-family: "Baloo 2", sans-serif; }
+    .card { background: #fff; border: 2px solid #ded7c8; border-radius: 14px; padding: 13px; margin-bottom: 10px; }
+    .card.risk { border-color: #e8543e; background: #fdeee9; }
+    .avatar { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
+    .btn { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13px; border: 2px solid #23201b; border-radius: 11px; padding: 9px 12px; cursor: pointer; box-shadow: 0 2px 0 #23201b; flex-grow: 1; text-align: center; }
+    .btn.accept { background: #55a863; color: #fff; }
+    .btn.decline { background: #fff; color: #c23f2c; border-color: #c23f2c; box-shadow: 0 2px 0 #c23f2c; }
+    .sect { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #a49c8d; margin: 16px 0 8px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fbfaf7; overflow: hidden; position: relative;">
+
+  <div style="display: flex; align-items: center; gap: 10px; padding: 16px 16px 0;">
+    <button style="width: 34px; height: 34px; border: 2px solid #23201b; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#23201b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="disp" style="font-weight: 800; font-size: 19px;">Requests</div>
+  </div>
+
+  <div style="padding: 14px 16px 0;">
+
+    <div class="sect" style="margin-top: 0;">Waiting on you</div>
+
+    <div class="card risk">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span class="avatar" style="background: #e8543e;">H</span>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13px; font-weight: 800;">Honi is out &middot; Thu 17 Sep</div>
+          <div style="font-size: 11px; font-weight: 700; color: #c23f2c;">Asked 46h ago &middot; escalates soon</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; font-weight: 600; color: #6b655b; margin-bottom: 10px;">Can you get Carlito from daycare on the 17th?</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn accept">Accept</button>
+        <button class="btn decline">Decline</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <span class="avatar" style="background: #3d7dd8;">I</span>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13px; font-weight: 800;">Inki is out &middot; Tue 8 Sep</div>
+          <div style="font-size: 11px; font-weight: 700; color: #8a8378;">Asked 3h ago</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; font-weight: 600; color: #6b655b; margin-bottom: 10px;">Can you get Carlito from daycare on the 8th?</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn accept">Accept</button>
+        <button class="btn decline">Decline</button>
+      </div>
+    </div>
+
+    <div class="sect">Answered</div>
+
+    <div class="card" style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 26px; height: 26px; border-radius: 50%; background: #e8f2e6; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3d7a48" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+      <div><div style="font-size: 12.5px; font-weight: 700;">You accepted &middot; Mon 7 Sep</div><div style="font-size: 11px; font-weight: 600; color: #a49c8d;">You&rsquo;re on pickup for Honi</div></div>
+    </div>
+
+    <div class="card" style="display: flex; align-items: center; gap: 10px; opacity: 0.75;">
+      <span style="width: 26px; height: 26px; border-radius: 50%; background: #f1ede4; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8378" stroke-width="3.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+      <div><div style="font-size: 12.5px; font-weight: 700;">Declined &middot; Wed 3 Sep</div><div style="font-size: 11px; font-weight: 600; color: #a49c8d;">Went to at-risk &mdash; resolved by a direct claim</div></div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

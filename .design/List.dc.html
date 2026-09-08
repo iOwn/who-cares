@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Nunito", system-ui, sans-serif; color: #23201b; }
+    a { color: #3d7dd8; } a:hover { color: #2f63ad; }
+    .disp { font-family: "Baloo 2", sans-serif; }
+    .sect { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #a49c8d; margin: 16px 0 8px; }
+    .row { display: flex; gap: 11px; background: #fff; border: 2px solid #ded7c8; border-radius: 14px; padding: 12px; margin-bottom: 8px; }
+    .rail { width: 5px; border-radius: 999px; flex: none; }
+    .rdate { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 14px; }
+    .rline { font-size: 12px; font-weight: 600; color: #6b655b; margin-top: 2px; line-height: 1.4; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; font-size: 10px; padding: 3px 8px; border-radius: 999px; margin-top: 6px; }
+    .mini { font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 12px; border: 2px solid #23201b; border-radius: 10px; background: #3d7dd8; color: #fff; padding: 7px 11px; box-shadow: 0 2px 0 #23201b; margin-top: 8px; cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #fbfaf7; overflow: hidden; position: relative; padding: 18px 16px 0;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+    <div>
+      <div class="disp" style="font-weight: 800; font-size: 22px; line-height: 1;">WhoCares</div>
+      <div style="font-size: 12px; font-weight: 700; color: #8a8378; margin-top: 3px;">Carlito &middot; who&rsquo;s on pickup</div>
+    </div>
+    <div style="position: relative; width: 40px; height: 40px; border: 2px solid #23201b; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 #23201b;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#23201b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span style="position: absolute; top: -8px; right: -8px; background: #e8543e; color: #fff; font-weight: 800; font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 2px solid #fbfaf7;">2</span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+    <button style="width: 34px; height: 34px; border: 2px solid #23201b; border-radius: 10px; background: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer;">&lsaquo;</button>
+    <div class="disp" style="font-weight: 700; font-size: 17px; flex-grow: 1; text-align: center;">September 2026</div>
+    <button style="width: 34px; height: 34px; border: 2px solid #23201b; border-radius: 10px; background: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer;">&rsaquo;</button>
+    <button class="disp" style="height: 34px; padding: 0 12px; border: 2px solid #23201b; border-radius: 10px; background: #f5c443; font-weight: 700; font-size: 13px; cursor: pointer;">Today</button>
+  </div>
+
+  <div style="display: flex; gap: 6px; background: #efece4; border-radius: 12px; padding: 4px; margin-bottom: 4px;">
+    <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 700; font-size: 13px; padding: 6px; border-radius: 9px; color: #8a8378;">Grid</div>
+    <div class="disp" style="flex-grow: 1; text-align: center; font-weight: 800; font-size: 13px; padding: 6px; border-radius: 9px; background: #fff; box-shadow: 0 1px 0 #d9d3c6;">List</div>
+  </div>
+
+  <div style="font-size: 11px; font-weight: 700; color: #a49c8d; margin: 8px 2px 0;">Only days worth a look &mdash; quiet days and weekends hidden.</div>
+
+  <div class="sect">This week</div>
+
+  <div class="row">
+    <div class="rail" style="background: #f5c443;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Tue 8 Sep</div>
+      <div class="rline">Inki is out (dentist). WhoCares asked <b>Honi</b> &mdash; still waiting for an answer.</div>
+      <span class="tag" style="background: #fdf3d9; color: #a9822a;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #f5c443;"></i>Waiting</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="rail" style="background: #e8543e;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Wed 9 Sep</div>
+      <div class="rline">You and Inki are both out. Nobody is covering Carlito&rsquo;s pickup.</div>
+      <span class="tag" style="background: #fdeee9; color: #c23f2c;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #e8543e;"></i>At risk</span>
+      <div><button class="mini">I&rsquo;ll get Carlito</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="rail" style="background: #c9c2b4;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Thu 10 Sep</div>
+      <div class="rline">Daycare closed &mdash; no pickup needed.</div>
+      <span class="tag" style="background: #f1ede4; color: #8a8378;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #c9c2b4;"></i>Closed</span>
+    </div>
+  </div>
+
+  <div class="sect">Next week</div>
+
+  <div class="row">
+    <div class="rail" style="background: #55a863;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Tue 15 Sep</div>
+      <div class="rline"><b>Inki</b> is on pickup &mdash; sorted.</div>
+      <span class="tag" style="background: #e8f2e6; color: #3d7a48;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #55a863;"></i>Sorted</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="rail" style="background: #e8543e;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Thu 17 Sep</div>
+      <div class="rline">Honi is out. Nobody has picked this one up yet.</div>
+      <span class="tag" style="background: #fdeee9; color: #c23f2c;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #e8543e;"></i>At risk</span>
+      <div><button class="mini">I&rsquo;ll get Carlito</button></div>
+    </div>
+  </div>
+
+  <div class="sect">Later</div>
+
+  <div class="row">
+    <div class="rail" style="background: #55a863;"></div>
+    <div style="flex-grow: 1;">
+      <div class="rdate">Mon 28 Sep</div>
+      <div class="rline"><b>Honi</b> is on pickup &mdash; sorted.</div>
+      <span class="tag" style="background: #e8f2e6; color: #3d7a48;"><i style="width: 7px; height: 7px; border-radius: 50%; background: #55a863;"></i>Sorted</span>
+    </div>
+  </div>
+
+  <button class="disp" style="position: absolute; right: 18px; bottom: 26px; padding: 13px 18px; border: 3px solid #23201b; border-radius: 999px; background: #f5c443; font-weight: 800; font-size: 14px; box-shadow: 0 4px 0 #23201b; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#23201b" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    I&rsquo;m out
+  </button>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap');
+    body { margin: 0; font-family: "Noto Sans", system-ui, sans-serif; }
+    a { color: #0058a3; } a:hover { color: #00427a; }
+    * { box-sizing: border-box; }
+    .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; line-height: 1; }
+    .tag::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.9); flex: none; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #ffffff; color: #11181c; overflow: hidden; position: relative;">
+
+  <!-- header -->
+  <div style="padding: 20px 20px 0;">
+    <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+      <div>
+        <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: #0058a3;">WhoCares</div>
+        <div style="font-size: 12px; font-weight: 600; color: #6a7680; margin-top: 2px;">Robin &middot; pickup planner</div>
+      </div>
+      <div style="position: relative; width: 38px; height: 38px; border: 1px solid #dce3ea; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#11181c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position: absolute; top: -7px; right: -7px; background: #0058a3; color: #fff; font-weight: 800; font-size: 10px; padding: 1px 5px; border-radius: 999px;">2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- yellow accent bar -->
+  <div style="height: 5px; background: #fbd914; margin: 14px 0 0;"></div>
+
+  <!-- month nav -->
+  <div style="padding: 16px 20px 0; display: flex; align-items: center; gap: 10px;">
+    <button style="width: 32px; height: 32px; border: 1px solid #dce3ea; border-radius: 8px; background: #fff; font-size: 15px; cursor: pointer;">&lsaquo;</button>
+    <div style="flex-grow: 1;">
+      <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.01em;">September</div>
+      <div style="font-size: 11px; font-weight: 600; color: #8a95a0;">2026</div>
+    </div>
+    <button style="height: 32px; padding: 0 12px; border: 1px solid #0058a3; border-radius: 8px; background: #fff; color: #0058a3; font-size: 12px; font-weight: 700; cursor: pointer;">Today</button>
+    <button style="width: 32px; height: 32px; border: 1px solid #dce3ea; border-radius: 8px; background: #fff; font-size: 15px; cursor: pointer;">&rsaquo;</button>
+  </div>
+
+  <!-- grid / list toggle -->
+  <div style="padding: 14px 20px 0; display: flex; gap: 0; border: 1px solid #dce3ea; border-radius: 8px; margin: 14px 20px 0; overflow: hidden;">
+    <div style="flex-grow: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 8px; background: #0058a3; color: #fff;">Grid</div>
+    <div style="flex-grow: 1; text-align: center; font-size: 12px; font-weight: 600; padding: 8px; color: #6a7680;">List</div>
+  </div>
+
+  <!-- legend -->
+  <div style="padding: 12px 20px 0; display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 10px; font-weight: 600; color: #6a7680;">
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 8px; height: 8px; border-radius: 50%; background: #2e7d46; display: inline-block;"></i>Sorted</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 8px; height: 8px; border-radius: 50%; background: #b7791f; display: inline-block;"></i>Waiting</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 8px; height: 8px; border-radius: 50%; background: #c0392b; display: inline-block;"></i>At risk</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px;"><i style="width: 8px; height: 8px; border-radius: 50%; background: #b8c2cc; display: inline-block;"></i>Closed</span>
+  </div>
+
+  <!-- weekday header -->
+  <div style="padding: 12px 20px 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #9aa4ae;">Mo</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #9aa4ae;">Tu</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #9aa4ae;">We</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #9aa4ae;">Th</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #9aa4ae;">Fr</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #c3cbd3;">Sa</div>
+    <div style="text-align: center; font-size: 10px; font-weight: 700; color: #c3cbd3;">Su</div>
+  </div>
+
+  <!-- month grid -->
+  <div style="padding: 6px 20px 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+    <div style="min-height: 62px;"></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">1</div><div style="margin-top: 4px;"><span class="tag" style="background: #2e7d46; color: #fff;">Alex</span></div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">2</div><div style="margin-top: 4px;"><span class="tag" style="background: #2e7d46; color: #fff;">Sam</span></div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">3</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #b3bcc4;">4</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">5</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">6</div></div>
+
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">7</div><div style="margin-top: 4px;"><span class="tag" style="background: #2e7d46; color: #fff;">Sam</span></div></div>
+    <div style="min-height: 62px; border: 2px solid #0058a3; border-radius: 6px; padding: 4px;"><div style="font-size: 12px; font-weight: 800;">8</div><div style="margin-top: 4px;"><span class="tag" style="background: #b7791f; color: #fff;">asked Sam</span></div></div>
+    <div style="min-height: 62px; border: 1px solid #c0392b; background: #fbeeec; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">9</div><div style="margin-top: 4px;"><span class="tag" style="background: #c0392b; color: #fff;">both out</span></div></div>
+    <div style="min-height: 62px; border: 1px dashed #b8c2cc; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700; color: #8a95a0;">10</div><div style="margin-top: 4px;"><span class="tag" style="background: #8a95a0; color: #fff;">closed</span></div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #b3bcc4;">11</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">12</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">13</div></div>
+
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">14</div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">15</div><div style="margin-top: 4px;"><span class="tag" style="background: #2e7d46; color: #fff;">Alex</span></div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">16</div></div>
+    <div style="min-height: 62px; border: 1px solid #c0392b; background: #fbeeec; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">17</div><div style="margin-top: 4px;"><span class="tag" style="background: #c0392b; color: #fff;">no one</span></div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #b3bcc4;">18</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">19</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">20</div></div>
+
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">21</div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">22</div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">23</div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">24</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #b3bcc4;">25</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">26</div></div>
+    <div style="min-height: 62px; background: #f6f8fa; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 600; color: #c7cfd6;">27</div></div>
+
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">28</div><div style="margin-top: 4px;"><span class="tag" style="background: #2e7d46; color: #fff;">Sam</span></div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">29</div></div>
+    <div style="min-height: 62px; border: 1px solid #e6ebf0; border-radius: 6px; padding: 5px;"><div style="font-size: 12px; font-weight: 700;">30</div></div>
+    <div style="min-height: 62px;"></div>
+    <div style="min-height: 62px;"></div>
+    <div style="min-height: 62px;"></div>
+    <div style="min-height: 62px;"></div>
+  </div>
+
+  <!-- day-detail peek -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid #dce3ea; padding: 16px 20px 20px; box-shadow: 0 -8px 24px rgba(17,24,28,0.06);">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+      <span style="width: 9px; height: 9px; border-radius: 50%; background: #c0392b; display: inline-block;"></span>
+      <span style="font-size: 14px; font-weight: 800;">Wed 9 September &middot; At risk</span>
+    </div>
+    <div style="font-size: 12px; font-weight: 500; color: #6a7680; line-height: 1.5; margin-bottom: 14px;">You&rsquo;re both away on the 9th, so no pickup request was sent. Assign someone to keep the day covered.</div>
+    <div style="display: flex; gap: 8px;">
+      <button style="flex-grow: 1; padding: 11px; border: none; border-radius: 8px; background: #0058a3; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;">I&rsquo;ll get Robin</button>
+      <button style="padding: 11px 16px; border: 1px solid #dce3ea; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 700; cursor: pointer;">Close</button>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button style="position: absolute; right: 20px; bottom: 150px; padding: 12px 18px; border: none; border-radius: 8px; background: #fbd914; color: #11181c; font-size: 13px; font-weight: 800; box-shadow: 0 4px 14px rgba(17,24,28,0.18); cursor: pointer; display: flex; align-items: center; gap: 7px;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#11181c" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    I&rsquo;m out
+  </button>
+
+</div>
+</x-dc>
+</body>
+</html>
