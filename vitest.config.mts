@@ -9,6 +9,24 @@ const alias = [{ find: /^@\//, replacement: srcDir }];
 
 export default defineConfig({
   test: {
+    // Coverage config is root-level (not per-project): `vitest run --coverage`
+    // instruments both the `node` and `browser` passes and merges the result.
+    // v8 is Vitest 5's default provider and the one `@vitest/coverage-v8`
+    // supplies; it collects browser-mode coverage over Playwright's CDP session.
+    // `json-summary` feeds the markdown table that `ci.yml`'s `test` job writes
+    // to `$GITHUB_STEP_SUMMARY`; `text` keeps a console report locally.
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary", "json-summary", "html"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        ...(configDefaults.coverage.exclude ?? []),
+        "src/**/*.test.{ts,tsx}",
+        "src/db/migrations/**",
+        "src/**/index.ts",
+      ],
+    },
     // Two Vitest projects, declared inline under `test.projects` — the standalone
     // `vitest.workspace.ts` file is deprecated in Vitest >=3 and removed in >=4.
     //

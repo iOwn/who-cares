@@ -1,0 +1,89 @@
+# E2E smoke — one Chromium spec against the Vercel preview deployment (ADR-0008).
+#
+# Fires when Vercel reports a successful *preview* deployment. NOT a required
+# check: it runs post-deploy, asynchronously, against the preview URL rather than
+# the PR head commit. Green is silent (the commit status carries it); a failure
+# posts one PR comment with the run link.
+name: E2E smoke
+
+on:
+  deployment_status:
+
+# Supersede an older preview run for the same deployment target.
+concurrency:
+  group: e2e-${{ github.event.deployment_status.target_url }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  smoke:
+    name: smoke (chromium vs preview)
+    runs-on: ubuntu-latest
+    # Only successful *preview* deployments. Vercel labels the preview env
+    # "Preview"; accept the lowercase spelling too in case the integration
+    # changes it.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      (github.event.deployment_status.environment == 'Preview' ||
+       github.event.deployment_status.environment == 'preview')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -e "console.log(require('playwright/package.json').version)")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run smoke spec
+        id: smoke
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
+        run: pnpm exec playwright test --project chromium
+
+      # Failure only — green stays silent.
+      - name: Comment on the PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.deployment.sha;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const previewUrl = context.payload.deployment_status.target_url;
+
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+            });
+            const pr = prs.find((p) => p.state === "open") ?? prs[0];
+            if (!pr) {
+              core.warning(`No PR associated with ${sha}; skipping comment.`);
+              return;
+            }
+
+            const body = [
+              "### ⚠️ E2E smoke failed",
+              "",
+              `- Preview: ${previewUrl}`,
+              "- Failing step: `Run smoke spec` (`pnpm exec playwright test --project chromium`)",
+              `- [View run](${runUrl})`,
+              "",
+              "_E2E is not a required check — merge is still possible, but investigate before you do._",
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
