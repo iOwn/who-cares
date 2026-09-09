@@ -1,0 +1,80 @@
+"use client";
+
+import { X } from "lucide-react";
+import type { CalendarDayView } from "@/ui";
+import { Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
+import styles from "./DayDetail.module.css";
+
+/**
+ * `DayDetail` (the design-system's `DayDetailSheet`, #50) — the modal that opens
+ * over the grid when a day cell is pressed. It is a read-only summary in v1:
+ * the day's state dot + label + a plain-language narrative line, plus the
+ * closure's free-text reason when the day is `closed` (SPEC.md "Day-state
+ * encoding"; docs/design-system.md "Closed affordance").
+ *
+ * Everything it shows comes off the already-derived `CalendarDayView` — the
+ * live Day state is computed once in `buildCalendarMonth`, never again here.
+ * The pickup actions (accept / decline / claim) that will live in this sheet
+ * arrive with #52 / #53.
+ */
+
+export interface DayDetailProps {
+  /** The day to show, or `null` when the sheet is closed. */
+  readonly day: CalendarDayView | null;
+  /** Called with `false` when the sheet should close. */
+  readonly onOpenChange: (open: boolean) => void;
+}
+
+/** Neutral label for the two non-status display states the `StatePill` can't speak. */
+const NEUTRAL_LABEL: Record<"quiet" | "off", string> = {
+  quiet: "Quiet day",
+  off: "No childcare",
+};
+
+function longDate(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function DayDetail({ day, onOpenChange }: DayDetailProps) {
+  return (
+    <Dialog presentation="sheet" isOpen={day != null} onOpenChange={onOpenChange}>
+      {({ close }) =>
+        day == null ? (
+          <span />
+        ) : (
+          <div className={styles.body}>
+            <Dialog.Header
+              title={longDate(day.date)}
+              trailing={
+                <IconButton variant="ghost" size="sm" aria-label="Close" onPress={close}>
+                  <X size={18} aria-hidden />
+                </IconButton>
+              }
+            />
+            <div className={styles.state}>
+              {isStatusDisplayState(day.displayState) ? (
+                <StatePill state={day.displayState} />
+              ) : (
+                <span className={styles.neutralPill}>
+                  <span className={styles.neutralDot} aria-hidden />
+                  {NEUTRAL_LABEL[day.displayState]}
+                </span>
+              )}
+            </div>
+            <p className={styles.narrative}>{day.narrative}</p>
+            {day.displayState === "closed" && day.closureReason ? (
+              <p className={styles.reason}>Reason given: {day.closureReason}</p>
+            ) : null}
+          </div>
+        )
+      }
+    </Dialog>
+  );
+}

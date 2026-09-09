@@ -8,4 +8,5 @@ export * as noopAdapters from "./adapters/noop";
 export * from "./ports";
 export * from "./services/bootstrapHousehold";
 export * from "./services/childcareDay";
+export * from "./services/dayState";
 export * from "./types";

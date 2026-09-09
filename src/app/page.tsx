@@ -5,11 +5,6 @@ import { createRepositories } from "@/db/repositories";
 import { AppShell } from "./AppShell";
 import { SignInScreen } from "./SignInScreen";
 
-/** `'YYYY-MM-DD'` for the server's current instant (UTC). */
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default async function Home() {
   const current = await getCurrentSession();
   if (!current) {
@@ -17,17 +12,24 @@ export default async function Home() {
   }
 
   const repos = createRepositories(db);
-  const [pattern, closures] = await Promise.all([
+  const [pattern, closures, members] = await Promise.all([
     repos.childcarePattern.findByHousehold(current.household.id),
     repos.closures.listByHousehold(current.household.id),
+    repos.members.listByHousehold(current.household.id),
   ]);
+
+  // One server instant, formatted two ways — the calendar corrects both to the
+  // viewer's clock after mount.
+  const serverNow = new Date();
 
   return (
     <AppShell
       childName={current.child?.name ?? ""}
       pattern={pattern}
       closures={closures}
-      initialToday={todayIso()}
+      members={members}
+      initialToday={serverNow.toISOString().slice(0, 10)}
+      initialNow={serverNow.toISOString()}
     />
   );
 }

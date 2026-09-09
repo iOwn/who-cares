@@ -10,13 +10,15 @@
  * real states. See docs/design-system.md "Display state vs domain Day state".
  */
 
+import type { DayState } from "@/domain";
+
 /**
- * The domain-level Day state, mirrored from CONTEXT.md / `src/domain`. Kept as a
- * local literal union (rather than imported) because `src/domain` has no Day
- * state type yet — it is derived live in issue #50. When #50 lands a domain
- * type, this alias should re-export it so the two stay in lock-step.
+ * The domain-level Day state (issue #50, `src/domain` `dayState()`), re-exported
+ * under the name the presentation layer has always used for it so the two stay
+ * in lock-step — `dayDisplayState()` widens its `n/a` into the display-only
+ * `closed` / `off` / `quiet`.
  */
-export type DomainDayState = "Resolved" | "Pending" | "At-risk" | "n/a";
+export type DomainDayState = DayState;
 
 /** The UI display states. `StatePill` / `StateDot` / `Legend` use the first four; `DayCell` uses all six. */
 export type DayDisplayState = "resolved" | "pending" | "at-risk" | "closed" | "quiet" | "off";
@@ -31,6 +33,14 @@ export type StatusDisplayState = Extract<
   DayDisplayState,
   "resolved" | "pending" | "at-risk" | "closed"
 >;
+
+/**
+ * Whether a display state is one the 4-state status vocabulary (`StatePill` /
+ * `StateDot` / `Legend`) can speak — i.e. not the grid-only `quiet` / `off`.
+ */
+export function isStatusDisplayState(state: DayDisplayState): state is StatusDisplayState {
+  return state !== "quiet" && state !== "off";
+}
 
 /**
  * The friendly, user-facing label for each status-vocabulary state — shared by
