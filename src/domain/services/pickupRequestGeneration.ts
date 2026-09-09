@@ -204,8 +204,8 @@ export class AbsenceInputError extends Error {
   }
 }
 
-/** `clock.now()` as a `'YYYY-MM-DD'` UTC calendar date. */
-function todayOf(clock: Clock): CalendarDate {
+/** `clock.now()` as a `'YYYY-MM-DD'` UTC calendar date. Shared with the recurring batch service (#54). */
+export function todayOf(clock: Clock): CalendarDate {
   return clock.now().toISOString().slice(0, 10);
 }
 

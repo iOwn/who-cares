@@ -24,6 +24,11 @@ function plural(n: number, unit: string): string {
   return `${n} ${unit}${n === 1 ? "" : "s"}`;
 }
 
+/**
+ * The preview copy. Assumes a selection is in play (both weekdays and a valid
+ * range) — the "nothing picked yet" prompt is the caller's inline fallback, not
+ * a branch here.
+ */
 export function recurringPreviewLine(
   toCreate: number,
   alreadyCovered: number,
@@ -33,13 +38,13 @@ export function recurringPreviewLine(
 
   if (toCreate === 0) {
     if (alreadyCovered === 0) {
-      return `Pick weekdays and a date range to preview.${trimmed}`;
+      return `No matching weekdays fall in this date range.${trimmed}`;
     }
     return `Every matching day is already covered — nothing new to add.${trimmed}`;
   }
 
   const covered =
-    alreadyCovered > 0 ? ` ${plural(alreadyCovered, "day")} already covered were skipped.` : "";
+    alreadyCovered > 0 ? ` Skipped ${plural(alreadyCovered, "day")} already covered.` : "";
   return `Creates ${plural(toCreate, "one-day absence")}.${covered}${trimmed}`;
 }
 

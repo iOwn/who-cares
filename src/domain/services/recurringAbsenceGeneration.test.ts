@@ -247,6 +247,19 @@ describe("planRecurringAbsences", () => {
         toCreate: [],
       },
     },
+    {
+      name: "the whole range sits past the 4-week horizon → empty plan (nothing created)",
+      weekdays: ["mon"],
+      startDate: "2025-03-03",
+      endDate: "2025-03-10",
+      expected: {
+        // Cosmetic end never precedes the start; nothing is generated.
+        effectiveEndDate: "2025-03-03",
+        capped: true,
+        days: [],
+        toCreate: [],
+      },
+    },
   ];
 
   it.each(cases)("$name", (testCase) => {
@@ -500,6 +513,19 @@ describe("recordRecurringAbsences", () => {
     });
     expect(wider.absences.map((a) => a.startDate)).toEqual(["2025-01-27", "2025-02-03"]);
     expect(fakes.savedAbsences).toHaveLength(5);
+  });
+
+  it("persists nothing when the whole picked range is past the 4-week horizon", async () => {
+    const fakes = createFakes();
+    const result = await recordRecurringAbsences(fakes.deps, {
+      ...baseInput,
+      startDate: "2025-03-03",
+      endDate: "2025-03-31",
+    });
+    expect(result.absences).toHaveLength(0);
+    expect(result.requests).toHaveLength(0);
+    expect(result.notification).toBeNull();
+    expect(fakes.savedAbsences).toHaveLength(0);
   });
 
   it("hard-caps the range at 4 weeks from today even when a longer range is passed", async () => {

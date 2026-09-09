@@ -36,23 +36,31 @@ import { weekdayOf } from "./childcareDay";
 import {
   AbsenceInputError,
   eachDateInclusive,
-  MAX_ABSENCE_SPAN_DAYS,
   PICKUP_REQUEST_RECEIVED_EVENT,
   pickupRequestDigestBody,
   type RecordAbsenceDeps,
   type RecordAbsenceResult,
   recordAbsence,
+  todayOf,
 } from "./pickupRequestGeneration";
 
 /**
- * How far ahead the recurring generator will reach: the last day it will create
- * an absence for is this many days after real today. The same 28-day figure as
- * the one-off form's `MAX_ABSENCE_SPAN_DAYS` cap (SPEC.md "Absence entry" — "end
- * date hard-capped at 4 weeks from today"), named separately because this bound
- * is measured **from today**, whereas `MAX_ABSENCE_SPAN_DAYS` bounds the length
- * of a single absence span.
+ * How far ahead the recurring generator reaches: it never creates an absence
+ * dated more than this many days after today (SPEC.md "Absence entry" — "end
+ * date hard-capped at 4 weeks from today"). 4 weeks = 28 days, and the last
+ * allowed date is `today + 28`, matching the one-off form's `DateRangeField`
+ * `maxValue` (`today.add({ weeks: 4 })`).
+ *
+ * Numerically 28, the same as `pickupRequestGeneration`'s `MAX_ABSENCE_SPAN_DAYS`,
+ * but a **conceptually distinct bound** kept as its own literal so either can
+ * move independently: `MAX_ABSENCE_SPAN_DAYS` limits the *length of one absence
+ * span*; this limits *how far into the future* the recurring expansion walks.
+ * (`recordAbsence`'s span guard is marginally stricter at the boundary — it
+ * rejects a single absence that both starts today and ends at `today + 28`, a
+ * 29-day span — but the recurring path never hits that: every generated absence
+ * is exactly one day.)
  */
-export const MAX_RECURRING_HORIZON_DAYS = MAX_ABSENCE_SPAN_DAYS;
+export const MAX_RECURRING_HORIZON_DAYS = 28;
 
 /** Add `n` whole days to a `'YYYY-MM-DD'` date, staying in `'YYYY-MM-DD'` (UTC, no zone drift). */
 function addDays(date: CalendarDate, n: number): CalendarDate {
@@ -92,11 +100,20 @@ export interface PlanRecurringAbsencesParams {
 }
 
 export interface RecurringAbsencePlan {
-  /** The range end after the 4-week-from-today cap (and never before the start). */
+  /**
+   * The cap verdict for the form to show: the picked `endDate`, pulled down to
+   * the 4-week horizon and never shown before the start. Cosmetic only — the
+   * day walk uses the un-floored horizon so a wholly-out-of-range selection
+   * still produces nothing.
+   */
   readonly effectiveEndDate: CalendarDate;
-  /** The picked `endDate` was past the cap and was clamped to `effectiveEndDate`. */
+  /** The picked `endDate` was past the 4-week-from-today horizon. */
   readonly capped: boolean;
-  /** Every matching weekday in `[max(startDate, today), effectiveEndDate]`, chronological. */
+  /**
+   * Every matching weekday from `max(startDate, today)` to the horizon-capped
+   * end, chronological. Empty when no weekday matches, or the whole range is
+   * past the horizon, or the range is inverted.
+   */
   readonly days: readonly RecurringAbsenceDay[];
   /** One single-day absence input per matching weekday that is not `alreadyCovered`. */
   readonly toCreate: readonly RecurringAbsenceInput[];
@@ -124,21 +141,26 @@ export function planRecurringAbsences(params: PlanRecurringAbsencesParams): Recu
   // four weeks out — both silently, matching the one-off form's field bounds.
   const effectiveStart = startDate < today ? today : startDate;
   const capped = endDate > capDate;
-  let effectiveEndDate = capped ? capDate : endDate;
-  // An end before the (floored) start can't yield any day; keep the field
-  // non-empty and let the range guard below produce the empty plan.
-  if (effectiveEndDate < effectiveStart) effectiveEndDate = effectiveStart;
+  // The last day the loop actually walks to: the picked end, pulled down to the
+  // horizon. Deliberately NOT floored to `effectiveStart` — a selection whose
+  // whole range sits past the horizon (`startDate > capDate`) must yield an
+  // empty plan, and `eachDateInclusive` returns [] when its end precedes its
+  // start. `effectiveEndDate` below is the cosmetic value for the form only.
+  const lastDay = capped ? capDate : endDate;
 
   const coveringForMember = existingAbsences.filter((a) => a.memberId === memberId);
 
   const days: RecurringAbsenceDay[] = [];
-  if (weekdaySet.size > 0 && endDate >= effectiveStart) {
-    for (const date of eachDateInclusive(effectiveStart, effectiveEndDate)) {
+  if (weekdaySet.size > 0) {
+    for (const date of eachDateInclusive(effectiveStart, lastDay)) {
       if (!weekdaySet.has(weekdayOf(date))) continue;
       const alreadyCovered = coveringForMember.some((a) => absenceCovers(a, date));
       days.push({ date, alreadyCovered });
     }
   }
+
+  // Never surface an end before the start in the preview.
+  const effectiveEndDate = lastDay < effectiveStart ? effectiveStart : lastDay;
 
   const toCreate: RecurringAbsenceInput[] = days
     .filter((day) => !day.alreadyCovered)
@@ -194,6 +216,11 @@ export async function recordRecurringAbsences(
   deps: RecordAbsenceDeps,
   input: RecordRecurringAbsencesInput,
 ): Promise<RecordRecurringAbsencesResult> {
+  // The pure `planRecurringAbsences` is total — a bad weekday set or an
+  // inverted range just yields an empty plan, so the live preview never
+  // throws. The write path rejects the same inputs loudly instead: a
+  // hand-crafted Server Action call should get a clear error, not a silent
+  // no-op. This mirrors `recordAbsence`, which validates the same way.
   if (input.weekdays.length === 0) {
     throw new AbsenceInputError("Pick at least one weekday to repeat.");
   }
@@ -201,7 +228,7 @@ export async function recordRecurringAbsences(
     throw new AbsenceInputError("The end date can't be before the start date.");
   }
 
-  const today = deps.clock.now().toISOString().slice(0, 10);
+  const today = todayOf(deps.clock);
   const existingAbsences = await deps.absences.listByHousehold(input.householdId);
 
   const plan = planRecurringAbsences({
@@ -240,6 +267,10 @@ async function buildBatchDigest(
 ): Promise<Notification | null> {
   if (requests.length === 0) return null;
 
+  // TODO(#54 follow-up): each `recordAbsence` in the batch already loaded the
+  // member list; this is one more `listByHousehold` for the digest names. Cheap
+  // (2-row table, once per submission) but avoidable if `recordAbsence` returned
+  // its resolved requester / recipient.
   const members = await deps.members.listByHousehold(input.householdId);
   const requester = members.find((m) => m.id === input.memberId);
   const other = members.find((m) => m.id !== input.memberId);

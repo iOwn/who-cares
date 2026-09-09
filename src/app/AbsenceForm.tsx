@@ -282,7 +282,7 @@ export function AbsenceForm({
           />
 
           {mode === "recurring" ? (
-            recurring ? (
+            recurring && weekdays.length > 0 ? (
               <RecurringPreview
                 toCreate={recurring.toCreate}
                 alreadyCovered={recurring.alreadyCovered}
