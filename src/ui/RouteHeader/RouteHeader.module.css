@@ -1,0 +1,34 @@
+/*
+ * RouteHeader — sticky sub-route header. Semantic tokens only. No interaction
+ * state, no motion of its own (the composed IconButton owns its own press /
+ * focus-ring / motion contract).
+ */
+
+.base {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: var(--border) solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trailing {
+  flex: none;
+}

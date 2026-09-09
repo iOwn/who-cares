@@ -10,6 +10,8 @@
  * layout (and the Ladle Provider) — never from here, never from a component.
  */
 
+export { ActionBar, type ActionBarProps } from "./ActionBar";
+export { AppHeader, type AppHeaderProps } from "./AppHeader";
 export { Avatar, type AvatarProps } from "./Avatar";
 export {
   type AnnounceMessage,
@@ -44,6 +46,7 @@ export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Legend, type LegendProps } from "./Legend";
 export { PersonChip, type PersonChipProps } from "./PersonChip";
+export { RouteHeader, type RouteHeaderProps } from "./RouteHeader";
 export { SectionHeading, type SectionHeadingProps } from "./SectionHeading";
 export {
   SegmentedControl,
@@ -57,3 +60,4 @@ export { Surface, type SurfaceProps } from "./Surface";
 export { TextArea, type TextAreaProps } from "./TextArea";
 export { TextField, type TextFieldProps } from "./TextField";
 export { ToggleGroup, type ToggleGroupItemProps, type ToggleGroupProps } from "./ToggleGroup";
+export { VisuallyHidden, type VisuallyHiddenProps } from "./VisuallyHidden";
