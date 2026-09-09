@@ -60,6 +60,7 @@ export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Legend, type LegendProps } from "./Legend";
+export { ListRow, type ListRowProps } from "./ListRow";
 export { MonthPager, type MonthPagerProps } from "./MonthPager";
 export { MonthPicker, type MonthPickerProps } from "./MonthPicker";
 export { PersonChip, type PersonChipProps } from "./PersonChip";

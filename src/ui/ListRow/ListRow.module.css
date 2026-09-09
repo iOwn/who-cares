@@ -1,0 +1,64 @@
+/*
+ * ListRow — a pressable or static row with Surface's sunken treatment.
+ * Semantic tokens only. The pressable variant uses RAC attributes.
+ */
+
+.base {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12);
+  text-align: left;
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+/* --- leading content column --- */
+.content {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* --- trailing slot --- */
+.trailing {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+/* --- pressable variant --- */
+.pressable {
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pressable[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.pressable[data-pressed] {
+  transform: translateY(1px);
+}
+
+.pressable[data-disabled] {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable {
+    transition: none;
+  }
+
+  .pressable[data-pressed] {
+    transform: none;
+  }
+}
