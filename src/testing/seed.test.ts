@@ -15,7 +15,9 @@ import {
   HOUSEHOLD_ID,
   MEMBER_1_ID,
   MEMBER_2_ID,
+  makeClosure,
   makeTypicalHousehold,
+  pattern,
   seed,
   truncateAll,
 } from "@/testing";
@@ -36,7 +38,13 @@ describe("seed", () => {
   it("writes the household, both members and the child", async () => {
     const report = await seed(db, makeTypicalHousehold());
 
-    expect(report.inserted).toEqual({ households: 1, members: 2, children: 1 });
+    expect(report.inserted).toEqual({
+      households: 1,
+      members: 2,
+      children: 1,
+      childcarePatternVersions: 1,
+      closures: 0,
+    });
 
     const households = await pg.query<{ id: string; name: string }>(
       `SELECT id, name FROM households`,
@@ -84,8 +92,43 @@ describe("seed", () => {
     const report = await seed(db, makeTypicalHousehold());
 
     // Pinned so the list cannot go stale: each migration that adds one of these
-    // tables must extend `seed()` and shorten this expectation.
-    expect(report.skipped).toEqual(["pattern"]);
+    // tables must extend `seed()` and shorten this expectation. `pattern` and
+    // `closures` came off the list in migration `0003`.
+    expect(report.skipped).toEqual([]);
+  });
+
+  it("persists the childcare pattern versions and closures", async () => {
+    const graph = makeTypicalHousehold({
+      pattern: pattern.versions([
+        { weekdays: ["mon", "tue", "wed"], effectiveFrom: "2025-01-06" },
+        { weekdays: ["mon", "tue", "wed", "thu", "fri"], effectiveFrom: "2025-06-01" },
+      ]),
+      closures: [
+        makeClosure({ id: "closure-a", date: "2025-01-08", reason: "Staff training" }),
+        makeClosure({ id: "closure-b", date: "2025-01-15" }),
+      ],
+    });
+
+    const report = await seed(db, graph);
+    expect(report.inserted.childcarePatternVersions).toBe(2);
+    expect(report.inserted.closures).toBe(2);
+
+    const versions = await pg.query<{ weekdays: string[]; effective_from: string }>(
+      `SELECT weekdays, effective_from::text AS effective_from
+       FROM childcare_pattern_versions ORDER BY effective_from`,
+    );
+    expect(versions.rows).toEqual([
+      { weekdays: ["mon", "tue", "wed"], effective_from: "2025-01-06" },
+      { weekdays: ["mon", "tue", "wed", "thu", "fri"], effective_from: "2025-06-01" },
+    ]);
+
+    const closureRows = await pg.query<{ date: string; reason: string | null }>(
+      `SELECT date::text AS date, reason FROM closures ORDER BY date`,
+    );
+    expect(closureRows.rows).toEqual([
+      { date: "2025-01-08", reason: "Staff training" },
+      { date: "2025-01-15", reason: null },
+    ]);
   });
 
   it("rolls the whole graph back when any row is rejected", async () => {

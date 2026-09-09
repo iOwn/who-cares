@@ -21,7 +21,16 @@
  */
 
 import { relations } from "drizzle-orm";
-import { boolean, check, integer, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  date,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 
 /** The single family unit the app serves; v1 runs exactly one. */
@@ -67,6 +76,65 @@ export const children = pgTable("children", {
   name: text("name").notNull(),
 });
 
+/**
+ * The childcare pattern (ADR-0002), stored as its ordered version list — one
+ * row per `{weekdays, effectiveFrom}` entry, keyed **directly by household**.
+ *
+ * There is no parent `childcare_patterns` row: a household has exactly one
+ * pattern, so its identity *is* the household. `ChildcarePatternRepository`
+ * assembles a `ChildcarePattern` (whose `id` is the `householdId`) from these
+ * rows, ordered by `effective_from` ascending.
+ *
+ * ## Table-shape choice: `weekdays` as a `text[]`, not normalized rows
+ *
+ * `weekdays` holds the domain `Weekday` union values as a Postgres `text[]`
+ * rather than a `pattern_version_weekdays` join table. The set is tiny (0–7),
+ * always read and written whole, and never queried by individual element — a
+ * normalized design would buy nothing and cost a join on every derivation.
+ * `UNIQUE (household_id, effective_from)` carries the "one version per
+ * effective date" invariant; the domain's strictly-ascending-`effectiveFrom`
+ * rule is enforced by the repository on write. A plain FK + that UNIQUE is
+ * enough — no COMMIT-time trigger (unlike the household graph).
+ */
+export const childcarePatternVersions = pgTable(
+  "childcare_pattern_versions",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    /** Domain `Weekday` values (`"mon"`…`"sun"`); read/written as a whole set. */
+    weekdays: text("weekdays").array().notNull(),
+    effectiveFrom: date("effective_from").notNull(),
+  },
+  (table) => [
+    unique("childcare_pattern_versions_household_effective_from_unique").on(
+      table.householdId,
+      table.effectiveFrom,
+    ),
+  ],
+);
+
+/**
+ * A closure — a single date on which the childcare day the pattern would
+ * include is cancelled (CONTEXT.md). Single-date rows, never a range: a holiday
+ * week is several rows. `reason` is optional free text shown verbatim, with no
+ * taxonomy. `UNIQUE (household_id, date)` caps it at one closure per date, which
+ * is what `ClosureRepository.findByDate` (`Closure | null`) assumes.
+ */
+export const closures = pgTable(
+  "closures",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    reason: text("reason"),
+  },
+  (table) => [unique("closures_household_date_unique").on(table.householdId, table.date)],
+);
+
 /* ------------------------------------------------------------------ *
  * Relations — for Drizzle's relational query API.
  * ------------------------------------------------------------------ */
@@ -74,6 +142,22 @@ export const children = pgTable("children", {
 export const householdsRelations = relations(households, ({ many, one }) => ({
   members: many(members),
   child: one(children),
+  childcarePatternVersions: many(childcarePatternVersions),
+  closures: many(closures),
+}));
+
+export const childcarePatternVersionsRelations = relations(childcarePatternVersions, ({ one }) => ({
+  household: one(households, {
+    fields: [childcarePatternVersions.householdId],
+    references: [households.id],
+  }),
+}));
+
+export const closuresRelations = relations(closures, ({ one }) => ({
+  household: one(households, {
+    fields: [closures.householdId],
+    references: [households.id],
+  }),
 }));
 
 export const membersRelations = relations(members, ({ one }) => ({
