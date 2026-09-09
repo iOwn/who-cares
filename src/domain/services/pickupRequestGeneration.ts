@@ -181,7 +181,13 @@ export interface RecordAbsenceResult {
 /** Event key from the notification catalogue (issue #5). */
 export const PICKUP_REQUEST_RECEIVED_EVENT = "pickup-request-received";
 
-function requestDigestBody(count: number, requesterName: string): string {
+/**
+ * The one bundled digest's body: `<name> is out and asked you to cover pickup on
+ * N childcare days`. Shared with the recurring-absence batch service (#54), which
+ * raises the same event across several generated absences and still sends one
+ * digest.
+ */
+export function pickupRequestDigestBody(count: number, requesterName: string): string {
   const days = count === 1 ? "one childcare day" : `${count} childcare days`;
   return `${requesterName} is out and asked you to cover pickup on ${days}. Open the app to accept or decline each day.`;
 }
@@ -198,8 +204,8 @@ export class AbsenceInputError extends Error {
   }
 }
 
-/** `clock.now()` as a `'YYYY-MM-DD'` UTC calendar date. */
-function todayOf(clock: Clock): CalendarDate {
+/** `clock.now()` as a `'YYYY-MM-DD'` UTC calendar date. Shared with the recurring batch service (#54). */
+export function todayOf(clock: Clock): CalendarDate {
   return clock.now().toISOString().slice(0, 10);
 }
 
@@ -304,7 +310,7 @@ export async function recordAbsence(
           recipientId: other.id,
           event: PICKUP_REQUEST_RECEIVED_EVENT,
           title: `${requester.name} asked you to cover pickup`,
-          body: requestDigestBody(requests.length, requester.name),
+          body: pickupRequestDigestBody(requests.length, requester.name),
         }
       : null;
 

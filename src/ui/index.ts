@@ -64,6 +64,11 @@ export { ListRow, type ListRowProps } from "./ListRow";
 export { MonthPager, type MonthPagerProps } from "./MonthPager";
 export { MonthPicker, type MonthPickerProps } from "./MonthPicker";
 export { PersonChip, type PersonChipProps } from "./PersonChip";
+export {
+  RecurringPreview,
+  type RecurringPreviewProps,
+  recurringPreviewLine,
+} from "./RecurringPreview";
 export { RequestCard, type RequestCardProps } from "./RequestCard";
 export { RouteHeader, type RouteHeaderProps } from "./RouteHeader";
 export { requestTimingLine, timeAgo } from "./relativeTime";
