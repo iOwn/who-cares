@@ -45,6 +45,11 @@ export function createMemberRepository(db: DbExecutor): MemberRepository {
       return row ?? null;
     },
 
+    async findByEmail(email: string): Promise<Member | null> {
+      const [row] = await db.select(columns).from(members).where(eq(members.email, email)).limit(1);
+      return row ?? null;
+    },
+
     /** Ordered by slot, so the result lines up with `Household.memberIds`. */
     async listByHousehold(householdId: string): Promise<Member[]> {
       return db

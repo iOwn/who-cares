@@ -43,22 +43,38 @@ describe("migration file convention", () => {
 
 describe("applyMigrations", () => {
   it("builds the schema from the migration files", async () => {
-    expect(await tableNames()).toEqual(["children", "households", "members"]);
+    expect(await tableNames()).toEqual([
+      "accounts",
+      "children",
+      "households",
+      "members",
+      "sessions",
+      "users",
+      "verifications",
+    ]);
   });
 
   it("records each applied migration so a re-run is a no-op", async () => {
     const before = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(before.rows[0].count).toBe(2);
+    expect(before.rows[0].count).toBe(3);
 
     await applyMigrations(db);
 
     const after = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(after.rows[0].count).toBe(2);
-    expect(await tableNames()).toEqual(["children", "households", "members"]);
+    expect(after.rows[0].count).toBe(3);
+    expect(await tableNames()).toEqual([
+      "accounts",
+      "children",
+      "households",
+      "members",
+      "sessions",
+      "users",
+      "verifications",
+    ]);
   });
 
   it("creates the deferred household-graph constraint triggers", async () => {

@@ -8,4 +8,5 @@
 
 export { createDatabase, type Database, type DbExecutor, schema } from "./client";
 export { applyMigrations, MIGRATIONS_FOLDER } from "./migrate";
+export { createNeonDatabase } from "./neon";
 export * from "./repositories";

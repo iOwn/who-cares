@@ -63,7 +63,12 @@ describe("createRepositories", () => {
     const children: ChildRepository = repos.children;
 
     expect(Object.keys(households).sort()).toEqual(["findById", "save"]);
-    expect(Object.keys(members).sort()).toEqual(["findById", "listByHousehold", "save"]);
+    expect(Object.keys(members).sort()).toEqual([
+      "findByEmail",
+      "findById",
+      "listByHousehold",
+      "save",
+    ]);
     expect(Object.keys(children).sort()).toEqual(["findByHousehold", "findById", "save"]);
   });
 });
@@ -178,6 +183,19 @@ describe("MemberRepository", () => {
 
   it("returns null for an unknown id", async () => {
     expect(await repos.members.findById("nobody")).toBeNull();
+  });
+
+  it("finds a member by email", async () => {
+    expect(await repos.members.findByEmail("bailey@example.com")).toEqual({
+      id: MEMBER_2_ID,
+      householdId: HOUSEHOLD_ID,
+      name: "Bailey",
+      email: "bailey@example.com",
+    });
+  });
+
+  it("returns null for an unknown email", async () => {
+    expect(await repos.members.findByEmail("nobody@example.com")).toBeNull();
   });
 
   it("lists a household's members in slot order", async () => {
