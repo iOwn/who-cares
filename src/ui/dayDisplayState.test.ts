@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type DayDisplayInput, dayDisplayState } from "./dayDisplayState";
+import {
+  type DayDisplayInput,
+  type DayDisplayState,
+  dayDisplayState,
+  isStatusDisplayState,
+} from "./dayDisplayState";
 
 /**
  * `dayDisplayState()` is the single presentation-layer mapper from the domain
@@ -84,5 +89,18 @@ describe("dayDisplayState — the domain → display state mapper", () => {
     for (const dayState of states) {
       expect(() => dayDisplayState(input({ dayState }))).not.toThrow();
     }
+  });
+
+  describe("isStatusDisplayState", () => {
+    it.each([
+      ["resolved", true],
+      ["pending", true],
+      ["at-risk", true],
+      ["closed", true],
+      ["quiet", false],
+      ["off", false],
+    ] as const)("%s → %s", (state: DayDisplayState, expected) => {
+      expect(isStatusDisplayState(state)).toBe(expected);
+    });
   });
 });

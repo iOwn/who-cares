@@ -50,6 +50,7 @@ export {
   type DayDisplayState,
   type DomainDayState,
   dayDisplayState,
+  isStatusDisplayState,
   STATUS_LABELS,
   type StatusDisplayState,
 } from "./dayDisplayState";

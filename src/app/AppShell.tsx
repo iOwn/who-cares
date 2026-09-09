@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { CalendarDate, ChildcarePattern, Closure } from "@/domain";
+import type { CalendarDate, ChildcarePattern, Closure, Member } from "@/domain";
 import { AppHeader } from "@/ui";
 import { Calendar } from "./Calendar";
 
@@ -9,8 +9,11 @@ export interface AppShellProps {
   readonly childName: string;
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
+  readonly members: readonly Member[];
   /** The real current date as the server saw it (`'YYYY-MM-DD'`, UTC). */
   readonly initialToday: CalendarDate;
+  /** The real current instant as the server saw it (ISO). */
+  readonly initialNow: string;
 }
 
 /**
@@ -21,7 +24,14 @@ export interface AppShellProps {
  * pickup-request inbox exists (#52); the gear routes to `/settings` (the
  * app-shell's only entry point to it).
  */
-export function AppShell({ childName, pattern, closures, initialToday }: AppShellProps) {
+export function AppShell({
+  childName,
+  pattern,
+  closures,
+  members,
+  initialToday,
+  initialNow,
+}: AppShellProps) {
   const router = useRouter();
   return (
     <>
@@ -32,7 +42,13 @@ export function AppShell({ childName, pattern, closures, initialToday }: AppShel
         onOpenSettings={() => router.push("/settings")}
       />
       <main aria-label="Calendar">
-        <Calendar pattern={pattern} closures={closures} initialToday={initialToday} />
+        <Calendar
+          pattern={pattern}
+          closures={closures}
+          members={members}
+          initialToday={initialToday}
+          initialNow={initialNow}
+        />
       </main>
     </>
   );

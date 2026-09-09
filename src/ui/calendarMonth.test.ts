@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { makeClosure, pattern } from "@/testing";
+import {
+  absence,
+  MEMBER_1_ID,
+  MEMBER_2_ID,
+  makeAssignment,
+  makeClosure,
+  makeMember,
+  makePickupRequest,
+  pattern,
+} from "@/testing";
 import {
   buildCalendarMonth,
   dayAriaLabel,
@@ -102,6 +111,86 @@ describe("buildCalendarMonth", () => {
     expect(dayAriaLabel("2026-09-14", "at-risk")).toBe(
       "Monday, September 14, 2026 — pickup at risk",
     );
+  });
+
+  it("folds live Day state (#50) over seeded assignments / requests / absences", () => {
+    const members = [
+      makeMember({ id: MEMBER_1_ID, name: "Alex" }),
+      makeMember({ id: MEMBER_2_ID, name: "Bailey" }),
+    ];
+    // A Monday, so the Fri "pending" day is still > 48h out and neither
+    // escalation clock has fired.
+    const now = new Date("2025-01-06T09:00:00.000Z");
+
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [makeClosure({ date: "2025-01-20", reason: "Staff day" })],
+      members,
+      assignments: [
+        makeAssignment({ date: "2025-01-09", assigneeId: MEMBER_1_ID }),
+        makeAssignment({ date: "2025-01-07", assigneeId: MEMBER_2_ID }),
+      ],
+      pickupRequests: [
+        makePickupRequest({
+          date: "2025-01-10",
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          raisedAt: new Date("2025-01-06T08:00:00.000Z"),
+        }),
+        // Raised days ago → past the 48h-since-raised threshold.
+        makePickupRequest({
+          date: "2025-01-31",
+          requesterId: MEMBER_2_ID,
+          recipientId: MEMBER_1_ID,
+          raisedAt: new Date("2025-01-03T08:00:00.000Z"),
+        }),
+      ],
+      absences: [
+        absence({ from: "2025-01-08", to: "2025-01-08" }, { memberId: MEMBER_1_ID }),
+        absence({ from: "2025-01-08", to: "2025-01-08" }, { memberId: MEMBER_2_ID }),
+        absence({ from: "2025-01-07", to: "2025-01-07" }, { memberId: MEMBER_2_ID }),
+      ],
+      today: "2025-01-06",
+      now,
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-09")).toMatchObject({
+      dayState: "Resolved",
+      displayState: "resolved",
+      whoLabel: "Alex",
+      narrative: "Alex is on pickup.",
+    });
+    expect(byDate.get("2025-01-10")).toMatchObject({
+      dayState: "Pending",
+      displayState: "pending",
+      whoLabel: "asked Bailey",
+    });
+    expect(byDate.get("2025-01-08")).toMatchObject({
+      dayState: "At-risk",
+      displayState: "at-risk",
+      whoLabel: "both away",
+    });
+    // Assigned to Bailey, but Bailey is absent that day → re-flag, assignment untouched.
+    expect(byDate.get("2025-01-07")).toMatchObject({
+      dayState: "At-risk",
+      whoLabel: "Bailey now away",
+    });
+    expect(byDate.get("2025-01-31")).toMatchObject({
+      dayState: "At-risk",
+      whoLabel: "no answer",
+    });
+    // Untouched days still derive quiet / closed.
+    expect(byDate.get("2025-01-13")?.displayState).toBe("quiet");
+    // The list row / grid cell narrative stays generic; only the closureReason
+    // field carries the free text (DayDetail is the only surface that shows it).
+    expect(byDate.get("2025-01-20")).toMatchObject({
+      displayState: "closed",
+      narrative: "No childcare on this day.",
+      closureReason: "Staff day",
+    });
   });
 
   it("notableDays is in-month closures / states only — weekends and quiet days hidden", () => {
