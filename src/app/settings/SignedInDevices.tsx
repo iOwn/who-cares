@@ -2,7 +2,7 @@
 
 import { Laptop } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/auth/client";
 import { announce, Button, Callout, Dialog, EmptyState, Surface } from "@/ui";
 import { describeUserAgent, formatLastActive } from "./deviceInfo";
@@ -33,6 +33,11 @@ export function SignedInDevices({ devices }: Props) {
   const [pending, setPending] = useState<DeviceView | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Relative "last active" is computed against `now`, which differs between the
+  // server render and the client — so hold it back until after mount to avoid a
+  // hydration mismatch.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
 
   async function confirmRevoke() {
     if (!pending || busy) return;
@@ -63,6 +68,7 @@ export function SignedInDevices({ devices }: Props) {
     return (
       <EmptyState
         icon={Laptop}
+        level={3}
         title="No active sessions"
         description="Sign in again to see this device listed."
       />
@@ -84,13 +90,20 @@ export function SignedInDevices({ devices }: Props) {
                   {device.isCurrent && <span className={styles.thisDevice}> · This device</span>}
                 </p>
                 <p className={styles.deviceMeta}>
-                  Last active {formatLastActive(new Date(device.lastActiveAt))}
+                  {now
+                    ? `Last active ${formatLastActive(new Date(device.lastActiveAt), now)}`
+                    : " "}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 tone="danger"
                 size="sm"
+                aria-label={
+                  device.isCurrent
+                    ? "Sign out this device"
+                    : `Revoke ${describeUserAgent(device.userAgent)}`
+                }
                 onPress={() => {
                   setFailed(false);
                   setPending(device);

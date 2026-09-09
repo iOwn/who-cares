@@ -13,9 +13,10 @@ import styles from "./SignInScreen.module.css";
  * same either way, since `auth.config.ts`'s `sendMagicLink` silently drops
  * mail to an unlisted address rather than surfacing an error.
  *
- * A passkey shortcut (issue #48) appears only once a passkey has been enrolled
- * on this device and the browser supports WebAuthn. Magic link stays the
- * primary, always-present path.
+ * A passkey shortcut (issue #48) appears whenever the browser supports
+ * WebAuthn; pressing it triggers the platform's credential picker, which is a
+ * no-op the user can dismiss if this device has no passkey for the app. Magic
+ * link stays the primary, always-present path.
  */
 export function SignInScreen() {
   const router = useRouter();
@@ -45,7 +46,11 @@ export function SignInScreen() {
     try {
       const { error } = await authClient.signIn.passkey();
       if (error) {
-        setPasskey("error");
+        const code = "code" in error ? error.code : undefined;
+        // A cancelled OS prompt is not a failure — just let them try again.
+        setPasskey(
+          code === "ERROR_CEREMONY_ABORTED" || code === "AUTH_CANCELLED" ? "ready" : "error",
+        );
         return;
       }
       router.replace("/");

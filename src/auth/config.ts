@@ -46,6 +46,19 @@ export const auth = betterAuth({
   session: {
     expiresIn: SESSION_LIFETIME_SECONDS,
     updateAge: SESSION_UPDATE_AGE_SECONDS,
+    /**
+     * Disable Better Auth's "session freshness" gate (issue #48). `freshAge`
+     * (default 1 day) makes `freshSessionMiddleware` reject any session whose
+     * `createdAt` is older than it — and that guards `auth.api.listSessions`
+     * (the signed-in-devices RSC) and the `passkey` plugin's
+     * `generate-register-options` / `verify-registration` endpoints. The
+     * sliding `updateAge` refresh only moves `expiresAt`, never `createdAt`, so
+     * with the spec's 30–60 day / no-idle-timeout sessions a normal session is
+     * >1 day old and every Settings visit / passkey enrollment would 403.
+     * There is no step-up re-auth flow to satisfy freshness with anyway
+     * (magic-link-only, no password), so 0 = off is the correct setting here.
+     */
+    freshAge: 0,
   },
 
   advanced: {
