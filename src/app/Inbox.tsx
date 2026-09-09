@@ -10,9 +10,12 @@ import styles from "./Inbox.module.css";
 
 /**
  * The pickup-request inbox (#51) — reached from the header bell. A full-screen
- * list on a narrow app-shell container, a right-hand side-panel *region* on a
- * wide one: the breakpoint is container-query-driven (`Inbox.module.css` + the
- * `container-type` on the app shell), not viewport-driven, per the ticket.
+ * list on phones, a right-hand side-panel *region* from `--bp-md` up
+ * (`Inbox.module.css`). #51 asked for this to be container-query-driven, but
+ * `docs/design-system.md` §10 (and `breakpoints.ts` / `tokens.css`, which
+ * earmark `--bp-md` for exactly this switch) settle it as a viewport `@media`:
+ * the app shell is always full viewport width, so there is no container to
+ * query — see the PR discussion.
  *
  * Deliberately **not a `Dialog`** (docs/design-system-inventory.md §9): on
  * desktop it is a non-modal region — no scrim, the calendar stays live. It

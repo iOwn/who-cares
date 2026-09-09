@@ -12,7 +12,6 @@ import type {
   PickupRequest,
 } from "@/domain";
 import { AppHeader } from "@/ui";
-import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
 import { useWallClock } from "./useWallClock";
@@ -38,9 +37,7 @@ export interface AppShellProps {
  * function props, `Calendar` owns paging state, and the bell toggles the inbox.
  *
  * The bell's count is the number of **open** requests addressed to the current
- * member; the inbox lists those. The shell wraps its children in a
- * `container-type` context so the inbox can switch between full-screen and
- * side-panel by container width, not viewport (`Inbox.module.css`).
+ * member; the inbox lists those, mounted only while open.
  */
 export function AppShell({
   childName,
@@ -67,7 +64,7 @@ export function AppShell({
   );
 
   return (
-    <div className={styles.shell}>
+    <>
       <AppHeader
         childName={childName}
         requestCount={myOpenRequests.length}
@@ -95,6 +92,6 @@ export function AppShell({
           now={now}
         />
       ) : null}
-    </div>
+    </>
   );
 }

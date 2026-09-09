@@ -1,9 +1,12 @@
 /*
- * Inbox — full-screen list on a narrow app-shell container, right-hand
- * side-panel *region* on a wide one. Container-query-driven (the `container-type`
- * lives on the app shell), never viewport-driven. NOT a Dialog: no scrim, and on
- * wide containers the calendar behind it stays live
- * (docs/design-system-inventory.md §9).
+ * Inbox — full-screen list on phones, a right-hand side-panel *region* from
+ * --bp-md up. NOT a Dialog: no scrim, and on desktop the calendar behind it
+ * stays live (docs/design-system-inventory.md §9).
+ *
+ * The switch is a viewport @media at --bp-md (768px) — breakpoints.ts and
+ * tokens.css both already earmark that value for the inbox side-panel switch.
+ * No container query: the app shell is always full viewport width, so there is
+ * no container context to query (docs/design-system.md §10).
  */
 
 .panel {
@@ -24,10 +27,9 @@
   padding: var(--space-16);
 }
 
-/* Wide app-shell container → dock to the right as a panel with a divider. */
-@container app-shell (min-width: 60rem) {
+/* Dock to the right as a panel with a divider from tablet width up. */
+@media (min-width: 768px) /* --bp-md */ {
   .panel {
-    inset-block: 0;
     inset-inline: auto 0;
     width: min(24rem, 90vw);
     border-inline-start: var(--border) solid var(--color-border);
