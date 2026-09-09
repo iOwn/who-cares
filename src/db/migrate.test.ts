@@ -50,6 +50,7 @@ describe("applyMigrations", () => {
       "closures",
       "households",
       "members",
+      "passkeys",
       "sessions",
       "users",
       "verifications",
@@ -60,14 +61,14 @@ describe("applyMigrations", () => {
     const before = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(before.rows[0].count).toBe(4);
+    expect(before.rows[0].count).toBe(5);
 
     await applyMigrations(db);
 
     const after = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(after.rows[0].count).toBe(4);
+    expect(after.rows[0].count).toBe(5);
     expect(await tableNames()).toEqual([
       "accounts",
       "childcare_pattern_versions",
@@ -75,6 +76,7 @@ describe("applyMigrations", () => {
       "closures",
       "households",
       "members",
+      "passkeys",
       "sessions",
       "users",
       "verifications",

@@ -27,3 +27,13 @@ export const LongChildName: Story = () => (
     <AppHeader childName="Bartholomew Alexander" requestCount={1} onOpenRequests={() => {}} />
   </div>
 );
+
+/** With `onOpenSettings` supplied, a leading gear `IconButton` joins the cluster. */
+export const WithSettings: Story = () => (
+  <AppHeader
+    childName="Carlito"
+    requestCount={2}
+    onOpenRequests={() => {}}
+    onOpenSettings={() => {}}
+  />
+);

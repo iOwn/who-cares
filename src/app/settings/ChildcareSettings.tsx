@@ -11,7 +11,6 @@ import {
   Button,
   Callout,
   DateField,
-  RouteHeader,
   SectionHeading,
   Surface,
   TextField,
@@ -23,8 +22,8 @@ import { removeClosureAction, saveClosureAction, savePatternAction } from "./chi
 /**
  * The childcare-settings feature (#49) — set the effective-dated pattern and
  * manage closures. A `'use client'` form over thin Server Actions
- * (`./childcareActions`); no domain logic here (ADR-0005). Kept in its own file
- * so a merge with the parallel #48 settings work stays mechanical.
+ * (`./childcareActions`); no domain logic here (ADR-0005). Rendered as a
+ * section inside `SettingsScreen` (issue #48 owns the route shell + header).
  */
 
 export interface ChildcareSettingsProps {
@@ -104,111 +103,106 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
   };
 
   return (
-    <>
-      <RouteHeader title="Childcare" onBack={() => router.push("/")} />
-      <div className={styles.root}>
-        {error ? (
-          <Callout tone="danger" role="alert">
-            {error}
-          </Callout>
-        ) : null}
+    <div className={styles.root}>
+      {error ? (
+        <Callout tone="danger" role="alert">
+          {error}
+        </Callout>
+      ) : null}
 
-        <section>
-          <SectionHeading>Which days need pickup</SectionHeading>
-          <p className={styles.hint}>The weekdays the child is normally in childcare.</p>
-          <WeekdayPicker
-            aria-label="Which weekdays"
-            value={weekdays}
-            onChange={setWeekdays}
-            className={styles.weekdays}
-          />
+      <section>
+        <SectionHeading>Which days need pickup</SectionHeading>
+        <p className={styles.hint}>The weekdays the child is normally in childcare.</p>
+        <WeekdayPicker
+          aria-label="Which weekdays"
+          value={weekdays}
+          onChange={setWeekdays}
+          className={styles.weekdays}
+        />
+        <DateField
+          label="Effective from"
+          value={effectiveFrom}
+          onChange={setEffectiveFrom}
+          description="Earlier weeks keep whatever pattern was in effect then."
+          className={styles.field}
+        />
+      </section>
+
+      <section>
+        <SectionHeading>Closures</SectionHeading>
+        {closures.length === 0 ? (
+          <p className={styles.hint}>No closures yet.</p>
+        ) : (
+          <ul className={styles.closureList}>
+            {closures.map((closure) => (
+              <li key={closure.id}>
+                <Surface className={styles.closureRow}>
+                  <div className={styles.closureText}>
+                    <p className={styles.closureDate}>{formatDate(closure.date)}</p>
+                    {closure.reason ? (
+                      <p className={styles.closureReason}>{closure.reason}</p>
+                    ) : null}
+                  </div>
+                  <Button variant="ghost" size="sm" onPress={() => editClosure(closure)}>
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    tone="danger"
+                    size="sm"
+                    isDisabled={pending}
+                    onPress={() => run(() => removeClosureAction(closure.id))}
+                  >
+                    <Trash2 size={14} aria-hidden /> Remove
+                  </Button>
+                </Surface>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <Surface variant="sunken" className={styles.closureForm}>
+          <p className={styles.closureFormTitle}>{editingId ? "Edit closure" : "Add a closure"}</p>
           <DateField
-            label="Effective from"
-            value={effectiveFrom}
-            onChange={setEffectiveFrom}
-            description="Earlier weeks keep whatever pattern was in effect then."
+            label="Date"
+            value={closureDate}
+            onChange={setClosureDate}
             className={styles.field}
           />
-        </section>
-
-        <section>
-          <SectionHeading>Closures</SectionHeading>
-          {closures.length === 0 ? (
-            <p className={styles.hint}>No closures yet.</p>
-          ) : (
-            <ul className={styles.closureList}>
-              {closures.map((closure) => (
-                <li key={closure.id}>
-                  <Surface className={styles.closureRow}>
-                    <div className={styles.closureText}>
-                      <p className={styles.closureDate}>{formatDate(closure.date)}</p>
-                      {closure.reason ? (
-                        <p className={styles.closureReason}>{closure.reason}</p>
-                      ) : null}
-                    </div>
-                    <Button variant="ghost" size="sm" onPress={() => editClosure(closure)}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      tone="danger"
-                      size="sm"
-                      isDisabled={pending}
-                      onPress={() => run(() => removeClosureAction(closure.id))}
-                    >
-                      <Trash2 size={14} aria-hidden /> Remove
-                    </Button>
-                  </Surface>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <Surface variant="sunken" className={styles.closureForm}>
-            <p className={styles.closureFormTitle}>
-              {editingId ? "Edit closure" : "Add a closure"}
-            </p>
-            <DateField
-              label="Date"
-              value={closureDate}
-              onChange={setClosureDate}
-              className={styles.field}
-            />
-            <TextField
-              label="Reason"
-              isOptional
-              value={closureReason}
-              onChange={setClosureReason}
-              placeholder="e.g. Staff training day"
-              className={styles.field}
-            />
-            <div className={styles.closureFormActions}>
-              {editingId ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onPress={() => {
-                    setEditingId(null);
-                    setClosureDate(null);
-                    setClosureReason("");
-                  }}
-                >
-                  Cancel
-                </Button>
-              ) : null}
-              <Button variant="secondary" size="sm" isDisabled={pending} onPress={submitClosure}>
-                {editingId ? "Save closure" : "Add closure"}
+          <TextField
+            label="Reason"
+            isOptional
+            value={closureReason}
+            onChange={setClosureReason}
+            placeholder="e.g. Staff training day"
+            className={styles.field}
+          />
+          <div className={styles.closureFormActions}>
+            {editingId ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  setEditingId(null);
+                  setClosureDate(null);
+                  setClosureReason("");
+                }}
+              >
+                Cancel
               </Button>
-            </div>
-          </Surface>
-        </section>
+            ) : null}
+            <Button variant="secondary" size="sm" isDisabled={pending} onPress={submitClosure}>
+              {editingId ? "Save closure" : "Add closure"}
+            </Button>
+          </div>
+        </Surface>
+      </section>
 
-        <ActionBar>
-          <Button variant="primary" fullWidth isDisabled={pending} onPress={submitPattern}>
-            Save changes
-          </Button>
-        </ActionBar>
-      </div>
-    </>
+      <ActionBar>
+        <Button variant="primary" fullWidth isDisabled={pending} onPress={submitPattern}>
+          Save changes
+        </Button>
+      </ActionBar>
+    </div>
   );
 }

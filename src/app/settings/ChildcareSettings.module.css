@@ -1,9 +1,9 @@
+/* Rendered as a section inside `SettingsScreen`'s `.body` (issue #48 owns the
+ * route shell), so no padding of its own — the body supplies the inset. */
 .root {
   display: flex;
   flex-direction: column;
   gap: var(--space-24);
-  padding: var(--space-16);
-  padding-bottom: var(--space-32);
 }
 
 .hint {
