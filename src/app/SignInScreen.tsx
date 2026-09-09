@@ -30,7 +30,7 @@ export function SignInScreen() {
         <p className={styles.tagline}>Sign in to see who&rsquo;s on pickup.</p>
 
         {status === "sent" ? (
-          <Callout tone="info" title="Check your email">
+          <Callout tone="info" title="Check your email" role="status">
             If {email} is a WhoCares account, we sent it a sign-in link.
           </Callout>
         ) : (
