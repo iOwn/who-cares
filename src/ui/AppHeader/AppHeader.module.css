@@ -1,0 +1,57 @@
+/*
+ * AppHeader — sticky app-shell header. Semantic tokens only. No interaction
+ * state, no motion of its own (the composed IconButton owns its own press /
+ * focus-ring / motion contract).
+ */
+
+.base {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: var(--border) solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+}
+
+.subtitle {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bellSlot {
+  position: relative;
+  flex: none;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  pointer-events: none;
+}

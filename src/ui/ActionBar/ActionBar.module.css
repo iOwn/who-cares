@@ -1,0 +1,28 @@
+/*
+ * ActionBar — sticky bottom action container. Semantic tokens only. No
+ * interaction state, no motion.
+ */
+
+.base {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-16);
+  background: var(--color-bg);
+}
+
+/*
+ * Gradient fade-in above the bar, signalling scrollable content beneath — a
+ * soft cue in place of a hard border. `.base`'s own `position: sticky` gives
+ * this absolutely-positioned pseudo-element its containing block.
+ */
+.base::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: var(--space-32);
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+}
