@@ -1,6 +1,6 @@
 "use client";
 
-import { type DateValue, getLocalTimeZone, parseDate, today } from "@internationalized/date";
+import { type DateValue, parseDate } from "@internationalized/date";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { RangeValue } from "react-aria-components";
@@ -14,7 +14,16 @@ import type {
   PickupRequest,
 } from "@/domain";
 import { planPickupRequests } from "@/domain";
-import { ActionBar, Button, Callout, DateRangeField, Dialog, TextArea, TextField } from "@/ui";
+import {
+  AbsenceImpact,
+  ActionBar,
+  Button,
+  Callout,
+  DateRangeField,
+  Dialog,
+  TextArea,
+  TextField,
+} from "@/ui";
 import styles from "./AbsenceForm.module.css";
 import { recordAbsenceAction } from "./absenceActions";
 
@@ -22,12 +31,13 @@ import { recordAbsenceAction } from "./absenceActions";
  * The "+ I'm out" absence-entry sheet (#51) — declare a one-off absence over a
  * date range, with an optional label + note, and see its impact before saving.
  * A `'use client'` form over the `recordAbsenceAction` Server Action; the
- * childcare-day / request-count preview is the pure `planPickupRequests`
- * (`@/domain`) run client-side, so the number shown is the number that fires.
+ * childcare-day / request-count preview runs the same pure `planPickupRequests`
+ * (`@/domain`) the server does, so the number shown is the number that fires.
  *
  * The range is hard-capped at four weeks from real today (`DateRangeField`'s
- * `maxValue`); the FAB opens it anchored to today, a day cell to that day.
- * Mounted only while open (`Calendar` gates it), so each open starts fresh.
+ * `maxValue`; `recordAbsence` re-checks server-side); the FAB opens it anchored
+ * to today, a day cell to that day. Mounted only while open (`Calendar` gates
+ * it), so each open starts fresh.
  */
 
 export interface AbsenceFormProps {
@@ -47,7 +57,7 @@ export interface AbsenceFormProps {
   readonly pickupRequests: readonly PickupRequest[];
 }
 
-function iso(value: DateValue | null | undefined): CalendarDate | null {
+function toIsoDate(value: DateValue | null | undefined): CalendarDate | null {
   return value ? value.toString() : null;
 }
 
@@ -68,9 +78,10 @@ export function AbsenceForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const tz = getLocalTimeZone();
-  const minValue = parseDate(todayIso);
-  const maxValue = useMemo(() => today(tz).add({ weeks: 4 }), [tz]);
+  // Both bounds come from the one server-supplied `today` so they can't
+  // disagree across a timezone near midnight.
+  const minValue = useMemo(() => parseDate(todayIso), [todayIso]);
+  const maxValue = useMemo(() => minValue.add({ weeks: 4 }), [minValue]);
 
   const [range, setRange] = useState<RangeValue<DateValue> | null>(() => {
     const anchor = parseDate(anchorDate);
@@ -79,8 +90,8 @@ export function AbsenceForm({
   const [label, setLabel] = useState("");
   const [note, setNote] = useState("");
 
-  const startDate = iso(range?.start);
-  const endDate = iso(range?.end);
+  const startDate = toIsoDate(range?.start);
+  const endDate = toIsoDate(range?.end);
   const rangeValid = startDate != null && endDate != null && endDate >= startDate;
 
   const otherName = members.find((m) => m.id !== currentMemberId)?.name ?? "the other parent";
@@ -97,7 +108,6 @@ export function AbsenceForm({
     const plan = planPickupRequests({
       startDate,
       endDate,
-      requesterId: currentMemberId,
       pattern,
       closures,
       absences: [...absences, synthetic],
@@ -117,15 +127,6 @@ export function AbsenceForm({
     pickupRequests,
   ]);
 
-  const impactCopy = impact
-    ? impact.childcareDays === 0
-      ? "No childcare days in this range — nothing to arrange."
-      : `Covers ${plural(impact.childcareDays, "childcare day")}. ` +
-        (impact.requests === 0
-          ? "No new pickup requests will go out."
-          : `${plural(impact.requests, "pickup request")} will go to ${otherName}.`)
-    : "Pick a start and end date.";
-
   const submit = () => {
     if (!rangeValid || startDate == null || endDate == null) {
       setError("Pick a start and end date, with the end on or after the start.");
@@ -133,18 +134,18 @@ export function AbsenceForm({
     }
     setError(null);
     startTransition(async () => {
-      try {
-        await recordAbsenceAction({
-          startDate,
-          endDate,
-          ...(label.trim() ? { label: label.trim() } : {}),
-          ...(note.trim() ? { note: note.trim() } : {}),
-        });
-        router.refresh();
-        onOpenChange(false);
-      } catch (thrown) {
-        setError(thrown instanceof Error ? thrown.message : "Something went wrong");
+      const result = await recordAbsenceAction({
+        startDate,
+        endDate,
+        ...(label.trim() ? { label: label.trim() } : {}),
+        ...(note.trim() ? { note: note.trim() } : {}),
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
       }
+      router.refresh();
+      onOpenChange(false);
     });
   };
 
@@ -200,9 +201,18 @@ export function AbsenceForm({
             className={styles.field}
           />
 
-          <Callout tone="info" dot className={styles.impact}>
-            {impactCopy}
-          </Callout>
+          {impact ? (
+            <AbsenceImpact
+              childcareDays={impact.childcareDays}
+              requests={impact.requests}
+              otherParentName={otherName}
+              className={styles.impact}
+            />
+          ) : (
+            <Callout tone="info" dot className={styles.impact}>
+              Pick a start and end date.
+            </Callout>
+          )}
 
           <ActionBar>
             <Button
@@ -218,8 +228,4 @@ export function AbsenceForm({
       )}
     </Dialog>
   );
-}
-
-function plural(n: number, unit: string): string {
-  return `${n} ${unit}${n === 1 ? "" : "s"}`;
 }

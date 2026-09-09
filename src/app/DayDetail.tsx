@@ -5,6 +5,7 @@ import type { CalendarDate } from "@/domain";
 import type { CalendarDayView } from "@/ui";
 import { Button, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
+import { longDate } from "./formatCalendarDate";
 
 /**
  * `DayDetail` (the design-system's `DayDetailSheet`, #50) — the modal that opens
@@ -37,17 +38,6 @@ const NEUTRAL_LABEL: Record<"quiet" | "off", string> = {
   quiet: "Quiet day",
   off: "No childcare",
 };
-
-function longDate(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export function DayDetail({ day, onOpenChange, onDeclareAbsence }: DayDetailProps) {
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   Absence,
   Assignment,
@@ -15,6 +15,7 @@ import { AppHeader } from "@/ui";
 import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
+import { useWallClock } from "./useWallClock";
 
 export interface AppShellProps {
   readonly childName: string;
@@ -55,21 +56,7 @@ export function AppShell({
 }: AppShellProps) {
   const router = useRouter();
   const [inboxOpen, setInboxOpen] = useState(false);
-  const [now, setNow] = useState(() => new Date(initialNow));
-
-  useEffect(() => {
-    const sync = () => setNow(new Date());
-    sync();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") sync();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", sync);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", sync);
-    };
-  }, []);
+  const now = useWallClock(initialNow);
 
   const myOpenRequests = useMemo(
     () =>
@@ -100,13 +87,14 @@ export function AppShell({
           initialNow={initialNow}
         />
       </main>
-      <Inbox
-        isOpen={inboxOpen}
-        onClose={() => setInboxOpen(false)}
-        requests={myOpenRequests}
-        members={members}
-        now={now}
-      />
+      {inboxOpen ? (
+        <Inbox
+          onClose={() => setInboxOpen(false)}
+          requests={myOpenRequests}
+          members={members}
+          now={now}
+        />
+      ) : null}
     </div>
   );
 }

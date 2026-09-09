@@ -1,20 +1,10 @@
 /*
- * Inbox — full-screen list on a narrow app-shell container, right-hand side
- * panel on a wide one. Container-query-driven (the `container-type` lives on the
- * app shell wrapper), never viewport-driven. NOT a Dialog — it is feature
- * layout (docs/design-system-inventory.md §9 / "the Inbox side-panel is NOT a
- * Dialog").
+ * Inbox — full-screen list on a narrow app-shell container, right-hand
+ * side-panel *region* on a wide one. Container-query-driven (the `container-type`
+ * lives on the app shell), never viewport-driven. NOT a Dialog: no scrim, and on
+ * wide containers the calendar behind it stays live
+ * (docs/design-system-inventory.md §9).
  */
-
-.scrim {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-overlay);
-  border: 0;
-  padding: 0;
-  background: var(--color-scrim);
-  cursor: pointer;
-}
 
 .panel {
   position: fixed;
@@ -34,7 +24,7 @@
   padding: var(--space-16);
 }
 
-/* Wide app-shell container → dock to the right as a panel, keep the scrim. */
+/* Wide app-shell container → dock to the right as a panel with a divider. */
 @container app-shell (min-width: 60rem) {
   .panel {
     inset-block: 0;

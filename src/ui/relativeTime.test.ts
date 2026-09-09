@@ -27,7 +27,13 @@ describe("requestTimingLine", () => {
 
   it("states the fact plainly once escalated, still no urgency tone", () => {
     expect(requestTimingLine(ago(3 * 24 * 60 * 60 * 1000), BASE, true)).toBe(
-      "Still no answer — asked 3 days ago.",
+      "Asked 3 days ago — still no answer.",
+    );
+  });
+
+  it("does not say 'asked just now' when a near-term request escalates immediately", () => {
+    expect(requestTimingLine(ago(2 * 60 * 1000), BASE, true)).toBe(
+      "Still needs sorting — the childcare day is close.",
     );
   });
 });

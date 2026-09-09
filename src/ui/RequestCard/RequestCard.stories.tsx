@@ -4,7 +4,7 @@ import { Button } from "../Button";
 import { RequestCard } from "./RequestCard";
 
 export default {
-  title: "Feature/RequestCard",
+  title: "Composed/RequestCard",
 } satisfies StoryDefault;
 
 function Stack({ children }: { children: ReactNode }) {

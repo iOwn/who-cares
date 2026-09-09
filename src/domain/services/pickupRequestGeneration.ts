@@ -35,7 +35,7 @@ import type {
   ClosureRepository,
   IdGenerator,
   MemberRepository,
-  Notifier,
+  Notification,
   PickupRequestRepository,
 } from "../ports";
 import type {
@@ -49,11 +49,7 @@ import type {
 import { isChildcareDay } from "./childcareDay";
 
 /** Why a childcare day inside an absence did *not* raise a pickup request. */
-export type RequestSkipReason =
-  | "both-absent"
-  | "already-assigned"
-  | "request-exists"
-  | "requester-not-absent";
+export type RequestSkipReason = "both-absent" | "already-assigned" | "request-exists";
 
 /** One childcare day inside the absence range and what the generator decided. */
 export interface RequestPlanEntry {
@@ -65,17 +61,20 @@ export interface RequestPlanEntry {
 }
 
 export interface PlanPickupRequestsParams {
-  /** Inclusive absence bounds. */
+  /**
+   * Inclusive bounds of the absence being recorded. The caller guarantees the
+   * requester is absent on **every** day in this range (`recordAbsence` saves an
+   * absence spanning exactly these dates; the form preview injects one), so the
+   * plan never re-checks that — it only decides whether the *other* parent
+   * needs asking.
+   */
   readonly startDate: CalendarDate;
   readonly endDate: CalendarDate;
-  /** The absent member the absence belongs to. */
-  readonly requesterId: string;
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
   /**
-   * Every absence in scope — **including the one being recorded**. Used both to
-   * confirm the requester is actually absent on a day and to detect the
-   * both-absent case.
+   * Every absence in scope — **including the one being recorded** — used to
+   * detect the both-absent case (the other parent is also away that day).
    */
   readonly absences: readonly Absence[];
   readonly assignments: readonly Assignment[];
@@ -108,7 +107,7 @@ export function eachDateInclusive(start: CalendarDate, end: CalendarDate): Calen
  * repository — the same seam `dayState()` and `childcareDay` follow.
  */
 export function planPickupRequests(params: PlanPickupRequestsParams): RequestPlanEntry[] {
-  const { startDate, endDate, requesterId, pattern, closures, absences, assignments } = params;
+  const { startDate, endDate, pattern, closures, absences, assignments } = params;
 
   const assignedDates = new Set(assignments.map((a) => a.date));
   const requestedDates = new Set(params.existingRequests.map((r) => r.date));
@@ -121,9 +120,7 @@ export function planPickupRequests(params: PlanPickupRequestsParams): RequestPla
       absences.filter((a) => absenceCovers(a, date)).map((a) => a.memberId),
     );
 
-    if (!absentIds.has(requesterId)) {
-      entries.push({ date, raise: false, skipReason: "requester-not-absent" });
-    } else if (absentIds.size >= 2) {
+    if (absentIds.size >= 2) {
       entries.push({ date, raise: false, skipReason: "both-absent" });
     } else if (assignedDates.has(date)) {
       entries.push({ date, raise: false, skipReason: "already-assigned" });
@@ -145,8 +142,15 @@ export interface RecordAbsenceDeps {
   readonly members: MemberRepository;
   readonly clock: Clock;
   readonly ids: IdGenerator;
-  readonly notifier: Notifier;
 }
+
+/**
+ * The longest one-off absence the app accepts, in days. Mirrors the "+ I'm out"
+ * form's 4-week `DateRangeField` cap (SPEC.md "Absence entry") as a server-side
+ * bound so a hand-crafted Server Action call can't walk an unbounded date range
+ * and write a `pickup_requests` row per childcare day.
+ */
+export const MAX_ABSENCE_SPAN_DAYS = 28;
 
 export interface RecordAbsenceInput {
   readonly householdId: string;
@@ -164,6 +168,14 @@ export interface RecordAbsenceResult {
   readonly requests: readonly PickupRequest[];
   /** The plan behind `requests` — every childcare day in range and its verdict. */
   readonly plan: readonly RequestPlanEntry[];
+  /**
+   * The single bundled digest to dispatch to the other parent, or `null` when
+   * no request fired. The caller sends this **after** the transaction commits
+   * (SPEC.md "Notifications" event 1) — `recordAbsence` never touches the
+   * `notifier` port itself, so a slow mail send can't hold a DB transaction
+   * open.
+   */
+  readonly notification: Notification | null;
 }
 
 /** Event key from the notification catalogue (issue #5). */
@@ -175,24 +187,56 @@ function requestDigestBody(count: number, requesterName: string): string {
 }
 
 /**
+ * A validation failure a caller can surface to the user as-is (the message is
+ * plain and non-sensitive). Anything else `recordAbsence` throws is a bug or an
+ * infrastructure failure and should reach the user only as a generic message.
+ */
+export class AbsenceInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AbsenceInputError";
+  }
+}
+
+/** `clock.now()` as a `'YYYY-MM-DD'` UTC calendar date. */
+function todayOf(clock: Clock): CalendarDate {
+  return clock.now().toISOString().slice(0, 10);
+}
+
+/** Whole days from `start` to `end` inclusive (1 for a single-day absence). */
+function spanDays(start: CalendarDate, end: CalendarDate): number {
+  const ms = Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`);
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/**
  * Record a one-off absence and raise its pickup requests.
  *
  * Persists the `Absence`, then plans and materialises one `PickupRequest`
- * (state `Open`, `raisedAt = clock.now()`) per covered childcare day, then
- * calls the `notifier` port **once** with a bundled digest addressed to the
- * other parent — never one notification per day (SPEC.md "Pickup requests";
- * each day inside the digest stays individually accept/declinable, handled in
- * #52). Returns nothing to dispatch when no request fired.
+ * (state `Open`, `raisedAt = clock.now()`) per covered childcare day, and
+ * **returns** a single bundled digest for the other parent (or `null`) — it
+ * never touches the `notifier` port, so the caller dispatches after the
+ * transaction commits (SPEC.md "Pickup requests" — one digest per
+ * absence-creation action, not one per day; each day stays individually
+ * accept/declinable in #52).
  *
  * The caller runs this against repositories bound to one transaction so the
- * absence and its requests commit together.
+ * absence and its requests commit together. Range bounds (not in the past, at
+ * most `MAX_ABSENCE_SPAN_DAYS`) are enforced here as well as in the form, so a
+ * hand-crafted Server Action call can't write an unbounded run of rows.
  */
 export async function recordAbsence(
   deps: RecordAbsenceDeps,
   input: RecordAbsenceInput,
 ): Promise<RecordAbsenceResult> {
   if (input.endDate < input.startDate) {
-    throw new Error(`absence endDate ${input.endDate} is before startDate ${input.startDate}`);
+    throw new AbsenceInputError("The end date can't be before the start date.");
+  }
+  if (input.startDate < todayOf(deps.clock)) {
+    throw new AbsenceInputError("You can only declare an absence from today onward.");
+  }
+  if (spanDays(input.startDate, input.endDate) > MAX_ABSENCE_SPAN_DAYS) {
+    throw new AbsenceInputError("An absence can cover at most four weeks at a time.");
   }
 
   const members = await deps.members.listByHousehold(input.householdId);
@@ -202,7 +246,9 @@ export async function recordAbsence(
   }
   const other = members.find((m) => m.id !== input.memberId);
   if (!other) {
-    throw new Error(`household ${input.householdId} has no second member to ask`);
+    throw new AbsenceInputError(
+      "The other parent hasn't signed in yet, so there's no one to send a request to.",
+    );
   }
 
   const absence: Absence = {
@@ -227,7 +273,6 @@ export async function recordAbsence(
   const plan = planPickupRequests({
     startDate: input.startDate,
     endDate: input.endDate,
-    requesterId: input.memberId,
     pattern,
     closures,
     absences: allAbsences,
@@ -253,14 +298,15 @@ export async function recordAbsence(
     await deps.pickupRequests.save(request);
   }
 
-  if (requests.length > 0) {
-    await deps.notifier.notify({
-      recipientId: other.id,
-      event: PICKUP_REQUEST_RECEIVED_EVENT,
-      title: `${requester.name} asked you to cover pickup`,
-      body: requestDigestBody(requests.length, requester.name),
-    });
-  }
+  const notification: Notification | null =
+    requests.length > 0
+      ? {
+          recipientId: other.id,
+          event: PICKUP_REQUEST_RECEIVED_EVENT,
+          title: `${requester.name} asked you to cover pickup`,
+          body: requestDigestBody(requests.length, requester.name),
+        }
+      : null;
 
-  return { absence, requests, plan };
+  return { absence, requests, plan, notification };
 }

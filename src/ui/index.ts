@@ -10,6 +10,7 @@
  * layout (and the Ladle Provider) — never from here, never from a component.
  */
 
+export { AbsenceImpact, type AbsenceImpactProps, impactLine } from "./AbsenceImpact";
 export { ActionBar, type ActionBarProps } from "./ActionBar";
 export { AppHeader, type AppHeaderProps } from "./AppHeader";
 export { Avatar, type AvatarProps } from "./Avatar";

@@ -6,7 +6,7 @@ import type { DateValue, RangeValue } from "react-aria-components";
 import { DateRangeField } from "./DateRangeField";
 
 export default {
-  title: "Primitives/DateRangeField",
+  title: "Composed/DateRangeField",
 } satisfies StoryDefault;
 
 function Stack({ children }: { children: ReactNode }) {

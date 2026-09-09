@@ -5,7 +5,7 @@
  * injection first").
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type {
   Absence,
   AbsenceRepository,
@@ -19,7 +19,6 @@ import type {
   IdGenerator,
   Member,
   MemberRepository,
-  Notifier,
   PickupRequest,
   PickupRequestRepository,
 } from "@/domain";
@@ -35,6 +34,7 @@ import {
   resetIdCounter,
 } from "@/testing";
 import {
+  MAX_ABSENCE_SPAN_DAYS,
   PICKUP_REQUEST_RECEIVED_EVENT,
   planPickupRequests,
   recordAbsence,
@@ -43,6 +43,8 @@ import {
 const HOUSEHOLD_ID = "household-1";
 /** Mon–Fri, effective from the anchor Monday. */
 const MON_FRI: ChildcarePattern = pattern(["mon", "tue", "wed", "thu", "fri"]);
+/** Frozen well before the 2025-01-06 anchor, so the "no past dates" guard passes. */
+const CLOCK_NOW = new Date("2025-01-01T09:00:00.000Z");
 
 /* --- planPickupRequests: the pure, table-driven decision --- */
 
@@ -57,6 +59,7 @@ describe("planPickupRequests", () => {
     readonly assignments?: readonly Assignment[];
     readonly existingRequests?: readonly PickupRequest[];
     readonly closures?: readonly Closure[];
+    readonly pattern?: ChildcarePattern | null;
     readonly expected: ReadonlyArray<{ date: string; raise: boolean; skipReason?: string }>;
   }
 
@@ -124,16 +127,6 @@ describe("planPickupRequests", () => {
       expected: [{ date: "2025-01-06", raise: false, skipReason: "request-exists" }],
     },
     {
-      name: "requester not absent on a day inside the range → skip requester-not-absent",
-      startDate: "2025-01-06",
-      endDate: "2025-01-07",
-      absences: [soloAbsence("2025-01-07", "2025-01-07")],
-      expected: [
-        { date: "2025-01-06", raise: false, skipReason: "requester-not-absent" },
-        { date: "2025-01-07", raise: true },
-      ],
-    },
-    {
       name: "a multi-day absence raises one entry per covered childcare day",
       startDate: "2025-01-06",
       endDate: "2025-01-10",
@@ -151,6 +144,7 @@ describe("planPickupRequests", () => {
       startDate: "2025-01-06",
       endDate: "2025-01-10",
       absences: [soloAbsence("2025-01-06", "2025-01-10")],
+      pattern: null,
       expected: [],
     },
   ];
@@ -159,8 +153,7 @@ describe("planPickupRequests", () => {
     const entries = planPickupRequests({
       startDate: testCase.startDate,
       endDate: testCase.endDate,
-      requesterId: MEMBER_1_ID,
-      pattern: testCase.name.includes("no pattern") ? null : MON_FRI,
+      pattern: testCase.pattern === undefined ? MON_FRI : testCase.pattern,
       closures: testCase.closures ?? [],
       absences: testCase.absences,
       assignments: testCase.assignments ?? [],
@@ -181,7 +174,6 @@ describe("planPickupRequests", () => {
 
 interface Fakes {
   readonly deps: Parameters<typeof recordAbsence>[0];
-  readonly notify: ReturnType<typeof vi.fn>;
   readonly savedAbsences: Absence[];
   readonly savedRequests: PickupRequest[];
 }
@@ -294,9 +286,7 @@ function createFakes(options: {
       return `gen-${counter}`;
     },
   };
-  const clock: Clock = { now: () => options.now ?? new Date("2025-01-01T09:00:00.000Z") };
-  const notify = vi.fn(async () => {});
-  const notifier: Notifier = { notify };
+  const clock: Clock = { now: () => options.now ?? CLOCK_NOW };
 
   return {
     deps: {
@@ -308,9 +298,7 @@ function createFakes(options: {
       members: memberRepo,
       clock,
       ids,
-      notifier,
     },
-    notify,
     savedAbsences,
     savedRequests,
   };
@@ -345,7 +333,7 @@ describe("recordAbsence", () => {
         absenceId: result.absence.id,
         state: "Open",
       });
-      expect(request.raisedAt.toISOString()).toBe("2025-01-01T09:00:00.000Z");
+      expect(request.raisedAt).toBe(CLOCK_NOW);
     }
     expect(result.requests.map((r) => r.date)).toEqual(["2025-01-06", "2025-01-07", "2025-01-08"]);
     expect(fakes.savedRequests).toHaveLength(3);
@@ -365,26 +353,23 @@ describe("recordAbsence", () => {
     expect(result.absence.note).toBeUndefined();
   });
 
-  it("fires exactly one bundled digest notification for the whole absence, to the other parent", async () => {
+  it("returns exactly one bundled digest for the whole absence, addressed to the other parent", async () => {
     const fakes = createFakes({});
-    await recordAbsence(fakes.deps, {
+    const result = await recordAbsence(fakes.deps, {
       householdId: HOUSEHOLD_ID,
       memberId: MEMBER_1_ID,
       startDate: "2025-01-06",
       endDate: "2025-01-10",
     });
 
-    expect(fakes.notify).toHaveBeenCalledTimes(1);
-    expect(fakes.notify).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recipientId: MEMBER_2_ID,
-        event: PICKUP_REQUEST_RECEIVED_EVENT,
-      }),
-    );
-    expect(fakes.notify.mock.calls[0][0].body).toContain("5 childcare days");
+    expect(result.notification).toMatchObject({
+      recipientId: MEMBER_2_ID,
+      event: PICKUP_REQUEST_RECEIVED_EVENT,
+    });
+    expect(result.notification?.body).toContain("5 childcare days");
   });
 
-  it("does not notify when no request is raised", async () => {
+  it("returns no notification when no request is raised", async () => {
     const fakes = createFakes({
       assignments: [makeAssignment({ date: "2025-01-06", assigneeId: MEMBER_2_ID })],
     });
@@ -395,7 +380,7 @@ describe("recordAbsence", () => {
       endDate: "2025-01-06",
     });
     expect(result.requests).toHaveLength(0);
-    expect(fakes.notify).not.toHaveBeenCalled();
+    expect(result.notification).toBeNull();
   });
 
   it("skips the both-absent day but still asks for the rest", async () => {
@@ -411,7 +396,7 @@ describe("recordAbsence", () => {
       endDate: "2025-01-08",
     });
     expect(result.requests.map((r) => r.date)).toEqual(["2025-01-06", "2025-01-08"]);
-    expect(fakes.notify.mock.calls[0][0].body).toContain("2 childcare days");
+    expect(result.notification?.body).toContain("2 childcare days");
   });
 
   it("does not re-raise a request for a day an earlier absence already covered", async () => {
@@ -427,7 +412,7 @@ describe("recordAbsence", () => {
     expect(result.requests.map((r) => r.date)).toEqual(["2025-01-06", "2025-01-08"]);
   });
 
-  it("throws when endDate precedes startDate", async () => {
+  it("rejects an end before the start", async () => {
     const fakes = createFakes({});
     await expect(
       recordAbsence(fakes.deps, {
@@ -436,18 +421,43 @@ describe("recordAbsence", () => {
         startDate: "2025-01-08",
         endDate: "2025-01-06",
       }),
-    ).rejects.toThrow(/before startDate/);
+    ).rejects.toThrow(/end date can't be before/i);
   });
 
-  it("throws when the acting member is not in the household", async () => {
+  it("rejects a start date in the past", async () => {
+    const fakes = createFakes({ now: new Date("2025-01-07T09:00:00.000Z") });
+    await expect(
+      recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: "2025-01-06",
+        endDate: "2025-01-06",
+      }),
+    ).rejects.toThrow(/from today onward/i);
+  });
+
+  it("rejects a range longer than the four-week cap", async () => {
     const fakes = createFakes({});
     await expect(
       recordAbsence(fakes.deps, {
         householdId: HOUSEHOLD_ID,
-        memberId: "stranger",
+        memberId: MEMBER_1_ID,
+        startDate: "2025-01-06",
+        endDate: "2025-02-06", // 32 days > MAX_ABSENCE_SPAN_DAYS
+      }),
+    ).rejects.toThrow(/at most four weeks/i);
+    expect(MAX_ABSENCE_SPAN_DAYS).toBe(28);
+  });
+
+  it("rejects an absence when there is no second member to ask", async () => {
+    const fakes = createFakes({ members: [makeMember({ id: MEMBER_1_ID, name: "Alex" })] });
+    await expect(
+      recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
         startDate: "2025-01-06",
         endDate: "2025-01-06",
       }),
-    ).rejects.toThrow(/not in household/);
+    ).rejects.toThrow(/hasn't signed in yet/i);
   });
 });
