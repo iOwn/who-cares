@@ -1,23 +1,27 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { CalendarDate } from "@/domain";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import type { Absence, CalendarDate, PickupRequest } from "@/domain";
 import type { CalendarDayView } from "@/ui";
-import { Button, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
+import { Button, Callout, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
 import { longDate } from "./formatCalendarDate";
+import { cancelAbsenceAction, withdrawRequestAction } from "./requestActions";
 
 /**
  * `DayDetail` (the design-system's `DayDetailSheet`, #50) — the modal that opens
- * over the grid when a day cell is pressed. It is a read-only summary in v1:
- * the day's state dot + label + a plain-language narrative line, plus the
- * closure's free-text reason when the day is `closed` (SPEC.md "Day-state
- * encoding"; docs/design-system.md "Closed affordance").
+ * over the grid when a day cell is pressed. A read-only state summary (#50)
+ * plus, from #52, the requester-side affordances for a day they have flagged:
+ * withdraw the still-open pickup request, or cancel the whole absence behind it.
  *
- * Everything it shows comes off the already-derived `CalendarDayView` — the
- * live Day state is computed once in `buildCalendarMonth`, never again here.
- * The pickup actions (accept / decline / claim) that will live in this sheet
- * arrive with #52 / #53.
+ * Both are the requester's own actions on their own records; the accept /
+ * decline side lives in the `Inbox`. Cancelling an absence never unassigns
+ * anyone (SPEC.md, CONTEXT.md) — it just drops the trip and withdraws the
+ * requests that no longer need an answer.
+ *
+ * The direct-claim affordance is #53 (separate, blocked).
  */
 
 export interface DayDetailProps {
@@ -31,6 +35,12 @@ export interface DayDetailProps {
    * affordance.
    */
   readonly onDeclareAbsence?: (date: CalendarDate) => void;
+  /** The signed-in member — decides which requester-side affordances show. */
+  readonly currentMemberId?: string;
+  /** Every pickup request for the household (any state). */
+  readonly pickupRequests?: readonly PickupRequest[];
+  /** Every absence for the household. */
+  readonly absences?: readonly Absence[];
 }
 
 /** Neutral label for the two non-status display states the `StatePill` can't speak. */
@@ -39,9 +49,56 @@ const NEUTRAL_LABEL: Record<"quiet" | "off", string> = {
   off: "No childcare",
 };
 
-export function DayDetail({ day, onOpenChange, onDeclareAbsence }: DayDetailProps) {
+function absenceCovers(absence: Absence, date: CalendarDate): boolean {
+  return absence.startDate <= date && date <= absence.endDate;
+}
+
+export function DayDetail({
+  day,
+  onOpenChange,
+  onDeclareAbsence,
+  currentMemberId,
+  pickupRequests = [],
+  absences = [],
+}: DayDetailProps) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const myOpenRequest =
+    day && currentMemberId
+      ? (pickupRequests.find(
+          (r) => r.date === day.date && r.state === "Open" && r.requesterId === currentMemberId,
+        ) ?? null)
+      : null;
+
+  const myAbsence =
+    day && currentMemberId
+      ? (absences.find((a) => a.memberId === currentMemberId && absenceCovers(a, day.date)) ?? null)
+      : null;
+
+  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await action();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+      onOpenChange(false);
+    });
+  };
+
   return (
-    <Dialog presentation="sheet" isOpen={day != null} onOpenChange={onOpenChange}>
+    <Dialog
+      presentation="sheet"
+      isOpen={day != null}
+      onOpenChange={(open) => {
+        if (!open) setError(null);
+        onOpenChange(open);
+      }}
+    >
       {({ close }) =>
         day == null ? (
           <span />
@@ -69,13 +126,50 @@ export function DayDetail({ day, onOpenChange, onDeclareAbsence }: DayDetailProp
             {day.displayState === "closed" && day.closureReason ? (
               <p className={styles.reason}>Reason given: {day.closureReason}</p>
             ) : null}
-            {onDeclareAbsence && day.displayState !== "off" ? (
-              <div className={styles.actions}>
-                <Button variant="secondary" size="sm" onPress={() => onDeclareAbsence(day.date)}>
-                  I&rsquo;m out this day
-                </Button>
-              </div>
+
+            {error ? (
+              <Callout tone="danger" role="alert">
+                {error}
+              </Callout>
             ) : null}
+
+            {(() => {
+              const canDeclare = onDeclareAbsence && day.displayState !== "off" && !myAbsence;
+              if (!myOpenRequest && !myAbsence && !canDeclare) return null;
+              return (
+                <div className={styles.actions}>
+                  {myOpenRequest ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      isDisabled={pending}
+                      onPress={() => run(() => withdrawRequestAction(myOpenRequest.id))}
+                    >
+                      Withdraw request
+                    </Button>
+                  ) : null}
+                  {myAbsence ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      isDisabled={pending}
+                      onPress={() => run(() => cancelAbsenceAction(myAbsence.id))}
+                    >
+                      Cancel my absence
+                    </Button>
+                  ) : null}
+                  {canDeclare ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => onDeclareAbsence?.(day.date)}
+                    >
+                      I&rsquo;m out this day
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
         )
       }

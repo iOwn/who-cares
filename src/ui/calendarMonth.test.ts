@@ -198,6 +198,62 @@ describe("buildCalendarMonth", () => {
     });
   });
 
+  it("folds the #52 request outcomes: accept ⇒ Resolved, decline / withdraw ⇒ At-risk", () => {
+    const members = [
+      makeMember({ id: MEMBER_1_ID, name: "Alex" }),
+      makeMember({ id: MEMBER_2_ID, name: "Bailey" }),
+    ];
+    const now = new Date("2025-01-06T09:00:00.000Z");
+
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [],
+      members,
+      // Alex is out all three days; each day answered individually.
+      absences: [absence({ from: "2025-01-08", to: "2025-01-10" }, { memberId: MEMBER_1_ID })],
+      assignments: [
+        // The accept wrote this Assignment; Bailey is not absent → Resolved.
+        makeAssignment({
+          date: "2025-01-08",
+          assigneeId: MEMBER_2_ID,
+          source: "accepted-request",
+        }),
+      ],
+      pickupRequests: [
+        makePickupRequest({
+          date: "2025-01-08",
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          state: "Accepted",
+        }),
+        makePickupRequest({
+          date: "2025-01-09",
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          state: "Declined",
+        }),
+        makePickupRequest({
+          date: "2025-01-10",
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          state: "Withdrawn",
+        }),
+      ],
+      today: "2025-01-06",
+      now,
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-08")).toMatchObject({ dayState: "Resolved", whoLabel: "Bailey" });
+    // A terminal request is not an open request — the day falls back to
+    // "contested, no open request" and derives At-risk (a direct claim is the
+    // only way back).
+    expect(byDate.get("2025-01-09")?.dayState).toBe("At-risk");
+    expect(byDate.get("2025-01-10")?.dayState).toBe("At-risk");
+  });
+
   it("day-state copy: explicit-nobody assignment, and an unknown member id", () => {
     const view = buildCalendarMonth({
       year: 2025,
