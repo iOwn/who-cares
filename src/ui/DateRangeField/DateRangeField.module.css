@@ -1,0 +1,95 @@
+/*
+ * DateRangeField — start–end segmented inputs + a shared RangeCalendar popover.
+ * Styling mirrors DateField (the worked field reference): the label / optional /
+ * description / error shell composes from ../field.module.css; the input row and
+ * calendar reuse DateField's own rules via `composes:` so the two date fields
+ * stay visually identical. Consumes ONLY semantic tokens (tokens.css).
+ * Interaction state via RAC `[data-*]`, never render-prop booleans.
+ */
+
+.field {
+  composes: field from "../field.module.css";
+}
+
+.label {
+  composes: label from "../field.module.css";
+}
+
+.optional {
+  composes: optional from "../field.module.css";
+}
+
+.description {
+  composes: description from "../field.module.css";
+}
+
+.error {
+  composes: error from "../field.module.css";
+}
+
+.group {
+  composes: group from "../DateField/DateField.module.css";
+}
+
+.input {
+  composes: input from "../DateField/DateField.module.css";
+  flex: none;
+}
+
+.segment {
+  composes: segment from "../DateField/DateField.module.css";
+}
+
+.trigger {
+  composes: trigger from "../DateField/DateField.module.css";
+  margin-inline-start: auto;
+}
+
+.dash {
+  color: var(--color-text-subtle);
+  padding-inline: var(--space-2);
+}
+
+.popover {
+  composes: popover from "../DateField/DateField.module.css";
+}
+
+.calendar {
+  composes: calendar from "../DateField/DateField.module.css";
+}
+
+.calendarHeader {
+  composes: calendarHeader from "../DateField/DateField.module.css";
+}
+
+.calendarTitle {
+  composes: calendarTitle from "../DateField/DateField.module.css";
+}
+
+.navButton {
+  composes: navButton from "../DateField/DateField.module.css";
+}
+
+.grid {
+  composes: grid from "../DateField/DateField.module.css";
+}
+
+.cell {
+  composes: cell from "../DateField/DateField.module.css";
+}
+
+/* The in-range days between the two selected endpoints. */
+.cell[data-selected] {
+  border-radius: 0;
+  background: var(--color-accent-surface);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-regular);
+}
+
+.cell[data-selection-start],
+.cell[data-selection-end] {
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-bold);
+}

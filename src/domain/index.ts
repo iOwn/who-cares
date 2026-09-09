@@ -9,4 +9,5 @@ export * from "./ports";
 export * from "./services/bootstrapHousehold";
 export * from "./services/childcareDay";
 export * from "./services/dayState";
+export * from "./services/pickupRequestGeneration";
 export * from "./types";

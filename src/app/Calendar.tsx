@@ -24,8 +24,11 @@ import {
   StatePill,
   shiftMonth,
 } from "@/ui";
+import { AbsenceForm } from "./AbsenceForm";
 import styles from "./Calendar.module.css";
 import { DayDetail } from "./DayDetail";
+import { shortDate } from "./formatCalendarDate";
+import { useWallClock } from "./useWallClock";
 
 /**
  * The calendar feature (#49, #50) — the calendar-first landing screen. A `'use
@@ -41,6 +44,8 @@ import { DayDetail } from "./DayDetail";
  */
 
 export interface CalendarProps {
+  /** The signed-in member — the one an absence declared from here belongs to. */
+  readonly currentMemberId: string;
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
   readonly assignments?: readonly Assignment[];
@@ -59,23 +64,14 @@ export interface CalendarProps {
 
 type Tab = "grid" | "list";
 
-function localTodayIso(): CalendarDate {
-  const now = new Date();
+function localTodayIso(now: Date): CalendarDate {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
     now.getDate(),
   ).padStart(2, "0")}`;
 }
 
-function formatDayShort(date: CalendarDate): string {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
-
 export function Calendar({
+  currentMemberId,
   pattern,
   closures,
   assignments,
@@ -85,35 +81,21 @@ export function Calendar({
   initialToday,
   initialNow,
 }: CalendarProps) {
-  // Start from the server's date/instant to keep the first paint stable, then
-  // correct to the viewer's local clock once mounted (an effect — no mismatch).
-  const [today, setToday] = useState<CalendarDate>(initialToday);
-  const [now, setNow] = useState(() => new Date(initialNow));
+  // The clock is server-seeded then corrected on mount + re-sampled on focus /
+  // visibility (`useWallClock`) so a long-lived PWA tab doesn't sit on a stale
+  // `now` past a 48h threshold (ADR-0003).
+  const now = useWallClock(initialNow);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // First paint (server HTML + hydration) uses the plain UTC `initialToday`
+  // string; once mounted, switch to the viewer's real local date.
+  const today = mounted ? localTodayIso(now) : initialToday;
+
   const [{ year, month }, setMonth] = useState(() => monthOf(initialToday));
   const [tab, setTab] = useState<Tab>("grid");
   const [selectedDate, setSelectedDate] = useState<CalendarDate | null>(null);
-
-  useEffect(() => {
-    const sync = () => {
-      setNow(new Date());
-      const local = localTodayIso();
-      setToday((prev) => (prev === local ? prev : local));
-    };
-    sync();
-    // Day state is derived live (ADR-0003); re-sample the clock whenever the tab
-    // comes back into view so a long-lived PWA tab doesn't sit on a stale
-    // Pending day past its 48h threshold. `today` only moves the grid when the
-    // browsed month still tracks it — handled below.
-    const onVisible = () => {
-      if (document.visibilityState === "visible") sync();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", sync);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", sync);
-    };
-  }, []);
+  // `null` = the "I'm out" sheet is closed; otherwise the day it is anchored to.
+  const [absenceAnchor, setAbsenceAnchor] = useState<CalendarDate | null>(null);
 
   // Follow the real date onto the grid only while the user hasn't paged away
   // from it (first mount, or they're sitting on "this month").
@@ -199,7 +181,7 @@ export function Calendar({
                     onClick={() => setSelectedDate(day.date)}
                   >
                     <span className={styles.listRowText}>
-                      <span className={styles.listDate}>{formatDayShort(day.date)}</span>
+                      <span className={styles.listDate}>{shortDate(day.date)}</span>
                       <span className={styles.listLine}>{day.narrative}</span>
                     </span>
                     {isStatusDisplayState(day.displayState) ? (
@@ -216,15 +198,38 @@ export function Calendar({
       <div className={styles.fab}>
         <FAB
           icon={Plus}
-          // Absence entry (the "I'm out" sheet) lands in #51 — it always
-          // defaults to the real today, never the browsed month.
-          onPress={() => {}}
+          // The FAB always anchors to the real today, never the browsed month
+          // (SPEC.md "Navigation").
+          onPress={() => setAbsenceAnchor(today)}
         >
           I&rsquo;m out
         </FAB>
       </div>
 
-      <DayDetail day={selectedDay} onOpenChange={(open) => !open && setSelectedDate(null)} />
+      <DayDetail
+        day={selectedDay}
+        onOpenChange={(open) => !open && setSelectedDate(null)}
+        onDeclareAbsence={(date) => {
+          setSelectedDate(null);
+          setAbsenceAnchor(date);
+        }}
+      />
+
+      {absenceAnchor != null ? (
+        <AbsenceForm
+          isOpen
+          anchorDate={absenceAnchor}
+          onOpenChange={(open) => !open && setAbsenceAnchor(null)}
+          today={today}
+          currentMemberId={currentMemberId}
+          members={members ?? []}
+          pattern={pattern}
+          closures={closures}
+          absences={absences ?? []}
+          assignments={assignments ?? []}
+          pickupRequests={pickupRequests ?? []}
+        />
+      ) : null}
     </div>
   );
 }

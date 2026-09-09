@@ -16,16 +16,19 @@
  * `HouseholdGraph` describes the whole domain; `seed()` persists whatever has a
  * table and reports the rest in `SeedReport.skipped`. Each migration that adds a
  * table extends this function and shrinks that list; `seed.test.ts` pins the
- * current contents, so the list cannot quietly go stale. As of `0003` the
- * childcare `pattern` and `closures` persist; absences / pickup requests /
- * assignments are still unpersisted.
+ * current contents, so the list cannot quietly go stale. As of `0005` the whole
+ * graph persists — `skipped` is always empty.
  */
 
 import type { Database } from "@/db";
 import type { HouseholdGraph } from "./factories";
 
-/** Entity kinds `HouseholdGraph` can carry that have no table yet. */
-export type UnpersistedKind = "absences" | "pickupRequests" | "assignments";
+/**
+ * Entity kinds `HouseholdGraph` can carry that have no table yet. As of
+ * migration `0005` every kind persists, so this is `never` — the type and the
+ * `skipped` list are kept so a future graph addition has a place to land.
+ */
+export type UnpersistedKind = never;
 
 export interface SeedReport {
   /** Rows actually written, per table. */
@@ -35,10 +38,13 @@ export interface SeedReport {
     readonly children: number;
     readonly childcarePatternVersions: number;
     readonly closures: number;
+    readonly absences: number;
+    readonly pickupRequests: number;
+    readonly assignments: number;
   };
   /**
    * Entity kinds present in the graph that this schema cannot store yet, in
-   * `HouseholdGraph` declaration order.
+   * `HouseholdGraph` declaration order. Empty since migration `0005`.
    */
   readonly skipped: readonly UnpersistedKind[];
 }
@@ -48,9 +54,13 @@ const INSERT_MEMBER = `INSERT INTO members (id, household_id, slot, name, email)
 const INSERT_CHILD = `INSERT INTO children (id, household_id, name) VALUES ($1, $2, $3)`;
 const INSERT_PATTERN_VERSION = `INSERT INTO childcare_pattern_versions (id, household_id, weekdays, effective_from) VALUES ($1, $2, $3, $4)`;
 const INSERT_CLOSURE = `INSERT INTO closures (id, household_id, date, reason) VALUES ($1, $2, $3, $4)`;
+const INSERT_ABSENCE = `INSERT INTO absences (id, household_id, member_id, start_date, end_date, label, note) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
+const INSERT_PICKUP_REQUEST = `INSERT INTO pickup_requests (id, household_id, date, requester_id, recipient_id, absence_id, state, raised_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+const INSERT_ASSIGNMENT = `INSERT INTO assignments (id, household_id, date, assignee_id, source, created_at) VALUES ($1, $2, $3, $4, $5, $6)`;
 
 export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedReport> {
-  const { household, members, child, pattern, closures } = graph;
+  const { household, members, child, pattern, closures, absences, pickupRequests, assignments } =
+    graph;
 
   await db.$client.transaction(async (tx) => {
     await tx.query(INSERT_HOUSEHOLD, [household.id, household.name]);
@@ -85,12 +95,43 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
         closure.reason ?? null,
       ]);
     }
-  });
 
-  const skipped: UnpersistedKind[] = [];
-  if (graph.absences.length > 0) skipped.push("absences");
-  if (graph.pickupRequests.length > 0) skipped.push("pickupRequests");
-  if (graph.assignments.length > 0) skipped.push("assignments");
+    for (const absence of absences) {
+      await tx.query(INSERT_ABSENCE, [
+        absence.id,
+        absence.householdId,
+        absence.memberId,
+        absence.startDate,
+        absence.endDate,
+        absence.label ?? null,
+        absence.note ?? null,
+      ]);
+    }
+
+    for (const request of pickupRequests) {
+      await tx.query(INSERT_PICKUP_REQUEST, [
+        request.id,
+        request.householdId,
+        request.date,
+        request.requesterId,
+        request.recipientId,
+        request.absenceId,
+        request.state,
+        request.raisedAt,
+      ]);
+    }
+
+    for (const assignment of assignments) {
+      await tx.query(INSERT_ASSIGNMENT, [
+        assignment.id,
+        assignment.householdId,
+        assignment.date,
+        assignment.assigneeId,
+        assignment.source,
+        assignment.createdAt,
+      ]);
+    }
+  });
 
   return {
     inserted: {
@@ -99,8 +140,11 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
       children: 1,
       childcarePatternVersions: pattern.versions.length,
       closures: closures.length,
+      absences: absences.length,
+      pickupRequests: pickupRequests.length,
+      assignments: assignments.length,
     },
-    skipped,
+    skipped: [],
   };
 }
 
@@ -111,6 +155,7 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
  */
 export async function truncateAll(db: Database): Promise<void> {
   await db.$client.exec(
-    `TRUNCATE households, members, children, childcare_pattern_versions, closures RESTART IDENTITY CASCADE`,
+    `TRUNCATE households, members, children, childcare_pattern_versions, closures,
+      absences, pickup_requests, assignments RESTART IDENTITY CASCADE`,
   );
 }

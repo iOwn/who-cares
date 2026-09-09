@@ -1,0 +1,14 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding-bottom: var(--space-16);
+}
+
+.field {
+  width: 100%;
+}
+
+.impact {
+  margin-top: var(--space-4);
+}

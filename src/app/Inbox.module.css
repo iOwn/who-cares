@@ -1,0 +1,51 @@
+/*
+ * Inbox — full-screen list on phones, a right-hand side-panel *region* from
+ * --bp-md up. NOT a Dialog: no scrim, and on desktop the calendar behind it
+ * stays live (docs/design-system-inventory.md §9).
+ *
+ * The switch is a viewport @media at --bp-md (768px) — breakpoints.ts and
+ * tokens.css both already earmark that value for the inbox side-panel switch.
+ * No container query: the app shell is always full viewport width, so there is
+ * no container context to query (docs/design-system.md §10).
+ */
+
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+}
+
+/* Dock to the right as a panel with a divider from tablet width up. */
+@media (min-width: 768px) /* --bp-md */ {
+  .panel {
+    inset-inline: auto 0;
+    width: min(24rem, 90vw);
+    border-inline-start: var(--border) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: inbox-in var(--dur-fast) var(--ease-standard);
+  }
+}
+
+@keyframes inbox-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
