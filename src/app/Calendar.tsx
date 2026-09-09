@@ -94,13 +94,35 @@ export function Calendar({
   const [selectedDate, setSelectedDate] = useState<CalendarDate | null>(null);
 
   useEffect(() => {
-    setNow(new Date());
-    const local = localTodayIso();
-    if (local !== initialToday) {
-      setToday(local);
-      setMonth(monthOf(local));
-    }
-  }, [initialToday]);
+    const sync = () => {
+      setNow(new Date());
+      const local = localTodayIso();
+      setToday((prev) => (prev === local ? prev : local));
+    };
+    sync();
+    // Day state is derived live (ADR-0003); re-sample the clock whenever the tab
+    // comes back into view so a long-lived PWA tab doesn't sit on a stale
+    // Pending day past its 48h threshold. `today` only moves the grid when the
+    // browsed month still tracks it — handled below.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
+  // Follow the real date onto the grid only while the user hasn't paged away
+  // from it (first mount, or they're sitting on "this month").
+  const initialMonth = useMemo(() => monthOf(initialToday), [initialToday]);
+  useEffect(() => {
+    setMonth((prev) =>
+      prev.year === initialMonth.year && prev.month === initialMonth.month ? monthOf(today) : prev,
+    );
+  }, [today, initialMonth]);
 
   const view = useMemo(
     () =>

@@ -9,7 +9,12 @@
   display: flex;
 }
 
-/* The quiet / off states the 4-state StatePill can't render — a muted echo of its shape. */
+/*
+ * `quiet` / `off` are deliberately outside the 4-state status vocabulary
+ * (docs/design-system.md "Display state vs domain Day state"), so there is no
+ * StatePill / StateDot for them. This is a one-off muted echo of the pill shape,
+ * scoped to DayDetail — the only surface that renders these two in a pill slot.
+ */
 .neutralPill {
   display: inline-flex;
   align-items: center;
@@ -23,8 +28,8 @@
 }
 
 .neutralDot {
-  width: 0.5rem;
-  height: 0.5rem;
+  width: var(--space-8);
+  height: var(--space-8);
   border-radius: var(--radius-pill);
   background: var(--color-border-strong);
 }

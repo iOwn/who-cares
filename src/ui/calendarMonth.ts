@@ -111,8 +111,18 @@ const STATE_PHRASE: Record<DayDisplayState, string> = {
   off: "no childcare",
 };
 
-/** `"Wednesday, January 8, 2025 — childcare closed"` — a `DayCell`'s SR label. */
-export function dayAriaLabel(date: CalendarDate, displayState: DayDisplayState): string {
+/**
+ * `"Wednesday, January 8, 2025 — childcare closed"` — a `DayCell`'s SR label.
+ * The `whoLabel` ("Alex", "asked Bailey", "both away", …) is appended for the
+ * contested states so a screen-reader user gets the same "who" line sighted
+ * users see in the cell; it is skipped for `closed` (the phrase already says it)
+ * and empty for `quiet` / `off`.
+ */
+export function dayAriaLabel(
+  date: CalendarDate,
+  displayState: DayDisplayState,
+  whoLabel = "",
+): string {
   const [y, m, d] = date.split("-").map(Number);
   const long = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
     weekday: "long",
@@ -121,7 +131,8 @@ export function dayAriaLabel(date: CalendarDate, displayState: DayDisplayState):
     day: "numeric",
     timeZone: "UTC",
   });
-  return `${long} — ${STATE_PHRASE[displayState]}`;
+  const base = `${long} — ${STATE_PHRASE[displayState]}`;
+  return whoLabel && whoLabel !== "closed" ? `${base}, ${whoLabel}` : base;
 }
 
 /** `"September 2026"` for `(2026, 9)`. */
@@ -342,7 +353,7 @@ export function buildCalendarMonth({
       whoLabel,
       narrative,
       closureReason,
-      ariaLabel: inMonth ? dayAriaLabel(date, displayState) : "",
+      ariaLabel: inMonth ? dayAriaLabel(date, displayState, whoLabel) : "",
     });
   }
 

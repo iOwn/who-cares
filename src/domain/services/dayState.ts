@@ -70,7 +70,11 @@ export interface DayStateFacts {
    * is not an open request and the day falls back to needing a direct claim.
    */
   readonly openRequest: PickupRequest | null;
-  /** Ids of the members (0, 1, or 2) who are absent on `date`. */
+  /**
+   * Ids of the members absent on `date` — **distinct**, 0–2 entries. The
+   * "both members absent" branch is `length >= 2`, so the caller must dedupe
+   * (overlapping absence rows for one member collapse to one id).
+   */
   readonly absentMemberIds: readonly string[];
 }
 
@@ -80,6 +84,12 @@ export interface DayStateFacts {
  * raised (long silence on a far-out request), **or** 48h before the childcare
  * day itself (a near-term request that never got a fair silence window). The
  * day flips to At-risk the instant either is crossed — whichever comes first.
+ *
+ * "48h before the day" counts back from the day's **UTC midnight**, matching
+ * the app's zone-free `'YYYY-MM-DD'` date model (`../types`). For a viewer well
+ * off UTC this leans a few hours early or late — a deliberate, documented
+ * trade-off, not a bug: the alternative (a per-viewer zone) has no home in a
+ * model where a childcare day is a bare date.
  */
 export function hasCrossedAtRiskThreshold(
   raisedAt: Date,

@@ -181,7 +181,12 @@ describe("buildCalendarMonth", () => {
     expect(byDate.get("2025-01-31")).toMatchObject({
       dayState: "At-risk",
       whoLabel: "no answer",
+      narrative: "The pickup request to Alex has gone unanswered. This day needs attention.",
     });
+    // The contested "who" line rides into the SR label too.
+    expect(byDate.get("2025-01-08")?.ariaLabel).toBe(
+      "Wednesday, January 8, 2025 — pickup at risk, both away",
+    );
     // Untouched days still derive quiet / closed.
     expect(byDate.get("2025-01-13")?.displayState).toBe("quiet");
     // The list row / grid cell narrative stays generic; only the closureReason
@@ -190,6 +195,41 @@ describe("buildCalendarMonth", () => {
       displayState: "closed",
       narrative: "No childcare on this day.",
       closureReason: "Staff day",
+    });
+  });
+
+  it("day-state copy: explicit-nobody assignment, and an unknown member id", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [],
+      // No `members` passed → names fall back to a generic phrase.
+      assignments: [makeAssignment({ date: "2025-01-08", assigneeId: null })],
+      pickupRequests: [
+        makePickupRequest({
+          date: "2025-01-20", // well clear of both 48h clocks at `now`
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          raisedAt: new Date("2025-01-08T08:00:00.000Z"),
+        }),
+      ],
+      absences: [absence({ from: "2025-01-20", to: "2025-01-20" }, { memberId: MEMBER_1_ID })],
+      today: "2025-01-08",
+      now: new Date("2025-01-08T09:00:00.000Z"),
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-08")).toMatchObject({
+      dayState: "At-risk",
+      whoLabel: "needs cover",
+      narrative: "Nobody is covering pickup and there is no open request.",
+    });
+    // Unknown member ids → the generic fallback, not `undefined`.
+    expect(byDate.get("2025-01-20")).toMatchObject({
+      dayState: "Pending",
+      whoLabel: "asked the other parent",
+      narrative: "the other parent asked the other parent to cover this pickup. No answer yet.",
     });
   });
 
