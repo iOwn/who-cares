@@ -191,6 +191,8 @@ export function Calendar({
             <ul className={styles.listRows}>
               {view.notableDays.map((day) => (
                 <li key={day.date}>
+                  {/* TODO(#83): ListRow primitive — this hand-rolls Surface's
+                      sunken treatment because Surface has no `as` prop. */}
                   <button
                     type="button"
                     className={styles.listRow}

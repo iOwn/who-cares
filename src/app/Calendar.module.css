@@ -41,6 +41,7 @@
  * A pressable row. `Surface` is a `<div>` with no `as` prop (conventions §5),
  * so a whole-row button can't compose it without nesting flow content in a
  * `<button>`; this mirrors `Surface variant="sunken"`'s tokens instead.
+ * TODO(#83): replace with the `ListRow` primitive.
  */
 .listRow {
   display: flex;
