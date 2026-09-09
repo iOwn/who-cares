@@ -1,6 +1,6 @@
 /*
  * SegmentedControl — exclusive segments on a sunken track.
- * Semantic tokens only. State via RAC's [data-*] attributes on <Radio>.
+ * Semantic tokens only. State via RAC's [data-*] attributes on <RadioButton>.
  * Motion (the active-segment settle) gated on prefers-reduced-motion.
  */
 
@@ -15,6 +15,10 @@
 
 .group[data-disabled] {
   opacity: 0.55;
+}
+
+.field {
+  display: contents;
 }
 
 .item {
