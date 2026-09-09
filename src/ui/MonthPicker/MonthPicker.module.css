@@ -1,0 +1,79 @@
+/*
+ * MonthPicker — jump-to-month body. Semantic tokens only.
+ */
+
+.body {
+  padding: var(--space-16);
+}
+
+.yearRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+.year {
+  min-width: 4rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-8);
+}
+
+.month {
+  padding: var(--space-12) var(--space-8);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.month[data-hovered],
+.month:hover {
+  background: var(--color-surface-sunken);
+}
+
+.month:active {
+  transform: translateY(1px);
+}
+
+.month:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.monthCurrent {
+  border-color: var(--color-border-strong);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.monthCurrent[data-hovered],
+.monthCurrent:hover {
+  background: var(--color-accent-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .month {
+    transition: none;
+  }
+
+  .month:active {
+    transform: none;
+  }
+}

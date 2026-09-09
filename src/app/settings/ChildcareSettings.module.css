@@ -1,0 +1,75 @@
+/* Rendered as a section inside `SettingsScreen`'s `.body` (issue #48 owns the
+ * route shell), so no padding of its own — the body supplies the inset. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.hint {
+  margin: 0 0 var(--space-12);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.weekdays {
+  margin-bottom: var(--space-16);
+}
+
+.field {
+  margin-top: var(--space-12);
+}
+
+.closureList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.closureRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-12);
+}
+
+.closureText {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.closureDate {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.closureReason {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.closureForm {
+  padding: var(--space-12);
+}
+
+.closureFormTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.closureFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}

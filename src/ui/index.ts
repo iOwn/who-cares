@@ -22,10 +22,22 @@ export {
 } from "./announce";
 export { Button, type ButtonProps } from "./Button";
 export { type Breakpoint, breakpoints, mq } from "./breakpoints";
+export { CalendarGrid, type CalendarGridProps } from "./CalendarGrid";
 export { Callout, type CalloutProps } from "./Callout";
 export { CountBadge, type CountBadgeProps } from "./CountBadge";
+export {
+  type BuildCalendarMonthParams,
+  buildCalendarMonth,
+  type CalendarDayView,
+  type CalendarMonthView,
+  monthLabelOf,
+  monthOf,
+  shiftMonth,
+  WEEKDAY_HEADERS,
+} from "./calendarMonth";
 export { cx } from "./cx";
 export { DateField, type DateFieldProps } from "./DateField";
+export { DayCell, type DayCellProps } from "./DayCell";
 export {
   Dialog,
   type DialogHeaderProps,
@@ -45,6 +57,8 @@ export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { FAB, type FABProps } from "./FAB";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { Legend, type LegendProps } from "./Legend";
+export { MonthPager, type MonthPagerProps } from "./MonthPager";
+export { MonthPicker, type MonthPickerProps } from "./MonthPicker";
 export { PersonChip, type PersonChipProps } from "./PersonChip";
 export { RouteHeader, type RouteHeaderProps } from "./RouteHeader";
 export { SectionHeading, type SectionHeadingProps } from "./SectionHeading";
@@ -61,3 +75,4 @@ export { TextArea, type TextAreaProps } from "./TextArea";
 export { TextField, type TextFieldProps } from "./TextField";
 export { ToggleGroup, type ToggleGroupItemProps, type ToggleGroupProps } from "./ToggleGroup";
 export { VisuallyHidden, type VisuallyHiddenProps } from "./VisuallyHidden";
+export { DEFAULT_WEEKDAYS, WeekdayPicker, type WeekdayPickerProps } from "./WeekdayPicker";

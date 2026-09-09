@@ -1,8 +1,0 @@
-.calendar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60dvh;
-  padding: var(--space-24);
-  color: var(--color-text-muted);
-}

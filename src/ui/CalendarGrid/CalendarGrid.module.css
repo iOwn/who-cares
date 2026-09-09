@@ -1,0 +1,41 @@
+/*
+ * CalendarGrid — the 7-column month grid. Semantic tokens only; no motion.
+ */
+
+.base {
+  display: block;
+}
+
+.headerRow,
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.headerRow {
+  margin-bottom: var(--space-6);
+}
+
+.headerCell {
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text-subtle);
+}
+
+.headerWeekend {
+  color: var(--color-text-placeholder);
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.blank {
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
