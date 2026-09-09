@@ -163,6 +163,14 @@ export const absences = pgTable("absences", {
  * is absent. `state` moves `Open` → one terminal value and never reopens, so
  * `UNIQUE (household_id, date)` holds: a request is never re-raised for a date
  * it already covered. Both ADR-0003 48h clocks run from `raised_at`.
+ *
+ * `absence_id` is `ON DELETE SET NULL`, not `CASCADE` (migration `0006`): when
+ * the absence behind a request is cancelled, `cancelAbsence` first moves the
+ * request to its terminal `Withdrawn` state, then the absence row goes and the
+ * request is left standing with `absence_id = NULL`. The terminal row must
+ * survive so `UNIQUE (household_id, date)` keeps blocking a re-raise for that
+ * date — "once Declined or Withdrawn … never re-raised" (CONTEXT.md, #5
+ * catalogue). Cascading the rows away would silently re-open that door.
  */
 export const pickupRequests = pgTable(
   "pickup_requests",
@@ -178,9 +186,7 @@ export const pickupRequests = pgTable(
     recipientId: text("recipient_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
-    absenceId: text("absence_id")
-      .notNull()
-      .references(() => absences.id, { onDelete: "cascade" }),
+    absenceId: text("absence_id").references(() => absences.id, { onDelete: "set null" }),
     state: text("state").notNull().default("Open"),
     raisedAt: timestamp("raised_at", { withTimezone: true }).notNull().defaultNow(),
   },

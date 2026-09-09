@@ -12,6 +12,10 @@ import { pickupRequests } from "../schema";
  * it back to a `Date`. `findByDate` leans on `UNIQUE (household_id, date)` (a
  * request is never re-raised), but still orders by `raised_at` desc so a
  * hand-seeded duplicate resolves to the newest.
+ *
+ * `absence_id` is nullable (`ON DELETE SET NULL`, migration `0006`): a terminal
+ * request outlives the absence that raised it, so the "never re-raised"
+ * `UNIQUE (household_id, date)` guard survives a `cancelAbsence`.
  */
 function toPickupRequest(row: {
   id: string;
@@ -19,7 +23,7 @@ function toPickupRequest(row: {
   date: string;
   requesterId: string;
   recipientId: string;
-  absenceId: string;
+  absenceId: string | null;
   state: string;
   raisedAt: Date;
 }): PickupRequest {

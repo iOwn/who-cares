@@ -210,6 +210,9 @@ export function Calendar({
           setSelectedDate(null);
           setAbsenceAnchor(date);
         }}
+        currentMemberId={currentMemberId}
+        pickupRequests={pickupRequests}
+        absences={absences}
       />
 
       {absenceAnchor != null ? (
