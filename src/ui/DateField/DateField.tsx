@@ -6,21 +6,17 @@ import {
   Calendar,
   CalendarCell,
   CalendarGrid,
-  composeRenderProps,
   DateInput,
   DatePicker,
   DateSegment,
   type DateValue,
-  FieldError,
   Group,
   Heading,
-  Label,
   Popover,
   Button as RACButton,
   type DatePickerProps as RACDatePickerProps,
-  Text,
 } from "react-aria-components";
-import { cx } from "../cx";
+import { FieldShell, fieldRootProps } from "../FieldShell";
 import { showOptionalHint } from "../fieldRequirement";
 import styles from "./DateField.module.css";
 
@@ -58,6 +54,10 @@ import styles from "./DateField.module.css";
  *     never with render-prop booleans (docs/design-system.md §1).
  *   - `className` / `style` forward to the `DatePicker` root and merge LAST
  *     (the escape hatch); `ref` forwards to that root `<div>`.
+ *
+ * The label / optional / description / error shell and the
+ * `validationBehavior` / `composeRenderProps` root wiring are shared with
+ * `TextField` / `TextArea` via `../FieldShell` (issue #74).
  */
 
 export interface DateFieldProps
@@ -92,30 +92,24 @@ export const DateField = forwardRef<HTMLDivElement, DateFieldProps>(function Dat
     <DatePicker
       {...props}
       ref={ref}
-      validationBehavior={props.validationBehavior ?? "aria"}
-      className={composeRenderProps(className, (resolved) => cx(styles.field, resolved))}
+      {...fieldRootProps(className, props.validationBehavior, styles.field)}
       style={style}
     >
-      {label != null && (
-        <Label className={styles.label}>
-          {label}
-          {optional && <span className={styles.optional}> — optional</span>}
-        </Label>
-      )}
-      <Group className={styles.group}>
-        <DateInput className={styles.input}>
-          {(segment) => <DateSegment segment={segment} className={styles.segment} />}
-        </DateInput>
-        <RACButton className={styles.trigger}>
-          <CalendarDays size={18} aria-hidden />
-        </RACButton>
-      </Group>
-      {description != null && (
-        <Text slot="description" className={styles.description}>
-          {description}
-        </Text>
-      )}
-      <FieldError className={styles.error}>{errorMessage}</FieldError>
+      <FieldShell
+        label={label}
+        optional={optional}
+        description={description}
+        errorMessage={errorMessage}
+      >
+        <Group className={styles.group}>
+          <DateInput className={styles.input}>
+            {(segment) => <DateSegment segment={segment} className={styles.segment} />}
+          </DateInput>
+          <RACButton className={styles.trigger}>
+            <CalendarDays size={18} aria-hidden />
+          </RACButton>
+        </Group>
+      </FieldShell>
       <Popover className={styles.popover} placement="bottom start">
         <Calendar className={styles.calendar}>
           <header className={styles.calendarHeader}>
