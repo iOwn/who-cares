@@ -3,10 +3,12 @@
 import { forwardRef, type ReactNode } from "react";
 import {
   composeRenderProps,
-  Radio as RACRadio,
+  RadioButton as RACRadioButton,
+  type RadioButtonProps as RACRadioButtonProps,
+  RadioField as RACRadioField,
+  type RadioFieldProps as RACRadioFieldProps,
   RadioGroup as RACRadioGroup,
   type RadioGroupProps as RACRadioGroupProps,
-  type RadioProps as RACRadioProps,
 } from "react-aria-components";
 import { cx } from "../cx";
 import styles from "./SegmentedControl.module.css";
@@ -15,10 +17,10 @@ import styles from "./SegmentedControl.module.css";
  * `SegmentedControl` — 2–n mutually-exclusive segments (Grid / List, One-off /
  * Recurring); docs/design-system-inventory.md §10.
  *
- * Built on RAC `RadioGroup` + `Radio`: that is the WAI-ARIA radio-group pattern,
- * so we get the `radiogroup` / `radio` roles, a true roving tabindex (only the
- * selected segment is tab-focusable), and arrow-key navigation that moves focus
- * AND selection — all asserted in SegmentedControl.test.tsx.
+ * Built on RAC `RadioGroup` + `RadioField` + `RadioButton`: that is the WAI-ARIA
+ * radio-group pattern, so we get the `radiogroup` / `radio` roles, a true roving
+ * tabindex (only the selected segment is tab-focusable), and arrow-key navigation
+ * that moves focus AND selection — all asserted in SegmentedControl.test.tsx.
  *
  * `ToggleGroup` is the sibling primitive for the multi-select / non-exclusive
  * case (weekday keys) — see src/ui/ToggleGroup.
@@ -27,11 +29,6 @@ import styles from "./SegmentedControl.module.css";
  * (docs/design-system.md §6). State is styled in the CSS Module via the
  * `&[data-selected]` / `&[data-focus-visible]` attributes RAC emits — never
  * render-prop booleans (§1).
- *
- * NOTE: RAC 1.21 marks the self-contained `Radio` `@deprecated` in favour of
- * `RadioField` + `RadioButton` (which wraps each option in an extra element).
- * `Radio` is not removed and keeps the segment DOM flat, so we stay on it for
- * now — migration tracked in iOwn/who-cares#73.
  */
 export interface SegmentedControlProps
   extends Pick<
@@ -74,21 +71,25 @@ const SegmentedControlRoot = forwardRef<HTMLDivElement, SegmentedControlProps>(
 );
 
 export interface SegmentedControlItemProps
-  extends Pick<RACRadioProps, "value" | "isDisabled" | "style"> {
+  extends Pick<RACRadioFieldProps, "value" | "isDisabled" | "style"> {
   /** The segment label — also its accessible name. */
   children: ReactNode;
-  /** Forwarded to the segment element and merged LAST. RAC's function form is supported. */
-  className?: RACRadioProps["className"];
+  /** Forwarded to the RadioButton element and merged LAST. RAC's function form is supported. */
+  className?: RACRadioButtonProps["className"];
 }
 
 const SegmentedControlItem = forwardRef<HTMLLabelElement, SegmentedControlItemProps>(
-  function SegmentedControlItem({ className, ...props }, ref) {
+  function SegmentedControlItem({ className, children, value, isDisabled, style }, ref) {
     return (
-      <RACRadio
-        {...props}
-        ref={ref}
-        className={composeRenderProps(className, (resolved) => cx(styles.item, resolved))}
-      />
+      <RACRadioField value={value} isDisabled={isDisabled} className={styles.field}>
+        <RACRadioButton
+          ref={ref}
+          style={style}
+          className={composeRenderProps(className, (resolved) => cx(styles.item, resolved))}
+        >
+          {children}
+        </RACRadioButton>
+      </RACRadioField>
     );
   },
 );
