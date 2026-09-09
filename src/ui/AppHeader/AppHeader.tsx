@@ -38,7 +38,11 @@ export const AppHeader = forwardRef<HTMLElement, AppHeaderProps>(function AppHea
         <p className={styles.subtitle}>{childName} · who&rsquo;s on pickup</p>
       </div>
       <div className={styles.bellSlot}>
-        <IconButton aria-label="Requests" variant="ghost" onPress={onOpenRequests}>
+        <IconButton
+          aria-label={requestCount > 0 ? `Requests, ${requestCount} pending` : "Requests"}
+          variant="ghost"
+          onPress={onOpenRequests}
+        >
           <Bell size={20} aria-hidden />
         </IconButton>
         <CountBadge count={requestCount} className={styles.badge} aria-hidden />
