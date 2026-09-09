@@ -1,0 +1,159 @@
+/*
+ * Settings screen (issue #48). Feature-level layout, semantic tokens only.
+ * No interaction state or motion of its own — the composed primitives
+ * (`Button`, `IconButton`, `Dialog`) each own their press / focus-ring / motion
+ * contract.
+ */
+
+.base {
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: var(--space-20) var(--space-16) var(--space-24);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+/* --- passkey card --- */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+}
+
+.cardText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text);
+}
+
+.cardBody {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+/* --- persistent inline confirmation row (no Toast primitive) --- */
+.confirmRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-16);
+}
+
+.confirmIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-resolved-surface);
+  color: var(--color-resolved-text);
+}
+
+.confirmText {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+/* --- device list --- */
+.deviceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deviceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+}
+
+.deviceIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.deviceText {
+  flex: 1;
+  min-width: 0;
+}
+
+.deviceName {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.thisDevice {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-subtle);
+}
+
+.deviceMeta {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-subtle);
+}
+
+/* --- revoke confirm dialog --- */
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-16);
+}
+
+.dialogText {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}

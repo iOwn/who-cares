@@ -26,6 +26,7 @@
     "prepare": "lefthook install"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.3",
     "@internationalized/date": "3.12.4",
     "@neondatabase/serverless": "^1.1.0",
     "@react-aria/live-announcer": "3.5.1",
