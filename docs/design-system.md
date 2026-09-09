@@ -191,7 +191,7 @@ A UI-only display state, never a domain `Day state`. Surfaces on:
 | Surface | Treatment |
 | --- | --- |
 | grid `DayCell` | striped bg + grey dot + generic "closed" line |
-| `ListRow` | grey rail + `StatePill` "Closed" + generic narrative |
+| `ListRow` | `StatePill` "Closed" + generic narrative; colour rail (deferred to Calendar feature) |
 | `DayDetail` `Dialog` | grey `StatePill` + narrative **with the closure reason** if one was entered |
 | `Legend` | 4th dot |
 | Settings closure list | the reason verbatim (it edits the `Closure`, not day-state) |
@@ -239,9 +239,9 @@ Confirmed + mechanically pinned in
    `<Link className={buttonStyles}>` **recipe**, not a polymorphic prop.
    
    **Pressable Surfaces**: `Surface` is always a `<div>` with no pressable path. Pressable
-   list rows / cards compose via the `ListRow` primitive (`ListRow` optionally pressable) or
-   `RequestCard` (which composes a pressable `Surface`-like container itself). This keeps
-   `Surface` focused: a single plain container primitive with no interaction behaviour.
+   sunken surfaces compose via the `ListRow` primitive (`ListRow` optionally pressable when
+   `onPress` is supplied). This keeps `Surface` focused: a single plain container primitive
+   with no interaction behaviour.
 6. **Controlled vs uncontrolled** — support both; **uncontrolled is the default**
    (`defaultValue` / `defaultSelected`), following RAC's conventions. Controlled via `value` +
    `onChange`.

@@ -41,11 +41,6 @@
  * Typography styles for content inside ListRow. ListRow.module.css handles
  * the container, border, background, and pressable interaction state.
  */
-.listRowText {
-  display: block;
-  min-width: 0;
-}
-
 .listDate {
   display: block;
   font-family: var(--font-display);

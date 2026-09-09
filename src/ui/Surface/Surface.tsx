@@ -11,8 +11,8 @@ import styles from "./Surface.module.css";
  * Deliberately minimal: a plain `<div>`, no interaction behaviour, no `as` prop
  * (docs/design-system.md §5 bans `as` / `asChild` — a feature that needs a
  * different element, e.g. a `<li>` in a list, wraps or nests its own).
- * Pressable rows are `Surface` + a nested link / `Button`, not a pressable
- * Surface. No `'use client'` — it imports no RAC.
+ * Pressable sunken surfaces compose via `ListRow`, not a pressable Surface.
+ * No `'use client'` — it imports no RAC.
  */
 const surface = cva(styles.base, {
   variants: {

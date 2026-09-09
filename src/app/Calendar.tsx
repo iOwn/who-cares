@@ -182,10 +182,8 @@ export function Calendar({
                       ) : null
                     }
                   >
-                    <span className={styles.listRowText}>
-                      <span className={styles.listDate}>{shortDate(day.date)}</span>
-                      <span className={styles.listLine}>{day.narrative}</span>
-                    </span>
+                    <span className={styles.listDate}>{shortDate(day.date)}</span>
+                    <span className={styles.listLine}>{day.narrative}</span>
                   </ListRow>
                 </li>
               ))}

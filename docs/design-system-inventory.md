@@ -216,7 +216,7 @@ A UI-only display state (`closed`), never a domain `Day state`. Surfaces on:
 | Surface | Treatment |
 | --- | --- |
 | grid `DayCell` | striped bg + grey dot + generic "closed" line |
-| `ListRow` | grey rail + `StatePill` "Closed" + generic narrative |
+| `ListRow` | `StatePill` "Closed" + generic narrative; colour rail (deferred to Calendar feature) |
 | `DayDetail` `Dialog` | grey `StatePill` + narrative **with the closure reason** if one was entered |
 | `Legend` | 4th dot |
 | Settings closure list | the reason verbatim (it edits the `Closure`, not day-state) |
