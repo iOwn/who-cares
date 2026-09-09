@@ -34,6 +34,8 @@ export interface HouseholdRepository {
 
 export interface MemberRepository {
   findById(id: string): Promise<Member | null>;
+  /** Matched exactly as given — callers normalise case before calling. */
+  findByEmail(email: string): Promise<Member | null>;
   listByHousehold(householdId: string): Promise<Member[]>;
   save(member: Member): Promise<void>;
 }
@@ -90,6 +92,16 @@ export interface AssignmentRepository {
  */
 export interface Clock {
   now(): Date;
+}
+
+/**
+ * A source of new entity ids, as an injected port — the same rationale as
+ * `Clock`: a domain service that mints ids (household bootstrap, request /
+ * assignment creation) takes this rather than calling `crypto.randomUUID()`
+ * itself, so a test can supply deterministic ids.
+ */
+export interface IdGenerator {
+  next(): string;
 }
 
 export interface EmailMessage {

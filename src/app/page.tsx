@@ -1,8 +1,12 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>WhoCares</h1>
-      <p>Placeholder landing page. The app isn&apos;t built yet.</p>
-    </main>
-  );
+import { getCurrentSession } from "@/auth";
+import { AppShell } from "./AppShell";
+import { SignInScreen } from "./SignInScreen";
+
+export default async function Home() {
+  const current = await getCurrentSession();
+  if (!current) {
+    return <SignInScreen />;
+  }
+
+  return <AppShell childName={current.child?.name ?? ""} />;
 }

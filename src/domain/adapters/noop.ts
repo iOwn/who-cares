@@ -10,6 +10,7 @@
 import type {
   Clock,
   EmailMessage,
+  IdGenerator,
   Mailer,
   Notification,
   Notifier,
@@ -26,6 +27,11 @@ export const systemClock: Clock = {
 export function fixedClock(instant: Date): Clock {
   return { now: () => new Date(instant.getTime()) };
 }
+
+/** The real id source (`crypto.randomUUID()`). Not a noop — the honest default `IdGenerator`. */
+export const systemIdGenerator: IdGenerator = {
+  next: () => crypto.randomUUID(),
+};
 
 type Logger = (message: string, payload: unknown) => void;
 

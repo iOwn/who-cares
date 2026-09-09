@@ -6,4 +6,5 @@
 
 export * as noopAdapters from "./adapters/noop";
 export * from "./ports";
+export * from "./services/bootstrapHousehold";
 export * from "./types";
