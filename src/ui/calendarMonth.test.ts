@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { makeClosure, pattern } from "@/testing";
-import { buildCalendarMonth, monthLabelOf, monthOf, shiftMonth } from "./calendarMonth";
+import {
+  buildCalendarMonth,
+  dayAriaLabel,
+  monthLabelOf,
+  monthOf,
+  shiftMonth,
+} from "./calendarMonth";
 
 const monToFri = pattern(["mon", "tue", "wed", "thu", "fri"], "2025-01-06");
 
@@ -71,6 +77,31 @@ describe("buildCalendarMonth", () => {
     expect(byDate.get("2025-01-11")).toMatchObject({ displayState: "off" }); // Saturday
     expect(byDate.get("2025-01-02")).toMatchObject({ displayState: "off" }); // before pattern
     expect(byDate.get("2025-01-15")?.isToday).toBe(true);
+  });
+
+  it("gives in-month cells a full date + state aria-label, blanks none", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [makeClosure({ date: "2025-01-08" })],
+      today: "2025-01-15",
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-08")?.ariaLabel).toBe(
+      "Wednesday, January 8, 2025 — childcare closed",
+    );
+    expect(byDate.get("2025-01-09")?.ariaLabel).toBe("Thursday, January 9, 2025 — childcare day");
+    expect(byDate.get("2025-01-11")?.ariaLabel).toBe("Saturday, January 11, 2025 — no childcare");
+    // Leading blank from December is not in-month → no label.
+    expect(view.weeks[0].find((day) => !day.inMonth)?.ariaLabel).toBe("");
+  });
+
+  it("dayAriaLabel formats date + state phrase", () => {
+    expect(dayAriaLabel("2026-09-14", "at-risk")).toBe(
+      "Monday, September 14, 2026 — pickup at risk",
+    );
   });
 
   it("notableDays is in-month closures / states only — weekends and quiet days hidden", () => {

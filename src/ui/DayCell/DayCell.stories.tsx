@@ -33,9 +33,9 @@ export const States: Story = () => (
 
 export const Today: Story = () => (
   <Grid>
-    <DayCell dayOfMonth={9} state="quiet" today />
-    <DayCell dayOfMonth={10} state="at-risk" whoLabel="both out" today />
-    <DayCell dayOfMonth={11} state="off" today />
+    <DayCell dayOfMonth={9} state="quiet" isToday />
+    <DayCell dayOfMonth={10} state="at-risk" whoLabel="both out" isToday />
+    <DayCell dayOfMonth={11} state="off" isToday />
   </Grid>
 );
 

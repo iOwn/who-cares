@@ -2,7 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { forwardRef, type ReactNode } from "react";
-import { Button as RACButton } from "react-aria-components";
+import { Button as RACButton, VisuallyHidden } from "react-aria-components";
 import { cx } from "../cx";
 import type { DayDisplayState } from "../dayDisplayState";
 import styles from "./DayCell.module.css";
@@ -15,8 +15,12 @@ import styles from "./DayCell.module.css";
  * The `state` display enum is the full six: the four status-vocabulary states
  * plus `quiet` (a childcare day with nothing happening — a small neutral dot)
  * and `off` (a weekday the pattern never included — a flat, borderless tile).
- * `today` is ORTHOGONAL to state — a heavy border + `--shadow-md` on whatever
+ * `isToday` is ORTHOGONAL to state — a heavy border + `--shadow-md` on whatever
  * the cell already is.
+ *
+ * The state dot / badge are decorative (`aria-hidden`); pass `ariaLabel` with
+ * the full date + state so a screen-reader user gets the real context on the
+ * root element rather than a bare day number.
  *
  * In #49 cells only ever render `quiet` / `off` / `closed` (no day-state yet);
  * the `whoLabel` is `"closed"` for a closure and empty otherwise. #50 fills in
@@ -55,7 +59,9 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
   /** The one-line label under the date (assignee / "asked …" / "closed"). */
   whoLabel?: string;
   /** Heavy border + shadow — the real current date. Orthogonal to `state`. */
-  today?: boolean;
+  isToday?: boolean;
+  /** Full date + state, for the screen-reader label on the root element. */
+  ariaLabel?: string;
   /** When set, the cell is a pressable RAC `Button`. */
   onPress?: () => void;
   isDisabled?: boolean;
@@ -64,15 +70,23 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
 }
 
 export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
-  { dayOfMonth, state, whoLabel, today, onPress, isDisabled, className, style },
+  { dayOfMonth, state, whoLabel, isToday, ariaLabel, onPress, isDisabled, className, style },
   ref,
 ) {
   const icon = STATE_ICON[state];
-  const classes = cx(cell({ state, today }), className);
+  const classes = cx(cell({ state, today: isToday }), className);
+
+  // When `ariaLabel` is given it carries the full date + state, so the visible
+  // number / "who" line become decorative to a screen reader (they'd otherwise
+  // read as a bare, contextless "3").
+  const decorative = ariaLabel != null;
 
   const inner: ReactNode = (
     <>
-      <span className={styles.date}>{dayOfMonth}</span>
+      {decorative ? <VisuallyHidden>{ariaLabel}</VisuallyHidden> : null}
+      <span className={styles.date} aria-hidden={decorative || undefined}>
+        {dayOfMonth}
+      </span>
       {state === "quiet" ? (
         <span className={styles.quietDot} aria-hidden />
       ) : icon != null ? (
@@ -80,7 +94,11 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
           {icon}
         </span>
       ) : null}
-      {whoLabel ? <span className={styles.who}>{whoLabel}</span> : null}
+      {whoLabel ? (
+        <span className={styles.who} aria-hidden={decorative || undefined}>
+          {whoLabel}
+        </span>
+      ) : null}
     </>
   );
 
@@ -90,6 +108,7 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
         ref={ref as React.Ref<HTMLButtonElement>}
         onPress={onPress}
         isDisabled={isDisabled}
+        aria-label={ariaLabel}
         className={cx(classes, styles.pressable)}
         style={style}
       >

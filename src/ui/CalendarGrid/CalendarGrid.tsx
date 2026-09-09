@@ -62,7 +62,8 @@ export const CalendarGrid = forwardRef<HTMLElement, CalendarGridProps>(function 
                   dayOfMonth={day.dayOfMonth}
                   state={day.displayState}
                   whoLabel={day.whoLabel}
-                  today={day.isToday}
+                  isToday={day.isToday}
+                  ariaLabel={day.ariaLabel}
                   onPress={onDayPress ? () => onDayPress(day.date) : undefined}
                 />
               ) : (

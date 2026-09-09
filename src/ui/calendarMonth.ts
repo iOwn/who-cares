@@ -39,6 +39,11 @@ export interface CalendarDayView {
    * name, …) arrives with #50.
    */
   readonly whoLabel: string;
+  /**
+   * Full date + state, for a `DayCell`'s screen-reader label — the visible grid
+   * is otherwise a wall of bare numbers. `""` for the adjacent-month blanks.
+   */
+  readonly ariaLabel: string;
 }
 
 export interface CalendarMonthView {
@@ -77,6 +82,29 @@ function leadingBlankCount(year: number, month: number): number {
 }
 
 const NOT_NOTABLE: ReadonlySet<DayDisplayState> = new Set(["quiet", "off"]);
+
+/** The state phrase a `DayCell` aria-label ends with, per display state. */
+const STATE_PHRASE: Record<DayDisplayState, string> = {
+  resolved: "pickup sorted",
+  pending: "pickup request waiting",
+  "at-risk": "pickup at risk",
+  closed: "childcare closed",
+  quiet: "childcare day",
+  off: "no childcare",
+};
+
+/** `"Wednesday, January 8, 2025 — childcare closed"` — a `DayCell`'s SR label. */
+export function dayAriaLabel(date: CalendarDate, displayState: DayDisplayState): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const long = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${long} — ${STATE_PHRASE[displayState]}`;
+}
 
 /** `"September 2026"` for `(2026, 9)`. */
 export function monthLabelOf(year: number, month: number): string {
@@ -140,6 +168,7 @@ export function buildCalendarMonth({
       isToday: date === today,
       displayState,
       whoLabel: displayState === "closed" ? "closed" : "",
+      ariaLabel: inMonth ? dayAriaLabel(date, displayState) : "",
     });
   }
 

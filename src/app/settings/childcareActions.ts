@@ -45,8 +45,24 @@ export async function savePatternAction(input: {
     weekdays: input.weekdays,
     effectiveFrom: input.effectiveFrom,
   });
-  await repos.childcarePattern.save({ id: householdId, householdId, versions });
+  // `childcarePattern.save` is delete-then-insert; run it in one transaction so
+  // a mid-write failure can't leave the household with no pattern at all
+  // (`src/db/repositories/childcarePattern.ts`; same pattern as
+  // `src/auth/config.ts`'s household bootstrap).
+  await db.transaction((tx) =>
+    createRepositories(tx).childcarePattern.save({ id: householdId, householdId, versions }),
+  );
   revalidateAll();
+}
+
+/** `true` iff `id` names a closure that belongs to `householdId`. */
+async function closureBelongsToHousehold(
+  repos: Awaited<ReturnType<typeof context>>["repos"],
+  householdId: string,
+  id: string,
+): Promise<boolean> {
+  const owned = await repos.closures.listByHousehold(householdId);
+  return owned.some((closure) => closure.id === id);
 }
 
 export async function saveClosureAction(input: {
@@ -59,15 +75,26 @@ export async function saveClosureAction(input: {
   const reason = input.reason?.trim() ? input.reason.trim() : undefined;
 
   // One closure per date: reuse the row already on that date if there is one.
+  // A client-supplied `id` is only honoured if it's this household's row —
+  // otherwise `save`'s upsert could re-parent someone else's closure (latent
+  // until multi-household, but cheap to close now).
   const onDate = await repos.closures.findByDate(householdId, input.date);
-  const id = input.id ?? onDate?.id ?? crypto.randomUUID();
+  const editId =
+    input.id && (await closureBelongsToHousehold(repos, householdId, input.id))
+      ? input.id
+      : undefined;
+  const id = editId ?? onDate?.id ?? crypto.randomUUID();
 
   await repos.closures.save({ id, householdId, date: input.date, ...(reason ? { reason } : {}) });
   revalidateAll();
 }
 
 export async function removeClosureAction(id: string): Promise<void> {
-  const { repos } = await context();
+  const { householdId, repos } = await context();
+  // `ClosureRepository.delete` takes a bare id; scope it to the household here
+  // so a stray id can't drop another household's row (latent in single-
+  // household v1 — see `saveClosureAction`).
+  if (!(await closureBelongsToHousehold(repos, householdId, id))) return;
   await repos.closures.delete(id);
   revalidateAll();
 }
