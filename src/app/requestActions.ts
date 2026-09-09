@@ -36,7 +36,7 @@ import {
  * the UI.
  */
 
-export type RequestActionResult = { ok: true } | { ok: false; error: string };
+export type RequestActionResult = { ok: true; note?: string } | { ok: false; error: string };
 
 const EXPIRED: RequestActionResult = {
   ok: false,
@@ -80,12 +80,17 @@ export async function acceptRequestAction(requestId: string): Promise<RequestAct
       ),
     );
     await dispatch([outcome.notification]);
+
+    revalidatePath("/");
+    return outcome.superseded
+      ? {
+          ok: true,
+          note: "That day was already covered by someone else, so the request was withdrawn.",
+        }
+      : { ok: true };
   } catch (thrown) {
     return toResult(thrown, "acceptRequestAction");
   }
-
-  revalidatePath("/");
-  return { ok: true };
 }
 
 export async function declineRequestAction(requestId: string): Promise<RequestActionResult> {

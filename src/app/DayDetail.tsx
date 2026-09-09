@@ -7,7 +7,7 @@ import type { Absence, CalendarDate, PickupRequest } from "@/domain";
 import type { CalendarDayView } from "@/ui";
 import { Button, Callout, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
-import { longDate } from "./formatCalendarDate";
+import { longDate, shortDate } from "./formatCalendarDate";
 import { cancelAbsenceAction, withdrawRequestAction } from "./requestActions";
 
 /**
@@ -77,7 +77,13 @@ export function DayDetail({
       ? (absences.find((a) => a.memberId === currentMemberId && absenceCovers(a, day.date)) ?? null)
       : null;
 
-  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
+  const canDeclare =
+    !!onDeclareAbsence && day != null && day.displayState !== "off" && myAbsence == null;
+  const showActions = myOpenRequest != null || myAbsence != null || canDeclare;
+
+  const run = (
+    action: () => Promise<{ ok: true; note?: string } | { ok: false; error: string }>,
+  ) => {
     setError(null);
     startTransition(async () => {
       const result = await action();
@@ -133,43 +139,49 @@ export function DayDetail({
               </Callout>
             ) : null}
 
-            {(() => {
-              const canDeclare = onDeclareAbsence && day.displayState !== "off" && !myAbsence;
-              if (!myOpenRequest && !myAbsence && !canDeclare) return null;
-              return (
-                <div className={styles.actions}>
-                  {myOpenRequest ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      isDisabled={pending}
-                      onPress={() => run(() => withdrawRequestAction(myOpenRequest.id))}
-                    >
-                      Withdraw request
-                    </Button>
-                  ) : null}
-                  {myAbsence ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      isDisabled={pending}
-                      onPress={() => run(() => cancelAbsenceAction(myAbsence.id))}
-                    >
-                      Cancel my absence
-                    </Button>
-                  ) : null}
-                  {canDeclare ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onPress={() => onDeclareAbsence?.(day.date)}
-                    >
-                      I&rsquo;m out this day
-                    </Button>
-                  ) : null}
-                </div>
-              );
-            })()}
+            {myAbsence ? (
+              <p className={styles.reason}>
+                Cancelling clears your whole absence
+                {myAbsence.startDate === myAbsence.endDate
+                  ? ` on ${shortDate(myAbsence.startDate)}`
+                  : ` (${shortDate(myAbsence.startDate)} – ${shortDate(myAbsence.endDate)})`}
+                . Any pickup already accepted for those days still stands.
+              </p>
+            ) : null}
+
+            {showActions ? (
+              <div className={styles.actions}>
+                {myOpenRequest ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isDisabled={pending}
+                    onPress={() => run(() => withdrawRequestAction(myOpenRequest.id))}
+                  >
+                    Withdraw request
+                  </Button>
+                ) : null}
+                {myAbsence ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isDisabled={pending}
+                    onPress={() => run(() => cancelAbsenceAction(myAbsence.id))}
+                  >
+                    Cancel my absence
+                  </Button>
+                ) : null}
+                {canDeclare ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => onDeclareAbsence?.(day.date)}
+                  >
+                    I&rsquo;m out this day
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         )
       }

@@ -8,7 +8,11 @@ import { hasCrossedAtRiskThreshold } from "@/domain";
 import { Button, Callout, EmptyState, IconButton, RequestCard, RouteHeader } from "@/ui";
 import { shortDate } from "./formatCalendarDate";
 import styles from "./Inbox.module.css";
-import { acceptRequestAction, declineRequestAction } from "./requestActions";
+import {
+  acceptRequestAction,
+  declineRequestAction,
+  type RequestActionResult,
+} from "./requestActions";
 
 /**
  * The pickup-request inbox (#51) — reached from the header bell. A full-screen
@@ -47,6 +51,7 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
   const [pending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -64,11 +69,9 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
 
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "The other parent";
 
-  const answer = (
-    requestId: string,
-    action: (id: string) => Promise<{ ok: true } | { ok: false; error: string }>,
-  ) => {
+  const answer = (requestId: string, action: (id: string) => Promise<RequestActionResult>) => {
     setError(null);
+    setNote(null);
     setPendingId(requestId);
     startTransition(async () => {
       const result = await action(requestId);
@@ -77,6 +80,7 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
         setError(result.error);
         return;
       }
+      if (result.note) setNote(result.note);
       router.refresh();
     });
   };
@@ -96,6 +100,11 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
         {error ? (
           <Callout tone="danger" role="alert">
             {error}
+          </Callout>
+        ) : null}
+        {note ? (
+          <Callout tone="info" dot>
+            {note}
           </Callout>
         ) : null}
         {requests.length === 0 ? (
