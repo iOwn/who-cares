@@ -1,9 +1,24 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { composeRenderProps, FieldError, Label, Text } from "react-aria-components";
+import {
+  type ClassNameOrFunction,
+  composeRenderProps,
+  FieldError,
+  Label,
+  Text,
+} from "react-aria-components";
 import { cx } from "./cx";
 import styles from "./field.module.css";
+
+/**
+ * Mirrors RAC's own `RACValidation["validationBehavior"]` — react-aria-components
+ * exports the components that extend `RACValidation` (`TextFieldProps`,
+ * `DatePickerProps`, …) but not `RACValidation` itself, so this is a hand-pinned
+ * copy rather than an import. Revisit on a react-aria-components upgrade if RAC
+ * ever adds a third value.
+ */
+type FieldValidationBehavior = "aria" | "native";
 
 /**
  * Shared internals for the RAC field primitives (`TextField`, `TextArea`,
@@ -73,12 +88,12 @@ export function FieldShell({
  * `className`, merged LAST (RAC's function form of `className` is supported).
  */
 export function fieldRootProps<RenderProps>(
-  className: string | ((renderProps: RenderProps) => string) | undefined,
-  validationBehavior: "aria" | "native" | undefined,
+  className: ClassNameOrFunction<RenderProps> | undefined,
+  validationBehavior: FieldValidationBehavior | undefined,
   base: string,
 ): {
-  className: (renderProps: RenderProps) => string;
-  validationBehavior: "aria" | "native";
+  className: (renderProps: RenderProps & { defaultClassName: string | undefined }) => string;
+  validationBehavior: FieldValidationBehavior;
 } {
   return {
     className: composeRenderProps(className, (resolved) => cx(base, resolved)),
