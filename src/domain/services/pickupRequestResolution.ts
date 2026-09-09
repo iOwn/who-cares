@@ -224,6 +224,12 @@ export interface AcceptRequestResult {
  * If an `Assignment` already exists for the day — a direct claim landed before
  * the response — the request auto-withdraws (event 6) rather than colliding with
  * the one-assignment-per-date invariant; `result.superseded` says so.
+ *
+ * TODO(#53): the `findByDate` check + `assignments.save` are not atomic against
+ * a truly concurrent direct claim in the same instant — the loser's transaction
+ * hits `UNIQUE (household_id, date)` and the action surfaces a generic retry
+ * message. Acceptable now (the claim UI is #53 and the client guards
+ * double-submit); revisit when direct claim ships.
  */
 export async function acceptRequest(
   deps: PickupRequestResolutionDeps,
@@ -269,7 +275,16 @@ export interface DeclineRequestInput {
 }
 
 export interface DeclineRequestResult {
+  /** The request in its new terminal state — `Declined`, or `Withdrawn` if a claim beat it. */
   readonly request: PickupRequest;
+  /**
+   * `true` ⇒ an `Assignment` already existed for the day (a direct claim landed
+   * first), so the request auto-withdrew (event 6) rather than being declined —
+   * declining a day that is already covered would tell the requester something
+   * misleading. Unreachable until direct-claim (#53) can create that
+   * `Assignment`; kept symmetric with `acceptRequest`.
+   */
+  readonly superseded: boolean;
   readonly notification: Notification;
 }
 
@@ -285,13 +300,26 @@ export async function declineRequest(
   assertOpenRequest(request);
   assertRecipient(request, input.actingMemberId);
 
-  const members = await deps.members.listByHousehold(request.householdId);
+  const nameOf = nameLookup(await deps.members.listByHousehold(request.householdId));
+
+  const existing = await deps.assignments.findByDate(request.householdId, request.date);
+  if (existing !== null) {
+    const withdrawn: PickupRequest = { ...request, state: "Withdrawn" };
+    await deps.pickupRequests.save(withdrawn);
+    return {
+      request: withdrawn,
+      superseded: true,
+      notification: withdrawnNotification(request, "day-claimed", nameOf),
+    };
+  }
+
   const declined: PickupRequest = { ...request, state: "Declined" };
   await deps.pickupRequests.save(declined);
 
   return {
     request: declined,
-    notification: declinedNotification(request, nameLookup(members)(request.recipientId)),
+    superseded: false,
+    notification: declinedNotification(request, nameOf(request.recipientId)),
   };
 }
 

@@ -13,6 +13,7 @@ import {
   declineRequest,
   type Notification,
   noopAdapters,
+  type PickupRequestResolutionDeps,
   PickupRequestStateError,
   shortenAbsence,
   withdrawRequest,
@@ -64,13 +65,30 @@ function toResult(thrown: unknown, label: string): RequestActionResult {
   return GENERIC;
 }
 
-export async function acceptRequestAction(requestId: string): Promise<RequestActionResult> {
+const SUPERSEDED_NOTE =
+  "That day was already covered by someone else, so the request was withdrawn instead.";
+
+/**
+ * Shared shape for the accept / decline / withdraw trio: run the domain service
+ * in one transaction, then — outside the `try`, matching `recordAbsenceAction` —
+ * dispatch its notification and revalidate. `superseded` (a direct claim landed
+ * first) surfaces as a calm note, not an error.
+ */
+async function runRequestResolution(
+  label: string,
+  requestId: string,
+  service: (
+    deps: PickupRequestResolutionDeps,
+    input: { requestId: string; actingMemberId: string },
+  ) => Promise<{ notification: Notification; superseded?: boolean }>,
+): Promise<RequestActionResult> {
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: { notification: Notification; superseded?: boolean };
   try {
-    const outcome = await db.transaction((tx) =>
-      acceptRequest(
+    outcome = await db.transaction((tx) =>
+      service(
         {
           ...createRepositories(tx),
           clock: noopAdapters.systemClock,
@@ -79,66 +97,25 @@ export async function acceptRequestAction(requestId: string): Promise<RequestAct
         { requestId, actingMemberId: session.member.id },
       ),
     );
-    await dispatch([outcome.notification]);
-
-    revalidatePath("/");
-    return outcome.superseded
-      ? {
-          ok: true,
-          note: "That day was already covered by someone else, so the request was withdrawn.",
-        }
-      : { ok: true };
   } catch (thrown) {
-    return toResult(thrown, "acceptRequestAction");
+    return toResult(thrown, label);
   }
+
+  await dispatch([outcome.notification]);
+  revalidatePath("/");
+  return outcome.superseded ? { ok: true, note: SUPERSEDED_NOTE } : { ok: true };
+}
+
+export async function acceptRequestAction(requestId: string): Promise<RequestActionResult> {
+  return runRequestResolution("acceptRequestAction", requestId, acceptRequest);
 }
 
 export async function declineRequestAction(requestId: string): Promise<RequestActionResult> {
-  const session = await getCurrentSession();
-  if (!session) return EXPIRED;
-
-  try {
-    const outcome = await db.transaction((tx) =>
-      declineRequest(
-        {
-          ...createRepositories(tx),
-          clock: noopAdapters.systemClock,
-          ids: noopAdapters.systemIdGenerator,
-        },
-        { requestId, actingMemberId: session.member.id },
-      ),
-    );
-    await dispatch([outcome.notification]);
-  } catch (thrown) {
-    return toResult(thrown, "declineRequestAction");
-  }
-
-  revalidatePath("/");
-  return { ok: true };
+  return runRequestResolution("declineRequestAction", requestId, declineRequest);
 }
 
 export async function withdrawRequestAction(requestId: string): Promise<RequestActionResult> {
-  const session = await getCurrentSession();
-  if (!session) return EXPIRED;
-
-  try {
-    const outcome = await db.transaction((tx) =>
-      withdrawRequest(
-        {
-          ...createRepositories(tx),
-          clock: noopAdapters.systemClock,
-          ids: noopAdapters.systemIdGenerator,
-        },
-        { requestId, actingMemberId: session.member.id },
-      ),
-    );
-    await dispatch([outcome.notification]);
-  } catch (thrown) {
-    return toResult(thrown, "withdrawRequestAction");
-  }
-
-  revalidatePath("/");
-  return { ok: true };
+  return runRequestResolution("withdrawRequestAction", requestId, withdrawRequest);
 }
 
 export async function cancelAbsenceAction(absenceId: string): Promise<RequestActionResult> {

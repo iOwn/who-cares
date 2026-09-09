@@ -291,7 +291,10 @@ describe("cancelAbsence", () => {
 
     expect(fakes.absences).toHaveLength(0);
     expect(result.absence).toBeNull();
+    // Rows persist in a terminal state with the dangling absence link dropped —
+    // the DB's ON DELETE SET NULL does the same to any it doesn't reach here.
     expect(fakes.requests.map((r) => r.state)).toEqual(["Withdrawn", "Withdrawn"]);
+    expect(fakes.requests.map((r) => r.absenceId)).toEqual([null, null]);
     expect(result.withdrawnRequests.map((r) => r.id)).toEqual(["r6", "r7"]);
   });
 
@@ -400,6 +403,8 @@ describe("shortenAbsence", () => {
     expect(fakes.requests.find((r) => r.id === "r6")?.state).toBe("Open");
     expect(fakes.requests.find((r) => r.id === "r7")?.state).toBe("Open");
     expect(fakes.requests.find((r) => r.id === "r8")?.state).toBe("Withdrawn");
+    // The absence still exists after a shorten, so the withdrawn row keeps its link.
+    expect(fakes.requests.find((r) => r.id === "r8")?.absenceId).toBe("abs-1");
     expect(result.withdrawnRequests.map((r) => r.id)).toEqual(["r8"]);
   });
 

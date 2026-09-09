@@ -127,8 +127,13 @@ export interface PickupRequest {
   readonly requesterId: string;
   /** The member being asked to take responsibility. */
   readonly recipientId: string;
-  /** The absence that triggered the request. */
-  readonly absenceId: string;
+  /**
+   * The absence that triggered the request, or `null` once that absence has
+   * been cancelled. The request row itself outlives its absence: it moves to a
+   * terminal state first and then stands with `absenceId === null`, so the
+   * "one request per date, never re-raised" invariant still holds (CONTEXT.md).
+   */
+  readonly absenceId: string | null;
   readonly state: PickupRequestState;
   /**
    * When the request was opened. Both 48h at-risk clocks run from here

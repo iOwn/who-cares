@@ -126,7 +126,12 @@ export interface AbsenceCancellationDeps {
 export interface AbsenceChangeResult {
   /** The revised absence, or `null` when it was cancelled outright. */
   readonly absence: Absence | null;
-  /** The requests this change auto-withdrew (now in state `Withdrawn`). */
+  /**
+   * The requests this change auto-withdrew, in their new terminal `Withdrawn`
+   * state (and, for a cancel, with `absenceId` nulled). The rows persist — a
+   * cancel does not erase them — so the "one request per date, never re-raised"
+   * invariant carries through a later re-declared absence.
+   */
   readonly withdrawnRequests: readonly PickupRequest[];
   /**
    * Notifications to dispatch after the transaction commits: one withdrawn
@@ -173,23 +178,29 @@ async function applyAbsenceChange(
 
   const nameOf = nameLookup(await deps.members.listByHousehold(original.householdId));
 
-  // Transition the affected requests to their terminal `Withdrawn` state
-  // *before* touching the absence row. Never touch an `Assignment` — an
-  // accepted request's assignment has no FK to the absence and stands on its
-  // own (CONTEXT.md, ADR-0003).
+  // Transition the affected requests to their terminal `Withdrawn` state, and
+  // for a full cancel drop their now-dangling `absenceId`. The row must stay:
+  // `UNIQUE (household_id, date)` on `pickup_requests` is what keeps a
+  // re-declared absence from re-asking a day already Declined / Withdrawn
+  // (CONTEXT.md "never … re-raised"). Never touch an `Assignment` — an accepted
+  // request's assignment has no FK to the absence and stands on its own
+  // (CONTEXT.md, ADR-0003).
+  const dropAbsenceLink = revisedAbsence === null;
   const withdrawnRequests: PickupRequest[] = [];
   for (const request of plan.requestsToWithdraw) {
-    const withdrawn: PickupRequest = { ...request, state: "Withdrawn" };
+    const withdrawn: PickupRequest = {
+      ...request,
+      state: "Withdrawn",
+      ...(dropAbsenceLink ? { absenceId: null } : {}),
+    };
     await deps.pickupRequests.save(withdrawn);
     withdrawnRequests.push(withdrawn);
   }
 
   // Now apply the absence change itself. A full cancel deletes the row; the
-  // schema's `pickup_requests.absence_id ON DELETE CASCADE` then clears that
-  // absence's request rows (the notifications were already built above, and a
-  // re-declared absence legitimately raises fresh requests — "never re-raised"
-  // guards a *Declined* answer, not a cancellation). A shorten is a plain
-  // `UPDATE`, so its `Withdrawn` rows persist.
+  // schema's `pickup_requests.absence_id ON DELETE SET NULL` (migration `0006`)
+  // then nulls the link on every request that pointed at it — the terminal rows
+  // stay put. A shorten is a plain `UPDATE`.
   let savedAbsence: Absence | null;
   if (revisedAbsence === null) {
     await deps.absences.delete(original.id);

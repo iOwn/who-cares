@@ -1,16 +1,25 @@
 /**
- * The #52 domain services (`acceptRequest` / `declineRequest` /
- * `cancelAbsence`) driven over real, migration-built repositories on in-process
- * PGlite (ADR-0006). The domain logic itself is unit-tested with fakes in
- * `src/domain/services/*.test.ts`; this tier only pins that the transitions
- * round-trip the schema and stay inside its cardinality guards — in particular
- * that an accept's `Assignment` insert coexists with
- * `UNIQUE (household_id, date)`.
+ * The #52 domain services (`acceptRequest` / `declineRequest` / `cancelAbsence`
+ * / `recordAbsence`) driven over real, migration-built repositories on
+ * in-process PGlite (ADR-0006). The domain logic itself is unit-tested with
+ * fakes in `src/domain/services/*.test.ts`; this tier pins the schema seams:
+ *
+ *   - an accept's `Assignment` insert coexists with `UNIQUE (household_id, date)`;
+ *   - `pickup_requests.absence_id ON DELETE SET NULL` (migration `0006`) — a
+ *     cancelled absence leaves its terminal request rows standing, so
+ *     `UNIQUE (household_id, date)` keeps a re-declared absence from re-asking a
+ *     day already Declined / Withdrawn ("never re-raised", CONTEXT.md).
  */
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createRepositories, type Repositories } from "@/db";
-import { acceptRequest, cancelAbsence, declineRequest, noopAdapters } from "@/domain";
+import {
+  acceptRequest,
+  cancelAbsence,
+  declineRequest,
+  noopAdapters,
+  recordAbsence,
+} from "@/domain";
 import {
   closeTestDatabase,
   createTestDatabase,
@@ -95,7 +104,7 @@ describe("declineRequest over real repositories", () => {
 });
 
 describe("cancelAbsence over real repositories", () => {
-  it("drops the absence + its request rows (FK cascade) but never touches an Assignment", async () => {
+  it("deletes the absence, leaves its request rows standing (absence_id nulled), touches no Assignment", async () => {
     // Accept one day first; its Assignment must survive the cancel untouched.
     await acceptRequest(deps(), { requestId: "r6", actingMemberId: MEMBER_2_ID });
 
@@ -105,15 +114,22 @@ describe("cancelAbsence over real repositories", () => {
     });
 
     expect(await repos.absences.findById("abs-1")).toBeNull();
-    // `pickup_requests.absence_id ON DELETE CASCADE` clears the absence's rows.
-    expect(await repos.pickupRequests.findById("r7")).toBeNull();
-    expect(await repos.pickupRequests.findById("r6")).toBeNull();
+
+    // r7 (was Open) → Withdrawn, still present, absence link cleared by SET NULL.
+    expect(await repos.pickupRequests.findById("r7")).toMatchObject({
+      state: "Withdrawn",
+      absenceId: null,
+    });
+    // r6 (was Accepted) → untouched state, still present, link cleared.
+    expect(await repos.pickupRequests.findById("r6")).toMatchObject({
+      state: "Accepted",
+      absenceId: null,
+    });
     // The accepted-request Assignment has no FK to the absence → it stands.
     expect(await repos.assignments.findByDate(HOUSEHOLD_ID, "2025-01-06")).toMatchObject({
       assigneeId: MEMBER_2_ID,
       source: "accepted-request",
     });
-    // The withdrawn notice was still built for the parent who had r7 open.
     expect(result.withdrawnRequests.map((r) => r.id)).toEqual(["r7"]);
     expect(result.notifications).toEqual(
       expect.arrayContaining([
@@ -121,5 +137,37 @@ describe("cancelAbsence over real repositories", () => {
         expect.objectContaining({ event: "assignment-stands", recipientId: MEMBER_2_ID }),
       ]),
     );
+  });
+
+  it("does NOT re-raise a Declined day after the absence is cancelled and re-declared", async () => {
+    // A declares abs-1 (seeded) → B declines Tuesday 2025-01-07.
+    await declineRequest(deps(), { requestId: "r7", actingMemberId: MEMBER_2_ID });
+    expect(await repos.pickupRequests.findById("r7")).toMatchObject({ state: "Declined" });
+
+    // A cancels the absence...
+    await cancelAbsence(repos, { absenceId: "abs-1", actingMemberId: MEMBER_1_ID });
+    // ...the Declined row is still there (SET NULL, not cascade).
+    expect(await repos.pickupRequests.findById("r7")).toMatchObject({
+      state: "Declined",
+      absenceId: null,
+    });
+
+    // A re-declares an overlapping absence.
+    const redeclared = await recordAbsence(deps(), {
+      householdId: HOUSEHOLD_ID,
+      memberId: MEMBER_1_ID,
+      startDate: "2025-01-06",
+      endDate: "2025-01-08",
+    });
+
+    // Tuesday is NOT re-asked — the terminal row (and UNIQUE(household_id,date)) block it.
+    expect(redeclared.requests.map((r) => r.date)).not.toContain("2025-01-07");
+    expect(redeclared.plan.find((p) => p.date === "2025-01-07")).toMatchObject({
+      raise: false,
+      skipReason: "request-exists",
+    });
+    // The day's only pickup_requests row is still the terminal Declined one.
+    const tuesday = await repos.pickupRequests.findByDate(HOUSEHOLD_ID, "2025-01-07");
+    expect(tuesday).toMatchObject({ id: "r7", state: "Declined" });
   });
 });

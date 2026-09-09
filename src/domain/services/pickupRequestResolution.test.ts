@@ -245,6 +245,32 @@ describe("declineRequest", () => {
       declineRequest(fakes.deps, { requestId: "req-1", actingMemberId: RECIPIENT }),
     ).rejects.toBeInstanceOf(PickupRequestStateError);
   });
+
+  it("auto-withdraws (not declines) when an Assignment already covers the day — symmetric with accept", async () => {
+    const fakes = createFakes({
+      requests: [openRequest()],
+      assignments: [
+        makeAssignment({
+          id: "asg-x",
+          date: "2025-01-06",
+          assigneeId: REQUESTER,
+          source: "direct-claim",
+        }),
+      ],
+    });
+
+    const result = await declineRequest(fakes.deps, {
+      requestId: "req-1",
+      actingMemberId: RECIPIENT,
+    });
+
+    expect(result.superseded).toBe(true);
+    expect(result.request.state).toBe("Withdrawn");
+    expect(result.notification).toMatchObject({
+      recipientId: REQUESTER,
+      event: PICKUP_REQUEST_WITHDRAWN_EVENT,
+    });
+  });
 });
 
 describe("each day answered individually", () => {

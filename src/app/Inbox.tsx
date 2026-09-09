@@ -69,6 +69,9 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
 
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "The other parent";
 
+  // TODO(#52 follow-up): `pending` disables every card's buttons while any one
+  // answer is in flight (a blunt double-submit guard). A per-card busy state
+  // would let the other requests stay actionable.
   const answer = (requestId: string, action: (id: string) => Promise<RequestActionResult>) => {
     setError(null);
     setNote(null);

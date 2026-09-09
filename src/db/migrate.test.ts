@@ -61,17 +61,22 @@ describe("applyMigrations", () => {
   });
 
   it("records each applied migration so a re-run is a no-op", async () => {
+    const journal = JSON.parse(
+      await readFile(join(MIGRATIONS_FOLDER, "meta", "_journal.json"), "utf8"),
+    ) as { entries: unknown[] };
+    const migrationCount = journal.entries.length;
+
     const before = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(before.rows[0].count).toBe(6);
+    expect(before.rows[0].count).toBe(migrationCount);
 
     await applyMigrations(db);
 
     const after = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(after.rows[0].count).toBe(6);
+    expect(after.rows[0].count).toBe(migrationCount);
     expect(await tableNames()).toEqual([
       "absences",
       "accounts",
