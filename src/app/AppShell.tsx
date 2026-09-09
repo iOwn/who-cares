@@ -1,26 +1,29 @@
 "use client";
 
+import type { CalendarDate, ChildcarePattern, Closure } from "@/domain";
 import { AppHeader } from "@/ui";
-import styles from "./AppShell.module.css";
+import { Calendar } from "./Calendar";
 
 export interface AppShellProps {
   readonly childName: string;
+  readonly pattern: ChildcarePattern | null;
+  readonly closures: readonly Closure[];
+  /** The real current date as the server saw it (`'YYYY-MM-DD'`, UTC). */
+  readonly initialToday: CalendarDate;
 }
 
 /**
- * The authenticated app shell (issue #47): `AppHeader` + a placeholder
- * calendar region. A Client Component because `AppHeader.onOpenRequests` is a
- * function prop — Server Components can't pass those across the boundary.
- * `requestCount` is hardcoded to 0 and the bell is a no-op until the pickup-
- * request inbox exists (#52) and the calendar grid replaces the placeholder
- * (#49/#50).
+ * The authenticated app shell (issue #47, #49): `AppHeader` + the real calendar.
+ * A Client Component because `AppHeader.onOpenRequests` is a function prop and
+ * `Calendar` owns paging state. `requestCount` is hardcoded to 0 and the bell is
+ * a no-op until the pickup-request inbox exists (#52).
  */
-export function AppShell({ childName }: AppShellProps) {
+export function AppShell({ childName, pattern, closures, initialToday }: AppShellProps) {
   return (
     <>
       <AppHeader childName={childName} requestCount={0} onOpenRequests={() => {}} />
-      <main className={styles.calendar} aria-label="Calendar">
-        <p>The calendar is coming soon.</p>
+      <main aria-label="Calendar">
+        <Calendar pattern={pattern} closures={closures} initialToday={initialToday} />
       </main>
     </>
   );

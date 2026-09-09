@@ -1,20 +1,18 @@
+import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
-import { AppShell } from "./AppShell";
-import { SignInScreen } from "./SignInScreen";
+import { ChildcareSettings } from "./ChildcareSettings";
 
-/** `'YYYY-MM-DD'` for the server's current instant (UTC). */
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export default async function Home() {
+/**
+ * The settings route. As of #49 it carries the childcare-pattern + closures
+ * form only; the parallel #48 work adds the passkey / devices section. Keep any
+ * additions in their own files so the merge stays mechanical.
+ */
+export default async function SettingsPage() {
   const current = await getCurrentSession();
-  if (!current) {
-    return <SignInScreen />;
-  }
+  if (!current) redirect("/");
 
   const repos = createRepositories(db);
   const [pattern, closures] = await Promise.all([
@@ -23,11 +21,10 @@ export default async function Home() {
   ]);
 
   return (
-    <AppShell
-      childName={current.child?.name ?? ""}
+    <ChildcareSettings
       pattern={pattern}
       closures={closures}
-      initialToday={todayIso()}
+      today={new Date().toISOString().slice(0, 10)}
     />
   );
 }
