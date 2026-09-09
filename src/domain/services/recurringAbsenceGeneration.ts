@@ -124,7 +124,10 @@ export function planRecurringAbsences(params: PlanRecurringAbsencesParams): Recu
   // four weeks out — both silently, matching the one-off form's field bounds.
   const effectiveStart = startDate < today ? today : startDate;
   const capped = endDate > capDate;
-  const effectiveEndDate = capped ? capDate : endDate < effectiveStart ? effectiveStart : endDate;
+  let effectiveEndDate = capped ? capDate : endDate;
+  // An end before the (floored) start can't yield any day; keep the field
+  // non-empty and let the range guard below produce the empty plan.
+  if (effectiveEndDate < effectiveStart) effectiveEndDate = effectiveStart;
 
   const coveringForMember = existingAbsences.filter((a) => a.memberId === memberId);
 
