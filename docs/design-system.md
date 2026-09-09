@@ -237,6 +237,11 @@ Confirmed + mechanically pinned in
    idiom). Default to concrete semantic elements; compose via RAC's built-in slot / context
    wiring (`DialogTrigger`, `Popover`, …). Sole exception: a button-styled link is a
    `<Link className={buttonStyles}>` **recipe**, not a polymorphic prop.
+   
+   **Pressable Surfaces**: `Surface` is always a `<div>` with no pressable path. Pressable
+   list rows / cards compose via the `ListRow` primitive (`ListRow` optionally pressable) or
+   `RequestCard` (which composes a pressable `Surface`-like container itself). This keeps
+   `Surface` focused: a single plain container primitive with no interaction behaviour.
 6. **Controlled vs uncontrolled** — support both; **uncontrolled is the default**
    (`defaultValue` / `defaultSelected`), following RAC's conventions. Controlled via `value` +
    `onChange`.

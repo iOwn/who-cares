@@ -38,31 +38,9 @@
 }
 
 /*
- * A pressable row. `Surface` is a `<div>` with no `as` prop (conventions §5),
- * so a whole-row button can't compose it without nesting flow content in a
- * `<button>`; this mirrors `Surface variant="sunken"`'s tokens instead.
- * TODO(#83): replace with the `ListRow` primitive.
+ * Typography styles for content inside ListRow. ListRow.module.css handles
+ * the container, border, background, and pressable interaction state.
  */
-.listRow {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-12);
-  text-align: left;
-  cursor: pointer;
-  border: var(--border) solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-sunken);
-  color: var(--color-text);
-}
-
-.listRow:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
 .listRowText {
   display: block;
   min-width: 0;

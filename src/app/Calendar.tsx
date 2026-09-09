@@ -18,6 +18,7 @@ import {
   FAB,
   isStatusDisplayState,
   Legend,
+  ListRow,
   MonthPager,
   monthOf,
   SegmentedControl,
@@ -173,21 +174,19 @@ export function Calendar({
             <ul className={styles.listRows}>
               {view.notableDays.map((day) => (
                 <li key={day.date}>
-                  {/* TODO(#83): ListRow primitive — this hand-rolls Surface's
-                      sunken treatment because Surface has no `as` prop. */}
-                  <button
-                    type="button"
-                    className={styles.listRow}
-                    onClick={() => setSelectedDate(day.date)}
+                  <ListRow
+                    onPress={() => setSelectedDate(day.date)}
+                    trailing={
+                      isStatusDisplayState(day.displayState) ? (
+                        <StatePill state={day.displayState} size="sm" />
+                      ) : null
+                    }
                   >
                     <span className={styles.listRowText}>
                       <span className={styles.listDate}>{shortDate(day.date)}</span>
                       <span className={styles.listLine}>{day.narrative}</span>
                     </span>
-                    {isStatusDisplayState(day.displayState) ? (
-                      <StatePill state={day.displayState} size="sm" />
-                    ) : null}
-                  </button>
+                  </ListRow>
                 </li>
               ))}
             </ul>

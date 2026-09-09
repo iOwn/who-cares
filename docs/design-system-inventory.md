@@ -184,9 +184,11 @@ pattern set). Props: `icon, title, description?, action?`.
   blue `Button` (Today) + a pressable label. Shared by Grid + List.
 - **MonthPicker** — month/year grid body inside a `Dialog`.
 - **Legend** — 4 × (`StateDot` + label). Grid + List.
-- **ListRow** — one notable-day row. Composes `Surface` + colour rail + date + narrative line +
-  `StatePill` + optional inline `Button` ("I'll get Carlito"). Grouped under `SectionHeading`
-  ("This week" / "Next week" / "Later").
+- **ListRow** — a pressable or static row with `Surface`'s `variant="sunken"` treatment (border,
+  radius, background). The single composition point for pressable sunken surfaces (the Calendar
+  List view, future inbox rows). Slots: leading content column (children, must be phrasing
+  content) + optional trailing slot (e.g. `StatePill`). Pressable → RAC `Button` when `onPress`
+  supplied; otherwise plain `<div>`.
 - **RequestCard** — inbox request. One component, variants `open` (avatar + "{name} is out ·
   {date}" + timing line + question + Accept/Decline `Button` row; sub-variant `escalating` =
   `Surface variant="danger"` + red timing) and `answered` (compact — status icon + "You
