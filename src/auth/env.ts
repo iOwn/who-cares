@@ -41,3 +41,31 @@ export function getAllowlistedEmails(): AllowlistedEmails {
 
   return [emails[0], emails[1]];
 }
+
+/**
+ * The WebAuthn Relying Party config for the `passkey` plugin (issue #48).
+ *
+ * Kept as explicit env rather than derived from `BETTER_AUTH_URL` so a preview
+ * deploy on a different host is a config change, not a code change, and so the
+ * RP ID (which a browser binds a credential to permanently) is never guessed:
+ *
+ * - `PASSKEY_RP_ID` — the registrable domain the credential is scoped to:
+ *   `localhost` in dev, the bare host (no scheme, no port, no path) in prod.
+ * - `PASSKEY_ORIGIN` — the full origin WebAuthn ceremonies occur at
+ *   (scheme + host + optional port), no trailing slash.
+ * - `PASSKEY_RP_NAME` — human-readable label shown in the OS passkey prompt;
+ *   optional, defaults to "WhoCares".
+ */
+export interface PasskeyRelyingParty {
+  readonly rpID: string;
+  readonly rpName: string;
+  readonly origin: string;
+}
+
+export function getPasskeyRelyingParty(): PasskeyRelyingParty {
+  return {
+    rpID: requireEnv("PASSKEY_RP_ID"),
+    rpName: process.env.PASSKEY_RP_NAME?.trim() || "WhoCares",
+    origin: requireEnv("PASSKEY_ORIGIN").replace(/\/+$/, ""),
+  };
+}

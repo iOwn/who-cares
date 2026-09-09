@@ -163,9 +163,44 @@ export const verification = pgTable("verifications", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Passkey credentials (issue #48) — the `@better-auth/passkey` plugin's table.
+ *
+ * Progressive enrollment only: a row is written from an already-signed-in
+ * session on a trusted device, and lets that parent re-enter with the device's
+ * platform authenticator instead of a fresh magic link. Magic link stays the
+ * sole bootstrap + recovery path (SPEC.md "Auth"); deleting a row here just
+ * drops the fast path.
+ *
+ * Column shapes mirror the plugin's expected model exactly
+ * (`@better-auth/passkey` `schema.passkey.fields` — `name`, `publicKey`,
+ * `userId`, `credentialID`, `counter`, `deviceType`, `backedUp`, `transports`,
+ * `createdAt`, `aaguid`). The plugin marks `user_id` / `credential_id` as
+ * indexed; we omit the explicit secondary indexes here for parity with the
+ * base auth tables above (`sessions` / `accounts` carry none either). Table
+ * name plural, JS symbol + adapter model key singular — same convention as the
+ * base tables.
+ */
+export const passkey = pgTable("passkeys", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  publicKey: text("public_key").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  credentialID: text("credential_id").notNull(),
+  counter: integer("counter").notNull(),
+  deviceType: text("device_type").notNull(),
+  backedUp: boolean("backed_up").notNull(),
+  transports: text("transports"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  aaguid: text("aaguid"),
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  passkeys: many(passkey),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -174,4 +209,8 @@ export const sessionRelations = relations(session, ({ one }) => ({
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, { fields: [passkey.userId], references: [user.id] }),
 }));

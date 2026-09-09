@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { authClient } from "@/auth/client";
 import { Button, Callout, Surface, TextField } from "@/ui";
 import styles from "./SignInScreen.module.css";
@@ -11,16 +12,47 @@ import styles from "./SignInScreen.module.css";
  * a non-allowlisted email (SPEC.md "Identity") — the confirmation copy is the
  * same either way, since `auth.config.ts`'s `sendMagicLink` silently drops
  * mail to an unlisted address rather than surfacing an error.
+ *
+ * A passkey shortcut (issue #48) appears only once a passkey has been enrolled
+ * on this device and the browser supports WebAuthn. Magic link stays the
+ * primary, always-present path.
  */
 export function SignInScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [passkey, setPasskey] = useState<"hidden" | "ready" | "authenticating" | "error">("hidden");
+
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.PublicKeyCredential === "function" &&
+      typeof navigator?.credentials?.get === "function"
+    ) {
+      setPasskey("ready");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("sending");
     const { error } = await authClient.signIn.magicLink({ email, callbackURL: "/" });
     setStatus(error ? "error" : "sent");
+  }
+
+  async function handlePasskey() {
+    setPasskey("authenticating");
+    try {
+      const { error } = await authClient.signIn.passkey();
+      if (error) {
+        setPasskey("error");
+        return;
+      }
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setPasskey("error");
+    }
   }
 
   return (
@@ -56,6 +88,25 @@ export function SignInScreen() {
             >
               {status === "sending" ? "Sending…" : "Send sign-in link"}
             </Button>
+
+            {passkey !== "hidden" && (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  onPress={handlePasskey}
+                  isDisabled={passkey === "authenticating"}
+                >
+                  {passkey === "authenticating" ? "Waiting for passkey…" : "Sign in with a passkey"}
+                </Button>
+                {passkey === "error" && (
+                  <Callout tone="danger" role="alert">
+                    Couldn’t sign in with a passkey. Use the email link instead.
+                  </Callout>
+                )}
+              </>
+            )}
           </form>
         )}
       </Surface>

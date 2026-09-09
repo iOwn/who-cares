@@ -22,6 +22,13 @@
       "when": 1788939003640,
       "tag": "0002_add_better_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788942921569,
+      "tag": "0003_add_passkey_table",
+      "breakpoints": true
     }
   ]
 }
