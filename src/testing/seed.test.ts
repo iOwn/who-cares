@@ -15,7 +15,10 @@ import {
   HOUSEHOLD_ID,
   MEMBER_1_ID,
   MEMBER_2_ID,
+  makeAbsence,
+  makeAssignment,
   makeClosure,
+  makePickupRequest,
   makeTypicalHousehold,
   pattern,
   seed,
@@ -44,6 +47,9 @@ describe("seed", () => {
       children: 1,
       childcarePatternVersions: 1,
       closures: 0,
+      absences: 0,
+      pickupRequests: 0,
+      assignments: 0,
     });
 
     const households = await pg.query<{ id: string; name: string }>(
@@ -92,9 +98,75 @@ describe("seed", () => {
     const report = await seed(db, makeTypicalHousehold());
 
     // Pinned so the list cannot go stale: each migration that adds one of these
-    // tables must extend `seed()` and shorten this expectation. `pattern` and
-    // `closures` came off the list in migration `0003`.
+    // tables must extend `seed()` and shorten this expectation. As of migration
+    // `0005` the whole `HouseholdGraph` persists, so this is empty.
     expect(report.skipped).toEqual([]);
+  });
+
+  it("persists absences, pickup requests and assignments", async () => {
+    const graph = makeTypicalHousehold({
+      absences: [
+        makeAbsence({
+          id: "absence-1",
+          memberId: MEMBER_1_ID,
+          startDate: "2025-01-06",
+          endDate: "2025-01-08",
+          label: "Conference",
+        }),
+      ],
+      pickupRequests: [
+        makePickupRequest({
+          id: "req-1",
+          date: "2025-01-06",
+          requesterId: MEMBER_1_ID,
+          recipientId: MEMBER_2_ID,
+          absenceId: "absence-1",
+        }),
+      ],
+      assignments: [
+        makeAssignment({
+          id: "asg-1",
+          date: "2025-01-07",
+          assigneeId: MEMBER_2_ID,
+          source: "accepted-request",
+        }),
+      ],
+    });
+
+    const report = await seed(db, graph);
+    expect(report.inserted.absences).toBe(1);
+    expect(report.inserted.pickupRequests).toBe(1);
+    expect(report.inserted.assignments).toBe(1);
+
+    const absenceRows = await pg.query<{ start_date: string; end_date: string; label: string }>(
+      `SELECT start_date::text AS start_date, end_date::text AS end_date, label FROM absences`,
+    );
+    expect(absenceRows.rows).toEqual([
+      { start_date: "2025-01-06", end_date: "2025-01-08", label: "Conference" },
+    ]);
+
+    const requestRows = await pg.query<{ date: string; state: string }>(
+      `SELECT date::text AS date, state FROM pickup_requests`,
+    );
+    expect(requestRows.rows).toEqual([{ date: "2025-01-06", state: "Open" }]);
+
+    const assignmentRows = await pg.query<{ date: string; assignee_id: string; source: string }>(
+      `SELECT date::text AS date, assignee_id, source FROM assignments`,
+    );
+    expect(assignmentRows.rows).toEqual([
+      { date: "2025-01-07", assignee_id: MEMBER_2_ID, source: "accepted-request" },
+    ]);
+  });
+
+  it("nulls an assignee on a nobody assignment", async () => {
+    const graph = makeTypicalHousehold({
+      assignments: [makeAssignment({ id: "asg-1", date: "2025-01-07", assigneeId: null })],
+    });
+    await seed(db, graph);
+    const rows = await pg.query<{ assignee_id: string | null }>(
+      `SELECT assignee_id FROM assignments`,
+    );
+    expect(rows.rows).toEqual([{ assignee_id: null }]);
   });
 
   it("persists the childcare pattern versions and closures", async () => {

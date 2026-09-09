@@ -1,0 +1,59 @@
+/*
+ * Inbox — full-screen list on a narrow app-shell container, right-hand side
+ * panel on a wide one. Container-query-driven (the `container-type` lives on the
+ * app shell wrapper), never viewport-driven. NOT a Dialog — it is feature
+ * layout (docs/design-system-inventory.md §9 / "the Inbox side-panel is NOT a
+ * Dialog").
+ */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  border: 0;
+  padding: 0;
+  background: var(--color-scrim);
+  cursor: pointer;
+}
+
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+}
+
+/* Wide app-shell container → dock to the right as a panel, keep the scrim. */
+@container app-shell (min-width: 60rem) {
+  .panel {
+    inset-block: 0;
+    inset-inline: auto 0;
+    width: min(24rem, 90vw);
+    border-inline-start: var(--border) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: inbox-in var(--dur-fast) var(--ease-standard);
+  }
+}
+
+@keyframes inbox-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}

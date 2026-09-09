@@ -135,6 +135,90 @@ export const closures = pgTable(
   (table) => [unique("closures_household_date_unique").on(table.householdId, table.date)],
 );
 
+/**
+ * A member's declaration that they are unavailable for pickup across an
+ * inclusive `start_date`–`end_date` range (CONTEXT.md "Absence"). `label` and
+ * `note` are free text and change no app behaviour. A single-day absence is one
+ * row with `start_date == end_date`. Cancelling / shortening an absence is a
+ * plain `UPDATE` / `DELETE` and never touches any `Assignment` the absence
+ * previously drove (ADR-0003, CONTEXT.md).
+ */
+export const absences = pgTable("absences", {
+  id: text("id").primaryKey(),
+  householdId: text("household_id")
+    .notNull()
+    .references(() => households.id, { onDelete: "cascade" }),
+  memberId: text("member_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  label: text("label"),
+  note: text("note"),
+});
+
+/**
+ * A pickup request (CONTEXT.md "Pickup request") — raised automatically when an
+ * absence covers a childcare day that has no assignment and exactly one member
+ * is absent. `state` moves `Open` → one terminal value and never reopens, so
+ * `UNIQUE (household_id, date)` holds: a request is never re-raised for a date
+ * it already covered. Both ADR-0003 48h clocks run from `raised_at`.
+ */
+export const pickupRequests = pgTable(
+  "pickup_requests",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    recipientId: text("recipient_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    absenceId: text("absence_id")
+      .notNull()
+      .references(() => absences.id, { onDelete: "cascade" }),
+    state: text("state").notNull().default("Open"),
+    raisedAt: timestamp("raised_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "pickup_requests_state_valid",
+      sql`${table.state} in ('Open', 'Accepted', 'Declined', 'Withdrawn')`,
+    ),
+    unique("pickup_requests_household_date_unique").on(table.householdId, table.date),
+  ],
+);
+
+/**
+ * The record of who is responsible for a given childcare day's pickup
+ * (CONTEXT.md "Assignment"). `UNIQUE (household_id, date)` is the "at most one
+ * per date" invariant; `assignee_id` is a member or `NULL` (nobody). Arises
+ * from an accepted request or a direct claim (`source`) and stands on its own
+ * once made — day state is always re-derived live from it, never cached
+ * (ADR-0003). A deleted member nulls the assignee rather than dropping the row.
+ */
+export const assignments = pgTable(
+  "assignments",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    assigneeId: text("assignee_id").references(() => members.id, { onDelete: "set null" }),
+    source: text("source").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("assignments_source_valid", sql`${table.source} in ('accepted-request', 'direct-claim')`),
+    unique("assignments_household_date_unique").on(table.householdId, table.date),
+  ],
+);
+
 /* ------------------------------------------------------------------ *
  * Relations — for Drizzle's relational query API.
  * ------------------------------------------------------------------ */
@@ -144,6 +228,38 @@ export const householdsRelations = relations(households, ({ many, one }) => ({
   child: one(children),
   childcarePatternVersions: many(childcarePatternVersions),
   closures: many(closures),
+  absences: many(absences),
+  pickupRequests: many(pickupRequests),
+  assignments: many(assignments),
+}));
+
+export const absencesRelations = relations(absences, ({ one }) => ({
+  household: one(households, {
+    fields: [absences.householdId],
+    references: [households.id],
+  }),
+  member: one(members, {
+    fields: [absences.memberId],
+    references: [members.id],
+  }),
+}));
+
+export const pickupRequestsRelations = relations(pickupRequests, ({ one }) => ({
+  household: one(households, {
+    fields: [pickupRequests.householdId],
+    references: [households.id],
+  }),
+  absence: one(absences, {
+    fields: [pickupRequests.absenceId],
+    references: [absences.id],
+  }),
+}));
+
+export const assignmentsRelations = relations(assignments, ({ one }) => ({
+  household: one(households, {
+    fields: [assignments.householdId],
+    references: [households.id],
+  }),
 }));
 
 export const childcarePatternVersionsRelations = relations(childcarePatternVersions, ({ one }) => ({

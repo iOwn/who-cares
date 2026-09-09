@@ -1,0 +1,60 @@
+/*
+ * RequestCard — one pickup request in the inbox. Composes Surface for the
+ * container treatment; this module only lays out the inner content. Semantic
+ * tokens only (tokens.css). No interaction state of its own — the optional
+ * action row holds Buttons that carry their own.
+ */
+
+.base {
+  padding: var(--space-12);
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  font-family: var(--font-body);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-extrabold);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.timing {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.question {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}

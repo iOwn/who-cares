@@ -44,13 +44,16 @@ describe("migration file convention", () => {
 describe("applyMigrations", () => {
   it("builds the schema from the migration files", async () => {
     expect(await tableNames()).toEqual([
+      "absences",
       "accounts",
+      "assignments",
       "childcare_pattern_versions",
       "children",
       "closures",
       "households",
       "members",
       "passkeys",
+      "pickup_requests",
       "sessions",
       "users",
       "verifications",
@@ -61,22 +64,25 @@ describe("applyMigrations", () => {
     const before = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(before.rows[0].count).toBe(5);
+    expect(before.rows[0].count).toBe(6);
 
     await applyMigrations(db);
 
     const after = await db.$client.query<{ count: number }>(
       `SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`,
     );
-    expect(after.rows[0].count).toBe(5);
+    expect(after.rows[0].count).toBe(6);
     expect(await tableNames()).toEqual([
+      "absences",
       "accounts",
+      "assignments",
       "childcare_pattern_versions",
       "children",
       "closures",
       "households",
       "members",
       "passkeys",
+      "pickup_requests",
       "sessions",
       "users",
       "verifications",

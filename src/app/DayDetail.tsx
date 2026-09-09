@@ -1,8 +1,9 @@
 "use client";
 
 import { X } from "lucide-react";
+import type { CalendarDate } from "@/domain";
 import type { CalendarDayView } from "@/ui";
-import { Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
+import { Button, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
 
 /**
@@ -23,6 +24,12 @@ export interface DayDetailProps {
   readonly day: CalendarDayView | null;
   /** Called with `false` when the sheet should close. */
   readonly onOpenChange: (open: boolean) => void;
+  /**
+   * Open the "+ I'm out" sheet anchored to this day (SPEC.md "Navigation" —
+   * tapping a day cell anchors the entry sheet to that day). Omit to hide the
+   * affordance.
+   */
+  readonly onDeclareAbsence?: (date: CalendarDate) => void;
 }
 
 /** Neutral label for the two non-status display states the `StatePill` can't speak. */
@@ -42,7 +49,7 @@ function longDate(date: string): string {
   });
 }
 
-export function DayDetail({ day, onOpenChange }: DayDetailProps) {
+export function DayDetail({ day, onOpenChange, onDeclareAbsence }: DayDetailProps) {
   return (
     <Dialog presentation="sheet" isOpen={day != null} onOpenChange={onOpenChange}>
       {({ close }) =>
@@ -71,6 +78,13 @@ export function DayDetail({ day, onOpenChange }: DayDetailProps) {
             <p className={styles.narrative}>{day.narrative}</p>
             {day.displayState === "closed" && day.closureReason ? (
               <p className={styles.reason}>Reason given: {day.closureReason}</p>
+            ) : null}
+            {onDeclareAbsence && day.displayState !== "off" ? (
+              <div className={styles.actions}>
+                <Button variant="secondary" size="sm" onPress={() => onDeclareAbsence(day.date)}>
+                  I&rsquo;m out this day
+                </Button>
+              </div>
             ) : null}
           </div>
         )

@@ -37,6 +37,7 @@ export {
 } from "./calendarMonth";
 export { cx } from "./cx";
 export { DateField, type DateFieldProps } from "./DateField";
+export { DateRangeField, type DateRangeFieldProps } from "./DateRangeField";
 export { DayCell, type DayCellProps } from "./DayCell";
 export {
   Dialog,
@@ -61,7 +62,9 @@ export { Legend, type LegendProps } from "./Legend";
 export { MonthPager, type MonthPagerProps } from "./MonthPager";
 export { MonthPicker, type MonthPickerProps } from "./MonthPicker";
 export { PersonChip, type PersonChipProps } from "./PersonChip";
+export { RequestCard, type RequestCardProps } from "./RequestCard";
 export { RouteHeader, type RouteHeaderProps } from "./RouteHeader";
+export { requestTimingLine, timeAgo } from "./relativeTime";
 export { SectionHeading, type SectionHeadingProps } from "./SectionHeading";
 export {
   SegmentedControl,

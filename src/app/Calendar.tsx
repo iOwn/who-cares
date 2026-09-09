@@ -24,6 +24,7 @@ import {
   StatePill,
   shiftMonth,
 } from "@/ui";
+import { AbsenceForm } from "./AbsenceForm";
 import styles from "./Calendar.module.css";
 import { DayDetail } from "./DayDetail";
 
@@ -41,6 +42,8 @@ import { DayDetail } from "./DayDetail";
  */
 
 export interface CalendarProps {
+  /** The signed-in member — the one an absence declared from here belongs to. */
+  readonly currentMemberId: string;
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
   readonly assignments?: readonly Assignment[];
@@ -76,6 +79,7 @@ function formatDayShort(date: CalendarDate): string {
 }
 
 export function Calendar({
+  currentMemberId,
   pattern,
   closures,
   assignments,
@@ -92,6 +96,8 @@ export function Calendar({
   const [{ year, month }, setMonth] = useState(() => monthOf(initialToday));
   const [tab, setTab] = useState<Tab>("grid");
   const [selectedDate, setSelectedDate] = useState<CalendarDate | null>(null);
+  // `null` = the "I'm out" sheet is closed; otherwise the day it is anchored to.
+  const [absenceAnchor, setAbsenceAnchor] = useState<CalendarDate | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -216,15 +222,38 @@ export function Calendar({
       <div className={styles.fab}>
         <FAB
           icon={Plus}
-          // Absence entry (the "I'm out" sheet) lands in #51 — it always
-          // defaults to the real today, never the browsed month.
-          onPress={() => {}}
+          // The FAB always anchors to the real today, never the browsed month
+          // (SPEC.md "Navigation").
+          onPress={() => setAbsenceAnchor(today)}
         >
           I&rsquo;m out
         </FAB>
       </div>
 
-      <DayDetail day={selectedDay} onOpenChange={(open) => !open && setSelectedDate(null)} />
+      <DayDetail
+        day={selectedDay}
+        onOpenChange={(open) => !open && setSelectedDate(null)}
+        onDeclareAbsence={(date) => {
+          setSelectedDate(null);
+          setAbsenceAnchor(date);
+        }}
+      />
+
+      {absenceAnchor != null ? (
+        <AbsenceForm
+          isOpen
+          anchorDate={absenceAnchor}
+          onOpenChange={(open) => !open && setAbsenceAnchor(null)}
+          today={today}
+          currentMemberId={currentMemberId}
+          members={members ?? []}
+          pattern={pattern}
+          closures={closures}
+          absences={absences ?? []}
+          assignments={assignments ?? []}
+          pickupRequests={pickupRequests ?? []}
+        />
+      ) : null}
     </div>
   );
 }
