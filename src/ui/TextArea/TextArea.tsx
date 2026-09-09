@@ -2,15 +2,11 @@
 
 import { forwardRef, type ReactNode } from "react";
 import {
-  composeRenderProps,
-  FieldError,
-  Label,
   TextArea as RACTextArea,
   TextField as RACTextField,
   type TextFieldProps as RACTextFieldProps,
-  Text,
 } from "react-aria-components";
-import { cx } from "../cx";
+import { FieldShell, fieldRootProps } from "../FieldShell";
 import { showOptionalHint } from "../fieldRequirement";
 import styles from "./TextArea.module.css";
 
@@ -30,6 +26,10 @@ import styles from "./TextArea.module.css";
  *
  * `isRequired` / `isOptional` — see `../fieldRequirement`: only optional fields
  * carry a visible marker ("— optional"); the two props are mutually exclusive.
+ *
+ * The label / optional / description / error shell and the
+ * `validationBehavior` / `composeRenderProps` root wiring are shared with
+ * `TextField` / `DateField` via `../FieldShell` (issue #74).
  */
 
 export interface TextAreaProps extends Omit<RACTextFieldProps, "className" | "children"> {
@@ -73,23 +73,17 @@ export const TextArea = forwardRef<HTMLDivElement, TextAreaProps>(function TextA
     <RACTextField
       {...props}
       ref={ref}
-      validationBehavior={props.validationBehavior ?? "aria"}
-      className={composeRenderProps(className, (resolved) => cx(styles.field, resolved))}
+      {...fieldRootProps(className, props.validationBehavior, styles.field)}
       style={style}
     >
-      {label != null && (
-        <Label className={styles.label}>
-          {label}
-          {optional && <span className={styles.optional}> — optional</span>}
-        </Label>
-      )}
-      <RACTextArea className={styles.input} placeholder={placeholder} rows={rows} />
-      {description != null && (
-        <Text slot="description" className={styles.description}>
-          {description}
-        </Text>
-      )}
-      <FieldError className={styles.error}>{errorMessage}</FieldError>
+      <FieldShell
+        label={label}
+        optional={optional}
+        description={description}
+        errorMessage={errorMessage}
+      >
+        <RACTextArea className={styles.input} placeholder={placeholder} rows={rows} />
+      </FieldShell>
     </RACTextField>
   );
 });

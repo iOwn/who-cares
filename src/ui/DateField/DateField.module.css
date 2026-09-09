@@ -1,27 +1,24 @@
 /*
  * DateField — segmented date input + calendar popover. The worked reference for
  * the src/ui/ FIELD styling conventions (counterpart of Button.module.css for
- * actions). Consumes ONLY semantic tokens (tokens.css). Interaction state via
- * RAC's `[data-*]` attributes, never render-prop booleans. Field control height
+ * actions). The label / optional / description / error rules are shared with
+ * TextField / TextArea via `composes:` from `../field.module.css` (issue #74).
+ * Consumes ONLY semantic tokens (tokens.css). Interaction state via RAC's
+ * `[data-*]` attributes, never render-prop booleans. Field control height
  * matches Button (2.5rem). The popover sits at `--z-popover` so it clears the
  * modal / scrim layer (docs/design-system.md Token model).
  */
 
 .field {
-  display: grid;
-  gap: var(--space-6);
-  font-family: var(--font-body);
+  composes: field from "../field.module.css";
 }
 
 .label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  composes: label from "../field.module.css";
 }
 
 .optional {
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text-subtle);
+  composes: optional from "../field.module.css";
 }
 
 /* --- the input row: segments + calendar trigger --- */
@@ -128,14 +125,11 @@
 }
 
 .description {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  composes: description from "../field.module.css";
 }
 
 .error {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-at-risk-text);
+  composes: error from "../field.module.css";
 }
 
 /* --- popover + calendar --- */

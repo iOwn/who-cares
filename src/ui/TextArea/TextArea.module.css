@@ -1,23 +1,21 @@
 /*
- * TextArea — the TextField shell, multi-line. Consumes ONLY semantic tokens
- * (tokens.css). Interaction state via RAC's `[data-*]` attributes.
+ * TextArea — the TextField shell, multi-line. The label / optional /
+ * description / error rules are shared with TextField / DateField via
+ * `composes:` from `../field.module.css` (issue #74); only `.input` is local.
+ * Consumes ONLY semantic tokens (tokens.css). Interaction state via RAC's
+ * `[data-*]` attributes.
  */
 
 .field {
-  display: grid;
-  gap: var(--space-6);
-  font-family: var(--font-body);
+  composes: field from "../field.module.css";
 }
 
 .label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
+  composes: label from "../field.module.css";
 }
 
 .optional {
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text-subtle);
+  composes: optional from "../field.module.css";
 }
 
 .input {
@@ -61,14 +59,11 @@
 }
 
 .description {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  composes: description from "../field.module.css";
 }
 
 .error {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-at-risk-text);
+  composes: error from "../field.module.css";
 }
 
 /* MOTION GATE — drop the transition entirely, not just its duration (§9). */

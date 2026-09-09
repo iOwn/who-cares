@@ -1,0 +1,39 @@
+/*
+ * field.module.css — the shared field shell for the RAC field primitives
+ * (`TextField`, `TextArea`, `DateField`, and `DateRangeField` to come — issue
+ * #74). Pulled into each component's own `<Component>.module.css` via CSS
+ * Modules `composes:` (e.g. `.label { composes: label from
+ * "../field.module.css"; }`) — the pieces below are byte-for-byte identical
+ * across every field primitive: the root grid layout, the label + "—
+ * optional" hint, the description text, and the error text. Each primitive's
+ * own control (input / textarea / date-segment group) stays local to its own
+ * module. Consumes ONLY semantic tokens (tokens.css), per docs/design-system.md.
+ */
+
+.field {
+  display: grid;
+  gap: var(--space-6);
+  font-family: var(--font-body);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-subtle);
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-at-risk-text);
+}
