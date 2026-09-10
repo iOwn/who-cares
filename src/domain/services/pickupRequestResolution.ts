@@ -225,11 +225,12 @@ export interface AcceptRequestResult {
  * the response — the request auto-withdraws (event 6) rather than colliding with
  * the one-assignment-per-date invariant; `result.superseded` says so.
  *
- * TODO(#53): the `findByDate` check + `assignments.save` are not atomic against
- * a truly concurrent direct claim in the same instant — the loser's transaction
+ * The `findByDate` check + `assignments.save` are not atomic against a truly
+ * concurrent direct claim (#53) in the same instant — the loser's transaction
  * hits `UNIQUE (household_id, date)` and the action surfaces a generic retry
- * message. Acceptable now (the claim UI is #53 and the client guards
- * double-submit); revisit when direct claim ships.
+ * message. Accepted for v1: a two-person household, the clients guard
+ * double-submit, and the loss is a stale-looking error the retry clears — never
+ * corruption. A DB-level upsert-or-retry would tighten it if it ever bites.
  */
 export async function acceptRequest(
   deps: PickupRequestResolutionDeps,
@@ -281,8 +282,8 @@ export interface DeclineRequestResult {
    * `true` ⇒ an `Assignment` already existed for the day (a direct claim landed
    * first), so the request auto-withdrew (event 6) rather than being declined —
    * declining a day that is already covered would tell the requester something
-   * misleading. Unreachable until direct-claim (#53) can create that
-   * `Assignment`; kept symmetric with `acceptRequest`.
+   * misleading. Reachable once direct claim (#53) shipped; kept symmetric with
+   * `acceptRequest`.
    */
   readonly superseded: boolean;
   readonly notification: Notification;

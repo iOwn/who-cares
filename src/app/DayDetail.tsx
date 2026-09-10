@@ -62,6 +62,14 @@ function absenceCovers(absence: Absence, date: CalendarDate): boolean {
   return absence.startDate <= date && date <= absence.endDate;
 }
 
+/**
+ * Display states a direct claim is offered on: a contested day needing or
+ * having coverage. Deliberately excludes `quiet` (an implicit "who's on duty"
+ * on an uncontested day is out of v1 scope — SPEC.md "Not yet specified"),
+ * `closed`, and `off` (no childcare — nothing to claim).
+ */
+const CLAIMABLE_DISPLAY_STATES = ["pending", "at-risk", "resolved"] as const;
+
 export function DayDetail({
   day,
   onOpenChange,
@@ -93,14 +101,14 @@ export function DayDetail({
 
   // Direct claim (#53, ADR-0001): offered on a contested day — pending, at-risk,
   // or resolved by the other parent — that the current member isn't already
-  // covering. Not on a quiet/off/closed day (`isStatusDisplayState` gate).
+  // covering or absent for (see `CLAIMABLE_DISPLAY_STATES`).
   const dayAssignment =
     day && currentMemberId ? (assignments.find((a) => a.date === day.date) ?? null) : null;
   const iCoverThisDay = dayAssignment?.assigneeId === currentMemberId;
   const canClaim =
     day != null &&
     !!currentMemberId &&
-    isStatusDisplayState(day.displayState) &&
+    (CLAIMABLE_DISPLAY_STATES as readonly string[]).includes(day.displayState) &&
     !iCoverThisDay &&
     // Can't sensibly claim a day you've declared yourself out for.
     myAbsence == null;

@@ -131,8 +131,9 @@ export async function claimDayAction(date: CalendarDate): Promise<RequestActionR
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: Awaited<ReturnType<typeof claimDay>>;
   try {
-    const outcome = await db.transaction((tx) =>
+    outcome = await db.transaction((tx) =>
       claimDay(
         {
           ...createRepositories(tx),
@@ -142,11 +143,13 @@ export async function claimDayAction(date: CalendarDate): Promise<RequestActionR
         { householdId: session.household.id, date, actingMemberId: session.member.id },
       ),
     );
-    await dispatch(outcome.notifications);
   } catch (thrown) {
     return toResult(thrown, "claimDayAction");
   }
 
+  // Dispatch after commit, matching `recordAbsenceAction` — a slow or failing
+  // send must not roll back a claim that already landed.
+  await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };
 }
