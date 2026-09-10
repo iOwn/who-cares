@@ -32,6 +32,7 @@ are load-bearing.
 | [ADR-0009](./docs/adr/0009-component-tests-are-a-narrow-interaction-contract-tier.md) | A narrow component-test tier covers the interaction / a11y contract of four `src/ui/` primitives only (`Dialog`, `SegmentedControl`, `DateField`, `DateRangeField`) via Vitest browser mode; supersedes ADR-0005's "no component tier" line. |
 | [ADR-0010](./docs/adr/0010-css-modules-and-custom-property-tokens-over-tailwind.md) | Component styling is CSS Modules + a two-layer design-token layer in CSS custom properties (not Tailwind / vanilla-extract); `cva` + `clsx` map variants to classes. |
 | [ADR-0011](./docs/adr/0011-primitives-are-built-on-react-aria-components.md) | The `src/ui/` primitives are built on React Aria Components (not Radix or shadcn/ui) — the only option with a real headless, screen-reader-tested date-range picker for the 4-week booking cap. |
+| [ADR-0012](./docs/adr/0012-coalesced-notifications-queue-drained-opportunistically.md) | The two coalescable notification events wait in a `pending_notifications` queue drained at the top of every Server Action + the daily cron (no timer, no second scheduler); a lone edit's notification can lag up to a day. |
 
 ## Stack & hosting plan
 

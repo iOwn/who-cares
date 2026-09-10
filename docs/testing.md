@@ -150,7 +150,12 @@ real interaction / a11y contract (ADR-0009).**
    coalescable?)`. Single non-actor member except the two actor-less events (both-absent,
    48h-silence) which notify both. Plus coalescing-window cases: two edits to the same record
    inside 5 min → one notification; different records → independent windows; an edit after
-   the window → a second notification.
+   the window → a second notification. Split across three files (#55):
+   `src/domain/services/notificationRecipients.test.ts` (events 2–8 recipient wiring against
+   the services that raise them), `src/notifications/catalogue.test.ts` (all 12 events'
+   coalescing flag + the actor-less events' "both" rule), and
+   `src/notifications/notifier.test.ts` (the 5-minute-window behaviour against the real
+   `Notifier`).
 3. **Effective-dated pattern derivation (ADR-0002) — targeted, ~5–8 cases.** Fold into the
    same "is childcare day" helper case 1 needs. Pin: a date resolves against the version in
    effect *then*; adding a newer version leaves past derivation unchanged; boundary date ==

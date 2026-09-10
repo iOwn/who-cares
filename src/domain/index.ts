@@ -7,10 +7,12 @@
 export * as noopAdapters from "./adapters/noop";
 export * from "./ports";
 export * from "./services/absenceCancellation";
+export * from "./services/atRiskEscalation";
 export * from "./services/bootstrapHousehold";
 export * from "./services/childcareDay";
 export * from "./services/dayState";
 export * from "./services/directClaim";
+export * from "./services/notificationCatalogue";
 export * from "./services/pickupRequestGeneration";
 export * from "./services/pickupRequestResolution";
 export * from "./services/recurringAbsenceGeneration";

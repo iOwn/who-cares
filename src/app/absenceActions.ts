@@ -7,6 +7,7 @@ import { db } from "@/auth/config";
 import { createRepositories } from "@/db/repositories";
 import type { CalendarDate, Weekday } from "@/domain";
 import { AbsenceInputError, noopAdapters, recordAbsence, recordRecurringAbsences } from "@/domain";
+import { notificationServicesFor } from "@/notifications";
 
 /**
  * Thin Server Actions for the "+ I'm out" flow: `recordAbsenceAction` for the
@@ -60,10 +61,9 @@ export async function recordAbsenceAction(input: {
     return { ok: false, error: "Something went wrong saving that. Please try again." };
   }
 
-  if (outcome.notification) {
-    // TODO(#55): real Notifier (email + web push + coalescing).
-    await noopAdapters.noopNotifier().notify(outcome.notification);
-  }
+  const services = notificationServicesFor(db);
+  await services.flush();
+  if (outcome.notification) await services.notifier.notify(outcome.notification);
 
   revalidatePath("/");
   return { ok: true, requestCount: outcome.requests.length };
@@ -119,10 +119,9 @@ export async function recordRecurringAbsencesAction(input: {
     return { ok: false, error: "Something went wrong saving that. Please try again." };
   }
 
-  if (outcome.notification) {
-    // TODO(#55): real Notifier (email + web push + coalescing).
-    await noopAdapters.noopNotifier().notify(outcome.notification);
-  }
+  const services = notificationServicesFor(db);
+  await services.flush();
+  if (outcome.notification) await services.notifier.notify(outcome.notification);
 
   revalidatePath("/");
   return {

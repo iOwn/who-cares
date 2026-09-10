@@ -5,7 +5,22 @@ import { getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
-import type { CalendarDate, ChildcarePatternVersion, Weekday } from "@/domain";
+import {
+  type CalendarDate,
+  CHILDCARE_PATTERN_CHANGED_EVENT,
+  type ChildcarePatternVersion,
+  CLOSURE_ADDED_EVENT,
+  type Member,
+  type Notification,
+  type Weekday,
+} from "@/domain";
+import {
+  closureAddedNotification,
+  closureCoalesceKey,
+  notificationServicesFor,
+  patternChangedNotification,
+  patternCoalesceKey,
+} from "@/notifications";
 
 /**
  * Thin Server Actions for the childcare-settings feature (#49). Adapters over
@@ -17,12 +32,37 @@ import type { CalendarDate, ChildcarePatternVersion, Weekday } from "@/domain";
 async function context() {
   const session = await getCurrentSession();
   if (!session) throw new Error("Not signed in");
-  return { householdId: session.household.id, repos: createRepositories(db) };
+  const repos = createRepositories(db);
+  return {
+    householdId: session.household.id,
+    actor: session.member,
+    repos,
+  };
 }
 
 function revalidateAll() {
   revalidatePath("/settings");
   revalidatePath("/");
+}
+
+/**
+ * Coalesce a settings-change notification to the *other* member (catalogue
+ * events 11 + 12). The `Notifier` queues it under `coalesceKey` with a 5-minute
+ * window, so a burst of edits to the same record collapses into one
+ * notification of the final state; `flush()` (here and on the daily cron) sends
+ * it once the window elapses. A single-member household has no one to tell.
+ */
+async function notifyOtherMember(
+  ctx: Awaited<ReturnType<typeof context>>,
+  build: (recipientId: string, actorName: string) => Notification,
+): Promise<void> {
+  const members = await ctx.repos.members.listByHousehold(ctx.householdId);
+  const other = members.find((m: Member) => m.id !== ctx.actor.id);
+  if (!other) return;
+
+  const services = notificationServicesFor(db);
+  await services.flush();
+  await services.notifier.notify(build(other.id, ctx.actor.name));
 }
 
 /** Insert (or replace, if one already starts on that date) a pattern version. */
@@ -39,8 +79,12 @@ export async function savePatternAction(input: {
   weekdays: Weekday[];
   effectiveFrom: CalendarDate;
 }): Promise<void> {
-  const { householdId, repos } = await context();
+  const ctx = await context();
+  const { householdId, repos } = ctx;
   const existing = await repos.childcarePattern.findByHousehold(householdId);
+  const priorVersion = existing?.versions.find((v) => v.effectiveFrom === input.effectiveFrom);
+  const isRealChange =
+    !priorVersion || [...priorVersion.weekdays].sort().join() !== [...input.weekdays].sort().join();
   const versions = upsertVersion(existing?.versions ?? [], {
     weekdays: input.weekdays,
     effectiveFrom: input.effectiveFrom,
@@ -52,6 +96,15 @@ export async function savePatternAction(input: {
   await db.transaction((tx) =>
     createRepositories(tx).childcarePattern.save({ id: householdId, householdId, versions }),
   );
+
+  if (isRealChange) {
+    await notifyOtherMember(ctx, (recipientId, actorName) => ({
+      recipientId,
+      event: CHILDCARE_PATTERN_CHANGED_EVENT,
+      coalesceKey: patternCoalesceKey(householdId),
+      ...patternChangedNotification(actorName),
+    }));
+  }
   revalidateAll();
 }
 
@@ -71,7 +124,8 @@ export async function saveClosureAction(input: {
   date: CalendarDate;
   reason?: string;
 }): Promise<void> {
-  const { householdId, repos } = await context();
+  const ctx = await context();
+  const { householdId, repos } = ctx;
   const reason = input.reason?.trim() ? input.reason.trim() : undefined;
 
   // One closure per date: reuse the row already on that date if there is one.
@@ -83,9 +137,21 @@ export async function saveClosureAction(input: {
     input.id && (await closureBelongsToHousehold(repos, householdId, input.id))
       ? input.id
       : undefined;
+  const isNewClosure = !editId && !onDate;
   const id = editId ?? onDate?.id ?? crypto.randomUUID();
 
   await repos.closures.save({ id, householdId, date: input.date, ...(reason ? { reason } : {}) });
+
+  // Catalogue event 12 fires on a closure being *added*, not on a later edit to
+  // one that already exists.
+  if (isNewClosure) {
+    await notifyOtherMember(ctx, (recipientId, actorName) => ({
+      recipientId,
+      event: CLOSURE_ADDED_EVENT,
+      coalesceKey: closureCoalesceKey(householdId, input.date),
+      ...closureAddedNotification(actorName, input.date),
+    }));
+  }
   revalidateAll();
 }
 

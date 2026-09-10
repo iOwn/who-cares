@@ -19,6 +19,7 @@ import {
   shortenAbsence,
   withdrawRequest,
 } from "@/domain";
+import { notificationServicesFor } from "@/notifications";
 
 /**
  * Thin Server Actions for the pickup-request lifecycle (#52, #53) — accept /
@@ -50,13 +51,16 @@ const GENERIC: RequestActionResult = {
   error: "Something went wrong. Please try again.",
 };
 
-/** Dispatch post-commit notifications through the (currently no-op) Notifier. */
+/**
+ * Dispatch post-commit notifications (email + web push) and, while we're here,
+ * flush any coalescing-queue rows whose 5-minute window has elapsed (#55 —
+ * opportunistic flush; the daily cron is the backstop). Runs against the base
+ * `db`, not a transaction — a slow send must never hold one open.
+ */
 async function dispatch(notifications: readonly Notification[]): Promise<void> {
-  const notifier = noopAdapters.noopNotifier();
-  for (const notification of notifications) {
-    // TODO(#55): real Notifier (email + web push + coalescing).
-    await notifier.notify(notification);
-  }
+  const services = notificationServicesFor(db);
+  await services.flush();
+  await services.dispatchAll(notifications);
 }
 
 function toResult(thrown: unknown, label: string): RequestActionResult {
