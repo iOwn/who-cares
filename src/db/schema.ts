@@ -245,6 +245,12 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   p256dh: text("p256dh").notNull(),
   /** The subscription's auth secret (`keys.auth`). */
   auth: text("auth").notNull(),
+  /**
+   * The subscribing browser's `User-Agent` (issue #90) — nullable, best-effort.
+   * The `/settings` push card renders it as a "Chrome on macOS" row so a member
+   * can tell their registered browsers apart and drop one.
+   */
+  userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 // No secondary index on `member_id` — same call as the base auth tables

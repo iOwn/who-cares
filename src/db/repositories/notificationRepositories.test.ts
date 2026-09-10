@@ -66,6 +66,28 @@ describe("PushSubscriptionRepository", () => {
     expect(rows[0].p256dh).toBe("rotated");
   });
 
+  it("round-trips the user agent (issue #90) and defaults created_at on write", async () => {
+    await repos.pushSubscriptions.save(sub({ userAgent: "Firefox on Android" }));
+    await repos.pushSubscriptions.save(
+      sub({ id: "sub-2", endpoint: "https://push.example/def" }), // no userAgent given
+    );
+
+    const rows = await repos.pushSubscriptions.listByMember(MEMBER_1_ID);
+    const byEndpoint = Object.fromEntries(rows.map((r) => [r.endpoint, r]));
+    expect(byEndpoint["https://push.example/abc"].userAgent).toBe("Firefox on Android");
+    expect(byEndpoint["https://push.example/def"].userAgent).toBeNull();
+    expect(byEndpoint["https://push.example/abc"].createdAt).toBeInstanceOf(Date);
+  });
+
+  it("upsert refreshes the user agent for a re-subscribing browser", async () => {
+    await repos.pushSubscriptions.save(sub({ userAgent: "Chrome on macOS" }));
+    await repos.pushSubscriptions.save(sub({ id: "sub-x", userAgent: "Chrome on Windows" }));
+
+    const rows = await repos.pushSubscriptions.listByMember(MEMBER_1_ID);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].userAgent).toBe("Chrome on Windows");
+  });
+
   it("drops a subscription by endpoint", async () => {
     await repos.pushSubscriptions.save(sub());
     await repos.pushSubscriptions.deleteByEndpoint("https://push.example/abc");

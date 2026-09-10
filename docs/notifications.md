@@ -89,9 +89,28 @@ dropped and logged, not retried.
 
 With none of these set the app still runs — it just sends nothing.
 
-## Not yet built (follow-up)
+## Web push delivery (issue #90, ADR-0013)
 
-The service worker, the PWA manifest, the push-subscription enrollment UI + API
-route, and the iOS Home-Screen-install onboarding are a separate ticket. Until
-then the `PushSender` adapter has no subscriptions to send to and web push is
-inert; email carries every notification.
+The server pipeline above is channel-agnostic; delivery to a browser needs a
+registered subscription. That client half:
+
+- **Service worker** — `public/sw.js`, a minimal static file (no offline cache):
+  `push` → `showNotification`, `notificationclick` → focus/open the app. Served
+  `no-cache` and registered once from the root layout (`ServiceWorkerRegistrar`).
+- **PWA manifest** — `app/manifest.ts` (`display: standalone`) plus code-generated
+  icons (`app/appIcon.tsx` → `app/icon-192.png` / `app/icon-512.png` /
+  `app/apple-icon.tsx`). No binary assets in the tree.
+- **Enrollment** — the push card in `/settings` (`PushCard` + `usePushEnrollment`):
+  opt-in only, never prompts on load. It runs the permission prompt +
+  `pushManager.subscribe({ applicationServerKey: NEXT_PUBLIC_VAPID_PUBLIC_KEY })`
+  and `POST`s / `DELETE`s the subscription to **`/api/push/subscribe`**, a thin
+  adapter over `PushSubscriptionRepository`. Each browser stores its own row
+  (`push_subscriptions.user_agent`, migration `0008`, powers the "registered
+  browsers" list).
+- **iOS** — push needs a Home-Screen install (16.4+). The card detects iOS /
+  desktop-UA iPadOS and, when not already `display-mode: standalone`, shows the
+  Share → "Add to Home Screen" steps instead of the enable button. Email remains
+  the guaranteed channel throughout (SPEC.md).
+
+Not wired yet: a deep-linking push. `sw.js` reads `data.url`, but the server
+payload (`webPushSender`) sends none, so a tapped notification opens `/`.
