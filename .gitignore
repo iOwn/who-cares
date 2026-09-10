@@ -10,6 +10,11 @@
 # Vitest browser-mode artifacts: failure screenshots (browser.screenshotFailures
 # defaults on in headless mode) and trace-view output.
 /.vitest
+# Playwright E2E: the HTML report, and the per-parent storageState that
+# `e2e/global-setup.ts` mints against the test seam (short-lived session tokens).
+/playwright-report
+/test-results
+/e2e/.auth
 
 # next.js
 /.next/

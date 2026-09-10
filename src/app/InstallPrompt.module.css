@@ -1,0 +1,7 @@
+/* The onboarding install nudge (issue #56). One `Callout` with an action row. */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}

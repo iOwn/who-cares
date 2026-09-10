@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authClient } from "@/auth/client";
 import { Button, Callout, Surface, TextField } from "@/ui";
+import { InstallPrompt } from "./InstallPrompt";
 import styles from "./SignInScreen.module.css";
 
 /**
@@ -62,59 +63,64 @@ export function SignInScreen() {
 
   return (
     <main className={styles.base}>
-      <Surface className={styles.card}>
-        <p className={styles.wordmark}>WhoCares</p>
-        <p className={styles.tagline}>Sign in to see who&rsquo;s on pickup.</p>
+      <div className={styles.stack}>
+        <Surface className={styles.card}>
+          <p className={styles.wordmark}>WhoCares</p>
+          <p className={styles.tagline}>Sign in to see who&rsquo;s on pickup.</p>
 
-        {status === "sent" ? (
-          <Callout tone="info" title="Check your email" role="status">
-            If {email} is a WhoCares account, we sent it a sign-in link.
-          </Callout>
-        ) : (
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <TextField
-              label="Email"
-              name="email"
-              autoComplete="email"
-              isRequired
-              value={email}
-              onChange={setEmail}
-              isDisabled={status === "sending"}
-            />
-            {status === "error" && (
-              <Callout tone="danger" role="alert">
-                Something went wrong sending the link. Try again.
-              </Callout>
-            )}
-            <Button
-              type="submit"
-              fullWidth
-              isDisabled={status === "sending" || email.trim() === ""}
-            >
-              {status === "sending" ? "Sending…" : "Send sign-in link"}
-            </Button>
+          {status === "sent" ? (
+            <Callout tone="info" title="Check your email" role="status">
+              If {email} is a WhoCares account, we sent it a sign-in link.
+            </Callout>
+          ) : (
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <TextField
+                label="Email"
+                name="email"
+                autoComplete="email"
+                isRequired
+                value={email}
+                onChange={setEmail}
+                isDisabled={status === "sending"}
+              />
+              {status === "error" && (
+                <Callout tone="danger" role="alert">
+                  Something went wrong sending the link. Try again.
+                </Callout>
+              )}
+              <Button
+                type="submit"
+                fullWidth
+                isDisabled={status === "sending" || email.trim() === ""}
+              >
+                {status === "sending" ? "Sending…" : "Send sign-in link"}
+              </Button>
 
-            {passkey !== "hidden" && (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  fullWidth
-                  onPress={handlePasskey}
-                  isDisabled={passkey === "authenticating"}
-                >
-                  {passkey === "authenticating" ? "Waiting for passkey…" : "Sign in with a passkey"}
-                </Button>
-                {passkey === "error" && (
-                  <Callout tone="danger" role="alert">
-                    Couldn’t sign in with a passkey. Use the email link instead.
-                  </Callout>
-                )}
-              </>
-            )}
-          </form>
-        )}
-      </Surface>
+              {passkey !== "hidden" && (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    fullWidth
+                    onPress={handlePasskey}
+                    isDisabled={passkey === "authenticating"}
+                  >
+                    {passkey === "authenticating"
+                      ? "Waiting for passkey…"
+                      : "Sign in with a passkey"}
+                  </Button>
+                  {passkey === "error" && (
+                    <Callout tone="danger" role="alert">
+                      Couldn’t sign in with a passkey. Use the email link instead.
+                    </Callout>
+                  )}
+                </>
+              )}
+            </form>
+          )}
+        </Surface>
+        <InstallPrompt />
+      </div>
     </main>
   );
 }

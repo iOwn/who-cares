@@ -12,8 +12,10 @@ import type {
   PickupRequest,
 } from "@/domain";
 import { AppHeader } from "@/ui";
+import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
+import { InstallPrompt } from "./InstallPrompt";
 import { useWallClock } from "./useWallClock";
 
 export interface AppShellProps {
@@ -72,6 +74,7 @@ export function AppShell({
         onOpenSettings={() => router.push("/settings")}
       />
       <main aria-label="Calendar">
+        <InstallPrompt className={styles.installNudge} />
         <Calendar
           currentMemberId={currentMemberId}
           pattern={pattern}
