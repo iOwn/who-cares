@@ -147,6 +147,11 @@ export interface RunAtRiskEscalationInput {
 }
 
 export interface RunAtRiskEscalationResult {
+  /**
+   * The escalations this run **claimed** (issue #92) — a `(date, event)` another
+   * concurrent or retried run already wrote to the ledger is dropped here, not
+   * returned, so the caller never double-dispatches it.
+   */
   readonly escalations: readonly AtRiskEscalation[];
   /** Every notification to dispatch — flattened across `escalations`. */
   readonly notifications: readonly Notification[];
