@@ -1,0 +1,8 @@
+/* App shell (issues #47–#51). Only the install-nudge gutter lives here — the
+ * calendar and inbox own their own layout. The nudge renders nothing when
+ * there is nothing to install, so this margin only exists when it is shown. */
+
+.installNudge {
+  margin: var(--space-16);
+  margin-bottom: 0;
+}

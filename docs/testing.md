@@ -192,13 +192,35 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
   dispatch.
 - **Target**: the Vercel **preview deployment** for the PR — real runtime, real Neon branch,
   real Resend.
-- **Test seam**: `POST /api/test/seed` (wipe + insert the fixture) and `POST /api/test/login`
-  (mint a Better Auth session), mounted only when `E2E_TEST_MODE` is set. Called from
-  Playwright global setup.
-- **CI trigger**: GitHub Actions on `deployment_status == success` for the preview.
+- **Test seam** (`src/app/api/test/`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
+  `buildE2eHouseholdGraph(ALLOWED_MEMBER_EMAILS)` — idempotent, truncate-then-insert each call)
+  and `POST /api/test/login` `{ member: "a" | "b" }` (plants a magic-link verification token then
+  runs `auth.api.magicLinkVerify`, relaying its `Set-Cookie` to the caller). Both call
+  `assertTestModeEnabled()` first and return a bare **404** unless `E2E_TEST_MODE` is one of
+  `1` / `true` / `on` / `yes`. `e2e/global-setup.ts` calls seed once, then login for each parent,
+  saving a `storageState` per parent under `e2e/.auth/` (gitignored).
+- **CI trigger**: GitHub Actions (`e2e.yml`) on `deployment_status == success` for the `Preview`
+  environment. Not a required check; a failure posts one PR comment, green is silent.
   **Production is never smoke-tested**; `E2E_TEST_MODE` is never set there.
-- **Local**: opt-in `pnpm e2e` against a personal Neon dev branch;
-  `npx playwright install chromium` is the one-time setup.
+- **Preview prerequisite**: `E2E_TEST_MODE=1` must be set on the Vercel **Preview** environment
+  (Project → Settings → Environment Variables, Preview scope only) or every preview deploy
+  triggers a failing `e2e.yml` run. `deployment_status` workflows only run from the copy of
+  `e2e.yml` on `main`, so the first real end-to-end validation is a follow-up once this lands
+  (ADR-0008).
+
+### Running `pnpm e2e` locally
+
+Against a **personal Neon dev branch** (never a shared DB — seed is destructive):
+
+1. One-time: `npx playwright install chromium` (or `pnpm test:browser:setup`).
+2. Point `.env` at your Neon dev branch and set the full auth env set
+   (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_EMAILS`,
+   `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus `E2E_TEST_MODE=1`**.
+3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.
+4. In another: `PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm e2e`.
+
+With `PLAYWRIGHT_BASE_URL` unset, `pnpm e2e` still lists / type-checks — the spec skips itself
+and global setup is a no-op.
 
 ## Test data / fixtures
 
@@ -213,7 +235,8 @@ From [issue #26](https://github.com/iOwn/who-cares/issues/26). No ADR — test i
   2. the PGlite layer persists them via a `seed(db, graph)` helper that does **raw `INSERT`s**
      against the migration-defined schema — *not* through the repository interfaces (those
      are the code under test);
-  3. the E2E `/api/test/seed` route builds its household from the same factories.
+  3. the E2E `/api/test/seed` route builds its household from the same factories, via the pure
+     `buildE2eHouseholdGraph(emails)` in `src/testing/e2eHousehold.ts`.
 - **Determinism**: fixed sentinel IDs (`household-1`, `m1` / `m2`, `child-1`), a fixed anchor
   date the factories default relative to, a counter-based ID generator for bulk rows. "Today"
   is always explicit per test via the injected clock.
@@ -349,7 +372,8 @@ None of this is committed in the planning effort. When the build starts:
   projects, declared under `test.projects`. See also `docs/design-system.md` for what
   `src/ui/` adds.
 - `src/testing/factories.ts`, `src/testing/seed.ts` — the shared fixture module.
-- `app/api/test/login/route.ts`, `app/api/test/seed/route.ts` — `E2E_TEST_MODE`-gated seam.
+- `src/app/api/test/{seed,login}/route.ts` + `src/app/api/test/testMode.ts` — `E2E_TEST_MODE`-gated
+  seam.
 - `e2e/` — one Playwright spec + `playwright.config.ts` + global setup.
 - `biome.json` — lint + format + import-sort config.
 - `lefthook.yml` — the pre-commit / pre-push layers.

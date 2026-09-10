@@ -14,9 +14,10 @@ import { defineConfig, devices } from "playwright/test";
  * The bare `playwright` package (not `@playwright/test`) is the devDependency,
  * so the test runner is imported from `playwright/test`.
  *
- * The real smoke spec is issue #56; `e2e/smoke.spec.ts` is a skipped placeholder
- * until then, and `e2e/global-setup.ts` is a scaffold for the seed/login calls
- * that spec will need.
+ * `e2e/smoke.spec.ts` is the one smoke path (#56); `e2e/global-setup.ts` calls
+ * the `E2E_TEST_MODE` seed/login seam and saves a `storageState` per parent.
+ * With `PLAYWRIGHT_BASE_URL` unset both are inert — global setup returns early
+ * and the spec skips — so `playwright test --list` still loads.
  */
 export default defineConfig({
   testDir: "./e2e",
