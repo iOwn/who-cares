@@ -151,18 +151,56 @@ describe("PendingNotificationRepository", () => {
 describe("AtRiskEscalationRepository", () => {
   it("records a (date, event) and lists it back; a re-run of the same pair is a no-op", async () => {
     const at = new Date("2025-01-06T06:00:00.000Z");
-    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
-    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
+    await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-escalated",
+      at,
+    );
+    await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-escalated",
+      at,
+    );
 
     expect(await repos.atRiskEscalations.listNotified(HOUSEHOLD_ID)).toEqual([
       { date: "2025-01-08", event: "day-at-risk-escalated" },
     ]);
   });
 
+  it("claimNotified returns true for the inserting call and false for a losing re-run (issue #92)", async () => {
+    const at = new Date("2025-01-06T06:00:00.000Z");
+    const first = await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-escalated",
+      at,
+    );
+    const second = await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-escalated",
+      at,
+    );
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+  });
+
   it("keeps event 9 and event 10 for the same date as distinct rows", async () => {
     const at = new Date("2025-01-06T06:00:00.000Z");
-    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
-    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-both-absent", at);
+    await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-escalated",
+      at,
+    );
+    await repos.atRiskEscalations.claimNotified(
+      HOUSEHOLD_ID,
+      "2025-01-08",
+      "day-at-risk-both-absent",
+      at,
+    );
 
     const notified = await repos.atRiskEscalations.listNotified(HOUSEHOLD_ID);
     expect(notified.map((r) => r.event).sort()).toEqual([
@@ -172,7 +210,7 @@ describe("AtRiskEscalationRepository", () => {
   });
 
   it("scopes listNotified to the household", async () => {
-    await repos.atRiskEscalations.record(
+    await repos.atRiskEscalations.claimNotified(
       HOUSEHOLD_ID,
       "2025-01-08",
       "day-at-risk-both-absent",

@@ -67,6 +67,27 @@ export function resolvePatternVersion(
   return resolved;
 }
 
+/**
+ * Would saving `weekdays` effective from `effectiveFrom` actually change the
+ * childcare schedule? Compares the proposed weekdays against the version that
+ * *resolves as effective for `effectiveFrom`* (`resolvePatternVersion`), not
+ * just a version whose `effectiveFrom` is an exact match.
+ *
+ * So a future-dated version that merely restates the currently-effective
+ * weekdays is a no-op — it moves no pickups and must not fire the
+ * "childcare pattern changed" notification (issue #92). `true` when there is no
+ * resolvable prior version (a genuinely new pattern) or the weekday sets differ.
+ */
+export function patternVersionChangesSchedule(
+  pattern: Pick<ChildcarePattern, "versions"> | null | undefined,
+  weekdays: readonly Weekday[],
+  effectiveFrom: CalendarDate,
+): boolean {
+  const prior = resolvePatternVersion(pattern, effectiveFrom);
+  if (!prior) return true;
+  return [...prior.weekdays].sort().join() !== [...weekdays].sort().join();
+}
+
 /** The two calendar facts `dayDisplayState()` needs to widen a domain `n/a`. */
 export interface ChildcareDayInputs {
   /** `date`'s weekday is in the pattern version that was in effect *then*. */

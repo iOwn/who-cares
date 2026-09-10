@@ -96,8 +96,15 @@ export interface AtRiskEscalationRecord {
 export interface AtRiskEscalationRepository {
   /** `(date, event)` pairs in `householdId` already recorded as notified. */
   listNotified(householdId: string): Promise<AtRiskEscalationRecord[]>;
-  /** Record a notification (idempotent on `(household, date, event)`). */
-  record(householdId: string, date: CalendarDate, event: string, at: Date): Promise<void>;
+  /**
+   * Claim a `(household, date, event)` for notification, writing the ledger row.
+   * Returns `true` iff **this call** inserted it — a `false` means another
+   * (retried or overlapping) cron run already claimed the pair, and the caller
+   * must **not** dispatch its notifications. `INSERT … ON CONFLICT DO NOTHING
+   * RETURNING`, so the check and the write are one statement — the ledger
+   * equivalent of `PendingNotificationRepository.claimDue` (ADR-0012).
+   */
+  claimNotified(householdId: string, date: CalendarDate, event: string, at: Date): Promise<boolean>;
 }
 
 /** One stored `PushSubscription` (issue #55) — the browser endpoint plus its keys. */

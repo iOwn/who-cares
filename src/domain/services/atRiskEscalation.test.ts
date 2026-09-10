@@ -149,6 +149,12 @@ function createFakes(seed: {
   requests?: readonly PickupRequest[];
   assignments?: readonly Assignment[];
   notifiedDates?: readonly string[];
+  /**
+   * Simulate a racing cron run: `listNotified` always reports an empty ledger
+   * even though `claimNotified` still dedupes against the rows already written.
+   * A second `runAtRiskEscalation` then re-plans every day but claims none.
+   */
+  staleReads?: boolean;
 }) {
   const absences = [...(seed.absences ?? [])];
   const requests = [...(seed.requests ?? [])];
@@ -242,13 +248,13 @@ function createFakes(seed: {
   const recorded: { date: string; event: string }[] = [];
   const atRiskEscalations: AtRiskEscalationRepository = {
     async listNotified() {
-      return notified.map((r) => ({ ...r }));
+      return seed.staleReads ? [] : notified.map((r) => ({ ...r }));
     },
-    async record(_h, date, event) {
-      if (!notified.some((r) => r.date === date && r.event === event)) {
-        notified.push({ date, event });
-      }
+    async claimNotified(_h, date, event) {
+      if (notified.some((r) => r.date === date && r.event === event)) return false;
+      notified.push({ date, event });
       recorded.push({ date, event });
+      return true;
     },
   };
 
@@ -321,6 +327,38 @@ describe("runAtRiskEscalation", () => {
 
     expect(result.notifications).toEqual([]);
     expect(recorded).toEqual([]);
+  });
+
+  it("dispatches nothing on a re-run once the ledger row is claimed, even if the read is stale (issue #92)", async () => {
+    const bothAbsent = {
+      absences: [
+        makeAbsence({
+          id: "a1",
+          memberId: MEMBER_1_ID,
+          startDate: "2025-01-08",
+          endDate: "2025-01-08",
+        }),
+        makeAbsence({
+          id: "a2",
+          memberId: MEMBER_2_ID,
+          startDate: "2025-01-08",
+          endDate: "2025-01-08",
+        }),
+      ],
+      staleReads: true,
+    };
+    const { deps, recorded } = createFakes(bothAbsent);
+
+    const first = await runAtRiskEscalation(deps, { householdId: HOUSEHOLD_ID, horizonDays: 14 });
+    expect(first.notifications).toHaveLength(2);
+    expect(recorded).toEqual([{ date: "2025-01-08", event: DAY_AT_RISK_BOTH_ABSENT_EVENT }]);
+
+    // A retried / overlapping run: it still plans the day (stale empty read) but
+    // `claimNotified` loses the race, so it dispatches nothing.
+    const second = await runAtRiskEscalation(deps, { householdId: HOUSEHOLD_ID, horizonDays: 14 });
+    expect(second.notifications).toEqual([]);
+    expect(second.escalations).toEqual([]);
+    expect(recorded).toHaveLength(1);
   });
 
   it("ignores weekends and days outside the horizon", async () => {
