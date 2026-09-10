@@ -61,6 +61,13 @@ at-risk again is **not** re-notified (its ledger row is permanent). Judged fine
 for v1: the day still shows the right state live, and re-nagging on every
 flip-flop is its own problem.
 
+Dispatch is **claim-based** (issue #92): `runAtRiskEscalation` writes the ledger
+row with `AtRiskEscalationRepository.claimNotified` — `INSERT … ON CONFLICT DO
+NOTHING RETURNING` — and only keeps the notifications for `(date, event)` pairs
+it actually inserted. A retried or overlapping cron run reading the same empty
+ledger plans the same days but claims none, so the at-risk email + push go out
+once. Same guarantee `claimDue` gives the coalescing queue below.
+
 ## Coalescing
 
 See **ADR-0012**. Only events 11 + 12. Each edit `upsert`s one
