@@ -10,7 +10,10 @@ import type { MetadataRoute } from "next";
  * to know the install succeeded.
  *
  * Icons are code-generated route handlers (`app/icon-192.png`, `app/icon-512.png`,
- * `app/appIcon.tsx`) — no binary PNGs in the tree.
+ * `app/appIcon.tsx`) — no binary PNGs in the tree. The same file is offered as
+ * `purpose: "maskable"`: the mark is a centred ring inside the middle ~56%, well
+ * within the maskable safe zone (the inner 80%), so a platform mask crops only
+ * padding. If the mark ever gains detail near the edge, split these out.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

@@ -35,10 +35,13 @@ interface Props {
  */
 export function PushCard({ browsers }: Props) {
   const router = useRouter();
-  const { state, currentEndpoint, enable, disable } = usePushEnrollment(() => router.refresh());
+  const { state, currentEndpoint, enable, disable, removeEndpoint } = usePushEnrollment(() =>
+    router.refresh(),
+  );
 
   const [iosInstall, setIosInstall] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
   useEffect(() => {
     setNow(new Date());
     setIosInstall(
@@ -57,6 +60,15 @@ export function PushCard({ browsers }: Props) {
   async function onDisable() {
     await disable();
     announce("Push notifications are off for this device. You’ll still get emails.");
+  }
+  async function onRemove(browser: PushBrowserView) {
+    setRemoving(browser.endpoint);
+    try {
+      await removeEndpoint(browser.endpoint);
+      announce(`${describeUserAgent(browser.userAgent)} will no longer get push notifications.`);
+    } finally {
+      setRemoving(null);
+    }
   }
 
   return (
@@ -82,9 +94,16 @@ export function PushCard({ browsers }: Props) {
         </Callout>
       )}
 
-      {!iosInstall && (state === "unsupported" || state === "unconfigured") && (
+      {!iosInstall && state === "unsupported" && (
         <Callout tone="neutral" icon={BellRing}>
           This browser can’t show push notifications. You’ll keep getting every update by email.
+        </Callout>
+      )}
+
+      {!iosInstall && state === "unconfigured" && (
+        <Callout tone="neutral" icon={BellRing}>
+          Push notifications aren’t set up for this deployment yet. Email is delivering every update
+          in the meantime.
         </Callout>
       )}
 
@@ -138,6 +157,16 @@ export function PushCard({ browsers }: Props) {
                     {now ? `Added ${formatLastActive(new Date(browser.addedAt), now)}` : " "}
                   </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  tone="danger"
+                  size="sm"
+                  aria-label={`Remove ${describeUserAgent(browser.userAgent)}`}
+                  onPress={() => onRemove(browser)}
+                  isDisabled={removing === browser.endpoint}
+                >
+                  {removing === browser.endpoint ? "Removing…" : "Remove"}
+                </Button>
               </Surface>
             </li>
           ))}

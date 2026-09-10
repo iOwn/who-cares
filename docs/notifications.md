@@ -82,7 +82,10 @@ dropped and logged, not retried.
 2. **VAPID** — `npx web-push generate-vapid-keys`. Set
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    (`mailto:you@yourdomain`) in Vercel. The keypair is permanent — rotating it
-   invalidates every stored subscription.
+   invalidates every stored subscription. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` is
+   **inlined at build time** (the client reads it), so a fresh deploy is required
+   after setting or changing it — until then the `/settings` push card shows
+   "not set up for this deployment yet".
 3. **Cron** — set `CRON_SECRET` in Vercel (any long random string). Vercel sends
    it as `Authorization: Bearer <CRON_SECRET>`; the route 401s without a match
    and 503s if the var is unset. The schedule lives in `vercel.json`.

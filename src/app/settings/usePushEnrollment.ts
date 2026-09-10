@@ -30,6 +30,12 @@ export interface PushEnrollment {
   readonly currentEndpoint: string | null;
   readonly enable: () => Promise<void>;
   readonly disable: () => Promise<void>;
+  /**
+   * Drop one registered browser by endpoint (the settings list — a stale phone,
+   * a shared computer). If it's *this* browser, also tears down the local
+   * subscription so the toggle flips back to off.
+   */
+  readonly removeEndpoint: (endpoint: string) => Promise<void>;
 }
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -55,6 +61,16 @@ function readyWithin(ms: number): Promise<ServiceWorkerRegistration> {
       setTimeout(() => reject(new Error("service worker not ready")), ms),
     ),
   ]);
+}
+
+/** DELETE one subscription row by endpoint. Swallows network failure — the
+ * push service prunes a dead endpoint on the next send anyway. */
+function deleteRow(endpoint: string): Promise<unknown> {
+  return fetch("/api/push/subscribe", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  }).catch(() => {});
 }
 
 export function usePushEnrollment(onChange?: () => void): PushEnrollment {
@@ -131,11 +147,7 @@ export function usePushEnrollment(onChange?: () => void): PushEnrollment {
       const registration = await readyWithin(10000);
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch("/api/push/subscribe", {
-          method: "DELETE",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        }).catch(() => {});
+        await deleteRow(subscription.endpoint);
         await subscription.unsubscribe().catch(() => {});
       }
       setCurrentEndpoint(null);
@@ -146,5 +158,26 @@ export function usePushEnrollment(onChange?: () => void): PushEnrollment {
     }
   }, [onChange]);
 
-  return { state, currentEndpoint, enable, disable };
+  const removeEndpoint = useCallback(
+    async (endpoint: string) => {
+      await deleteRow(endpoint);
+      // If we just removed this browser's own subscription, tear down the local
+      // half too so the card reflects it.
+      if (isSupported() && endpoint === currentEndpoint) {
+        try {
+          const registration = await readyWithin(10000);
+          const subscription = await registration.pushManager.getSubscription();
+          await subscription?.unsubscribe().catch(() => {});
+        } catch {
+          // best-effort — the server row is already gone
+        }
+        setCurrentEndpoint(null);
+        setState("disabled");
+      }
+      onChange?.();
+    },
+    [currentEndpoint, onChange],
+  );
+
+  return { state, currentEndpoint, enable, disable, removeEndpoint };
 }

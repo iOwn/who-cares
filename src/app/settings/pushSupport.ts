@@ -23,13 +23,13 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuf
   return output;
 }
 
-/** iOS / iPadOS — the platforms where push needs a Home-Screen install first. */
+/**
+ * iOS / iPadOS by user-agent string alone — where push needs a Home-Screen
+ * install first. Does *not* catch iPadOS 13+ running its desktop-Safari UA;
+ * `needsIOSInstall` layers a touch-point check on top for that.
+ */
 export function isIOS(userAgent: string): boolean {
-  if (/\b(iPhone|iPad|iPod)\b/.test(userAgent)) return true;
-  // iPadOS 13+ reports a desktop-Safari UA; the touch-point check disambiguates
-  // it from a real Mac. Callers on the server pass `navigator.maxTouchPoints`
-  // via the second form below.
-  return false;
+  return /\b(iPhone|iPad|iPod)\b/.test(userAgent);
 }
 
 /**
