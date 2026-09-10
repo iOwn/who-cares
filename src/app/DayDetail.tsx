@@ -3,12 +3,12 @@
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { Absence, CalendarDate, PickupRequest } from "@/domain";
+import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "@/domain";
 import type { CalendarDayView } from "@/ui";
 import { Button, Callout, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
 import { longDate, shortDate } from "./formatCalendarDate";
-import { cancelAbsenceAction, withdrawRequestAction } from "./requestActions";
+import { cancelAbsenceAction, claimDayAction, withdrawRequestAction } from "./requestActions";
 
 /**
  * `DayDetail` (the design-system's `DayDetailSheet`, #50) — the modal that opens
@@ -21,7 +21,12 @@ import { cancelAbsenceAction, withdrawRequestAction } from "./requestActions";
  * anyone (SPEC.md, CONTEXT.md) — it just drops the trip and withdraws the
  * requests that no longer need an answer.
  *
- * The direct-claim affordance is #53 (separate, blocked).
+ * From #53 it also carries the **direct claim** (ADR-0001): on a contested day
+ * the current member is neither already covering nor absent for — pending,
+ * at-risk, or resolved by the other parent — a "Claim this day" button takes it
+ * outright, newest claim wins, no confirmation. It is deliberately not offered
+ * on a quiet (uncontested) day: an implicit "who's on duty" there is out of
+ * scope for v1 (SPEC.md "Not yet specified").
  */
 
 export interface DayDetailProps {
@@ -41,6 +46,10 @@ export interface DayDetailProps {
   readonly pickupRequests?: readonly PickupRequest[];
   /** Every absence for the household. */
   readonly absences?: readonly Absence[];
+  /** Every assignment for the household — decides whether a direct claim is offered. */
+  readonly assignments?: readonly Assignment[];
+  /** Household members — for naming the parent a claim would take over from. */
+  readonly members?: readonly Member[];
 }
 
 /** Neutral label for the two non-status display states the `StatePill` can't speak. */
@@ -60,6 +69,8 @@ export function DayDetail({
   currentMemberId,
   pickupRequests = [],
   absences = [],
+  assignments = [],
+  members = [],
 }: DayDetailProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -79,7 +90,26 @@ export function DayDetail({
 
   const canDeclare =
     !!onDeclareAbsence && day != null && day.displayState !== "off" && myAbsence == null;
-  const showActions = myOpenRequest != null || myAbsence != null || canDeclare;
+
+  // Direct claim (#53, ADR-0001): offered on a contested day — pending, at-risk,
+  // or resolved by the other parent — that the current member isn't already
+  // covering. Not on a quiet/off/closed day (`isStatusDisplayState` gate).
+  const dayAssignment =
+    day && currentMemberId ? (assignments.find((a) => a.date === day.date) ?? null) : null;
+  const iCoverThisDay = dayAssignment?.assigneeId === currentMemberId;
+  const canClaim =
+    day != null &&
+    !!currentMemberId &&
+    isStatusDisplayState(day.displayState) &&
+    !iCoverThisDay &&
+    // Can't sensibly claim a day you've declared yourself out for.
+    myAbsence == null;
+  const claimTakesOverFrom =
+    canClaim && dayAssignment?.assigneeId && dayAssignment.assigneeId !== currentMemberId
+      ? (members.find((m) => m.id === dayAssignment.assigneeId)?.name ?? "the other parent")
+      : null;
+
+  const showActions = myOpenRequest != null || myAbsence != null || canDeclare || canClaim;
 
   const run = (
     action: () => Promise<{ ok: true; note?: string } | { ok: false; error: string }>,
@@ -149,6 +179,13 @@ export function DayDetail({
               </p>
             ) : null}
 
+            {claimTakesOverFrom ? (
+              <p className={styles.reason}>
+                Claiming this day takes over from {claimTakesOverFrom}. They&rsquo;ll be notified
+                &mdash; there&rsquo;s no confirmation step.
+              </p>
+            ) : null}
+
             {showActions ? (
               <div className={styles.actions}>
                 {myOpenRequest ? (
@@ -178,6 +215,16 @@ export function DayDetail({
                     onPress={() => onDeclareAbsence?.(day.date)}
                   >
                     I&rsquo;m out this day
+                  </Button>
+                ) : null}
+                {canClaim ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isDisabled={pending}
+                    onPress={() => run(() => claimDayAction(day.date))}
+                  >
+                    Claim this day
                   </Button>
                 ) : null}
               </div>

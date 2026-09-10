@@ -1,12 +1,13 @@
 /**
  * Consolidated notification-recipient matrix for the pickup-request lifecycle
  * (`docs/testing.md` §4 point 2, issue #5 catalogue). One table, one row per
- * event this slice (#52) raises, asserting `(event key, recipient)` — the
+ * event slices #52 + #53 raise, asserting `(event key, recipient)` — the
  * "single non-actor member" rule from the catalogue.
  *
- * Scope: the accept / decline / withdraw / cancel / shorten events only. The
- * actor-less events (both-absent, 48h-silence) and the 5-minute coalescing
- * window are #55's (they need the real `Notifier`, not these services).
+ * Scope: the accept / decline / withdraw / cancel / shorten / direct-claim
+ * events only. The actor-less events (both-absent, 48h-silence) and the
+ * 5-minute coalescing window are #55's (they need the real `Notifier`, not
+ * these services).
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
@@ -30,6 +31,7 @@ import type {
 } from "../ports";
 import type { Absence, Assignment, PickupRequest } from "../types";
 import { ASSIGNMENT_STANDS_EVENT, cancelAbsence, shortenAbsence } from "./absenceCancellation";
+import { claimDay, DIRECT_CLAIM_EVENT } from "./directClaim";
 import {
   acceptRequest,
   declineRequest,
@@ -258,6 +260,40 @@ describe("notification recipients — pickup-request lifecycle (#52)", () => {
           actingMemberId: RECIPIENT,
         });
         return { notifications: [notification] };
+      },
+    },
+    {
+      name: "direct claim over the other parent's assignment → the bumped parent",
+      event: DIRECT_CLAIM_EVENT,
+      recipient: RECIPIENT,
+      run: async () => {
+        const deps = createFakes({
+          assignments: [
+            makeAssignment({
+              date: "2025-01-07",
+              assigneeId: RECIPIENT,
+              source: "accepted-request",
+            }),
+          ],
+        });
+        return claimDay(deps, {
+          householdId: HOUSEHOLD_ID,
+          date: "2025-01-07",
+          actingMemberId: REQUESTER,
+        });
+      },
+    },
+    {
+      name: "direct claim auto-withdraws an open request → the original requester",
+      event: PICKUP_REQUEST_WITHDRAWN_EVENT,
+      recipient: REQUESTER,
+      run: async () => {
+        const deps = createFakes({ requests: [openReq()] });
+        return claimDay(deps, {
+          householdId: HOUSEHOLD_ID,
+          date: "2025-01-07",
+          actingMemberId: RECIPIENT,
+        });
       },
     },
     {
