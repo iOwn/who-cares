@@ -28,7 +28,15 @@ export interface WebPushDeps {
 
 export function createWebPushSender(deps: WebPushDeps): PushSender | null {
   if (!deps.vapid) return null;
-  webpush.setVapidDetails(deps.vapid.subject, deps.vapid.publicKey, deps.vapid.privateKey);
+  try {
+    webpush.setVapidDetails(deps.vapid.subject, deps.vapid.publicKey, deps.vapid.privateKey);
+  } catch (error) {
+    // A malformed VAPID pair (a truncated key, a bad `subject`) throws here.
+    // Degrade to the no-op sender rather than let a bad env var break every
+    // post-commit dispatch — email is the guaranteed channel (issue #55, #90).
+    console.error("web push disabled: invalid VAPID configuration", error);
+    return null;
+  }
 
   return {
     async send(message): Promise<void> {

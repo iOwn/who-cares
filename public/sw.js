@@ -34,11 +34,15 @@ self.addEventListener("push", (event) => {
     body: payload.body || "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    // Collapse repeats of the same event so a coalesced burst shows once.
-    tag: payload.tag || "whocares",
-    renotify: true,
     data: { url: payload.url || "/" },
   };
+  // Only collapse notifications when the server explicitly tags them (it does
+  // not yet). Without a tag each event stacks separately — a decline and a
+  // closure must not overwrite each other in the tray.
+  if (payload.tag) {
+    options.tag = payload.tag;
+    options.renotify = true;
+  }
 
   event.waitUntil(self.registration.showNotification(title, options));
 });

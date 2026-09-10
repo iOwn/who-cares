@@ -43,6 +43,20 @@ function isSupported(): boolean {
   );
 }
 
+/**
+ * `navigator.serviceWorker.ready` never rejects — if the worker never activates
+ * (a failed `/sw.js`, private browsing, a header misconfig) it just hangs.
+ * Bound the wait so the card can't get stuck in "loading" / "enabling".
+ */
+function readyWithin(ms: number): Promise<ServiceWorkerRegistration> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("service worker not ready")), ms),
+    ),
+  ]);
+}
+
 export function usePushEnrollment(onChange?: () => void): PushEnrollment {
   const [state, setState] = useState<PushState>("loading");
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null);
@@ -55,11 +69,13 @@ export function usePushEnrollment(onChange?: () => void): PushEnrollment {
       if (!VAPID_KEY) return "unconfigured";
       if (Notification.permission === "denied") return "denied";
       try {
-        const registration = await navigator.serviceWorker.ready;
+        const registration = await readyWithin(4000);
         const existing = await registration.pushManager.getSubscription();
         if (!cancelled) setCurrentEndpoint(existing?.endpoint ?? null);
         return existing ? "enabled" : "disabled";
       } catch {
+        // The worker isn't ready yet. Show the enable button anyway — pressing it
+        // re-awaits `ready` and surfaces a real error if it's still not there.
         return "disabled";
       }
     }
@@ -82,7 +98,7 @@ export function usePushEnrollment(onChange?: () => void): PushEnrollment {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await readyWithin(10000);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
@@ -112,7 +128,7 @@ export function usePushEnrollment(onChange?: () => void): PushEnrollment {
     if (!isSupported()) return;
     setState("disabling");
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await readyWithin(10000);
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await fetch("/api/push/subscribe", {

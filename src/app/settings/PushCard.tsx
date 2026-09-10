@@ -69,23 +69,29 @@ export function PushCard({ browsers }: Props) {
         </p>
       </div>
 
-      {(state === "unsupported" || state === "unconfigured") && (
+      {/*
+       * iOS onboarding takes priority: on a plain iOS Safari tab `PushManager` /
+       * `Notification` are undefined, so the hook reports `unsupported` — but
+       * push *does* work there once the app is installed to the Home Screen, so
+       * the install steps must show instead of the generic "can't" message.
+       */}
+      {iosInstall && state !== "enabled" && state !== "disabling" && (
+        <Callout tone="neutral" icon={Share}>
+          On iPhone and iPad, add WhoCares to your Home Screen first: tap the Share button, then
+          “Add to Home Screen”. Open it from there and turn on notifications from this screen.
+        </Callout>
+      )}
+
+      {!iosInstall && (state === "unsupported" || state === "unconfigured") && (
         <Callout tone="neutral" icon={BellRing}>
           This browser can’t show push notifications. You’ll keep getting every update by email.
         </Callout>
       )}
 
-      {state === "denied" && (
+      {!iosInstall && state === "denied" && (
         <Callout tone="neutral" icon={BellRing}>
           Notifications are blocked for this site in your browser settings. Re-allow them there to
           turn push on. Email keeps working regardless.
-        </Callout>
-      )}
-
-      {iosInstall && (state === "disabled" || state === "denied") && (
-        <Callout tone="neutral" icon={Share}>
-          On iPhone and iPad, add WhoCares to your Home Screen first: tap the Share button, then
-          “Add to Home Screen”. Open it from there and this switch will work.
         </Callout>
       )}
 
