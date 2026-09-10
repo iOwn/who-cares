@@ -54,17 +54,24 @@ never urgency- or guilt-toned, even for at-risk.
 Day state is derived live at read time (ADR-0003), so a parent opening the app
 always sees the right state. The *notification* for a newly-at-risk day is sent
 by the once-daily cron only — ADR-0004 accepts up to a day of lag, and no second
-scheduler was added. `at_risk_escalations` is the "already told them" ledger so a
-day is never nagged twice.
+scheduler was added. `at_risk_escalations` is the "already told them" ledger,
+keyed `(household, date, event)` so a day already flagged event 10 can still
+fire the more urgent event 9 — but a day that goes at-risk → resolved →
+at-risk again is **not** re-notified (its ledger row is permanent). Judged fine
+for v1: the day still shows the right state live, and re-nagging on every
+flip-flop is its own problem.
 
 ## Coalescing
 
 See **ADR-0012**. Only events 11 + 12. Each edit `upsert`s one
 `pending_notifications` row keyed by the record (`event:householdId` for the
 pattern, `event:householdId:date` for a closure), window `now + 5min`. Repeated
-edits to the same record collapse into one notification of the final state.
+edits to the same record collapse into one notification of the final state
+(and its recipient is whoever the *last* editor's counterpart is).
 `flushPendingNotifications` — run by every mutating Server Action and the daily
-cron — dispatches due rows.
+cron — claims due rows with a single `DELETE … RETURNING` (so two concurrent
+flushes can't double-send) and dispatches them; a row whose send then throws is
+dropped and logged, not retried.
 
 ## Deploy setup
 

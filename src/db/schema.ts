@@ -247,6 +247,9 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   auth: text("auth").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+// No secondary index on `member_id` — same call as the base auth tables
+// (`sessions` / `accounts` carry none): the table holds a handful of rows for
+// the one household, so `listByMember`'s scan is free.
 
 /**
  * The 5-minute coalescing queue (issue #5, #55). Only the two settings events
@@ -271,10 +274,15 @@ export const pendingNotifications = pgTable("pending_notifications", {
 });
 
 /**
- * The "both parents were already told this childcare day is at-risk" ledger
- * (issue #55, ADR-0004). Day state stays live-derived and unstored (ADR-0003);
- * this only records that the once-daily backstop notification went out, so a
- * later cron tick skips the day. One row per `(household, date)`.
+ * The "both parents were already told about this at-risk day" ledger (issue
+ * #55, ADR-0004). Day state stays live-derived and unstored (ADR-0003); this
+ * only records that the once-daily backstop notification went out, so a later
+ * cron tick skips it.
+ *
+ * Keyed on `(household, date, event)`, not just `(household, date)`: a day
+ * first flagged `day-at-risk-escalated` (event 10) can *still* later fire the
+ * more urgent `day-at-risk-both-absent` (event 9) when both parents go away —
+ * the two are separate ledger rows.
  */
 export const atRiskEscalations = pgTable(
   "at_risk_escalations",
@@ -287,7 +295,7 @@ export const atRiskEscalations = pgTable(
     event: text("event").notNull(),
     notifiedAt: timestamp("notified_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.householdId, table.date] })],
+  (table) => [primaryKey({ columns: [table.householdId, table.date, table.event] })],
 );
 
 /* ------------------------------------------------------------------ *

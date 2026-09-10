@@ -64,9 +64,18 @@ export interface PlanAtRiskEscalationsParams {
   readonly days: readonly DayStateFacts[];
   /** The recipients — every member of the household (both). */
   readonly memberIds: readonly string[];
-  /** Dates the household has already been notified about — never re-nagged. */
-  readonly alreadyNotified: ReadonlySet<CalendarDate>;
+  /**
+   * `${date}:${event}` keys the household has already been notified about —
+   * built by `escalationKey`. Keyed by event, not just date, so a day already
+   * flagged event 10 can still fire the more urgent event 9.
+   */
+  readonly alreadyNotified: ReadonlySet<string>;
   readonly now: Date;
+}
+
+/** The `alreadyNotified` set key for one `(date, event)` pair. */
+export function escalationKey(date: CalendarDate, event: string): string {
+  return `${date}:${event}`;
 }
 
 /** Plain, calm, factual copy per event (SPEC.md — never urgency- or guilt-toned). */
@@ -92,13 +101,13 @@ export function planAtRiskEscalations(params: PlanAtRiskEscalationsParams): AtRi
   const escalations: AtRiskEscalation[] = [];
 
   for (const facts of params.days) {
-    if (params.alreadyNotified.has(facts.date)) continue;
-
     const { state, reason } = dayState(facts, params.now);
     if (state !== "At-risk") continue;
 
     const event =
       reason === "both-absent" ? DAY_AT_RISK_BOTH_ABSENT_EVENT : DAY_AT_RISK_ESCALATED_EVENT;
+    if (params.alreadyNotified.has(escalationKey(facts.date, event))) continue;
+
     const { title, body } = escalationCopy(event, facts.date);
 
     escalations.push({
@@ -172,7 +181,11 @@ export async function runAtRiskEscalation(
   const absences = await deps.absences.listByHousehold(householdId);
   const assignments = await deps.assignments.listByHousehold(householdId);
   const requests = await deps.pickupRequests.listByHousehold(householdId);
-  const alreadyNotified = new Set(await deps.atRiskEscalations.listNotifiedDates(householdId));
+  const alreadyNotified = new Set(
+    (await deps.atRiskEscalations.listNotified(householdId)).map((r) =>
+      escalationKey(r.date, r.event),
+    ),
+  );
 
   const days: DayStateFacts[] = eachDateInclusive(today, horizonEnd).map((date) => {
     const openRequest = requests.find((r) => r.date === date && r.state === "Open") ?? null;

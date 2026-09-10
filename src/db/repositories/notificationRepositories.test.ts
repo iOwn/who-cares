@@ -93,13 +93,13 @@ describe("PendingNotificationRepository", () => {
       pending({ id: "pn-2", body: "v2", sendAfter: new Date("2025-01-06T09:09:00.000Z") }),
     );
 
-    const due = await repos.pendingNotifications.listDue(new Date("2025-01-06T10:00:00.000Z"));
+    const due = await repos.pendingNotifications.claimDue(new Date("2025-01-06T10:00:00.000Z"));
     expect(due).toHaveLength(1);
     expect(due[0].body).toBe("v2");
     expect(due[0].sendAfter.toISOString()).toBe("2025-01-06T09:09:00.000Z");
   });
 
-  it("listDue respects the window and orders oldest-first", async () => {
+  it("claimDue respects the window, removes what it returns, and orders oldest-first", async () => {
     await repos.pendingNotifications.upsert(
       pending({ id: "a", coalesceKey: "k-a", sendAfter: new Date("2025-01-06T09:03:00.000Z") }),
     );
@@ -110,36 +110,52 @@ describe("PendingNotificationRepository", () => {
       pending({ id: "c", coalesceKey: "k-c", sendAfter: new Date("2025-01-06T09:30:00.000Z") }),
     );
 
-    const due = await repos.pendingNotifications.listDue(new Date("2025-01-06T09:05:00.000Z"));
+    const due = await repos.pendingNotifications.claimDue(new Date("2025-01-06T09:05:00.000Z"));
     expect(due.map((row) => row.id)).toEqual(["b", "a"]);
+
+    const rest = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
+    expect(rest.map((row) => row.id)).toEqual(["c"]);
   });
 
-  it("deletes a flushed row", async () => {
+  it("a second concurrent claim gets nothing — the row is removed as it is returned", async () => {
     await repos.pendingNotifications.upsert(pending());
-    await repos.pendingNotifications.delete("pn-1");
-    expect(await repos.pendingNotifications.listDue(new Date("2030-01-01T00:00:00.000Z"))).toEqual(
-      [],
-    );
+    const first = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
+    const second = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
+    expect(first).toHaveLength(1);
+    expect(second).toEqual([]);
   });
 });
 
 describe("AtRiskEscalationRepository", () => {
-  it("records a date and lists it back, once", async () => {
+  it("records a (date, event) and lists it back; a re-run of the same pair is a no-op", async () => {
     const at = new Date("2025-01-06T06:00:00.000Z");
-    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-both-absent", at);
-    // A second run for the same day is a harmless no-op (onConflictDoNothing).
+    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
     await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
 
-    expect(await repos.atRiskEscalations.listNotifiedDates(HOUSEHOLD_ID)).toEqual(["2025-01-08"]);
+    expect(await repos.atRiskEscalations.listNotified(HOUSEHOLD_ID)).toEqual([
+      { date: "2025-01-08", event: "day-at-risk-escalated" },
+    ]);
   });
 
-  it("scopes listNotifiedDates to the household", async () => {
+  it("keeps event 9 and event 10 for the same date as distinct rows", async () => {
+    const at = new Date("2025-01-06T06:00:00.000Z");
+    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-escalated", at);
+    await repos.atRiskEscalations.record(HOUSEHOLD_ID, "2025-01-08", "day-at-risk-both-absent", at);
+
+    const notified = await repos.atRiskEscalations.listNotified(HOUSEHOLD_ID);
+    expect(notified.map((r) => r.event).sort()).toEqual([
+      "day-at-risk-both-absent",
+      "day-at-risk-escalated",
+    ]);
+  });
+
+  it("scopes listNotified to the household", async () => {
     await repos.atRiskEscalations.record(
       HOUSEHOLD_ID,
       "2025-01-08",
       "day-at-risk-both-absent",
       new Date(),
     );
-    expect(await repos.atRiskEscalations.listNotifiedDates("other-household")).toEqual([]);
+    expect(await repos.atRiskEscalations.listNotified("other-household")).toEqual([]);
   });
 });

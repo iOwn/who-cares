@@ -28,7 +28,7 @@ import type {
   PickupRequestRepository,
 } from "../ports";
 import type { Absence, Assignment, PickupRequest } from "../types";
-import { planAtRiskEscalations, runAtRiskEscalation } from "./atRiskEscalation";
+import { escalationKey, planAtRiskEscalations, runAtRiskEscalation } from "./atRiskEscalation";
 import type { DayStateFacts } from "./dayState";
 import {
   DAY_AT_RISK_BOTH_ABSENT_EVENT,
@@ -109,14 +109,24 @@ describe("planAtRiskEscalations", () => {
     expect(plan).toEqual([]);
   });
 
-  it("skips a day already recorded as notified", () => {
+  it("skips a (date, event) pair already recorded as notified", () => {
     const plan = planAtRiskEscalations({
       days: [childcareDay({ date: "2025-01-08", absentMemberIds: [MEMBER_1_ID, MEMBER_2_ID] })],
       memberIds: [MEMBER_1_ID, MEMBER_2_ID],
-      alreadyNotified: new Set(["2025-01-08"]),
+      alreadyNotified: new Set([escalationKey("2025-01-08", DAY_AT_RISK_BOTH_ABSENT_EVENT)]),
       now: NOW,
     });
     expect(plan).toEqual([]);
+  });
+
+  it("still fires event 9 for a day only ever notified as event 10", () => {
+    const [escalation] = planAtRiskEscalations({
+      days: [childcareDay({ date: "2025-01-08", absentMemberIds: [MEMBER_1_ID, MEMBER_2_ID] })],
+      memberIds: [MEMBER_1_ID, MEMBER_2_ID],
+      alreadyNotified: new Set([escalationKey("2025-01-08", DAY_AT_RISK_ESCALATED_EVENT)]),
+      now: NOW,
+    });
+    expect(escalation.event).toBe(DAY_AT_RISK_BOTH_ABSENT_EVENT);
   });
 
   it("never notifies about a non-childcare day", () => {
@@ -143,9 +153,10 @@ function createFakes(seed: {
   const absences = [...(seed.absences ?? [])];
   const requests = [...(seed.requests ?? [])];
   const assignments = [...(seed.assignments ?? [])];
-  const notified = new Map<string, { date: string; event: string }>(
-    (seed.notifiedDates ?? []).map((d) => [d, { date: d, event: "seed" }]),
-  );
+  const notified: { date: string; event: string }[] = (seed.notifiedDates ?? []).map((d) => ({
+    date: d,
+    event: DAY_AT_RISK_BOTH_ABSENT_EVENT,
+  }));
 
   const members: MemberRepository = {
     async findById(id) {
@@ -230,11 +241,13 @@ function createFakes(seed: {
 
   const recorded: { date: string; event: string }[] = [];
   const atRiskEscalations: AtRiskEscalationRepository = {
-    async listNotifiedDates() {
-      return [...notified.keys()];
+    async listNotified() {
+      return notified.map((r) => ({ ...r }));
     },
     async record(_h, date, event) {
-      notified.set(date, { date, event });
+      if (!notified.some((r) => r.date === date && r.event === event)) {
+        notified.push({ date, event });
+      }
       recorded.push({ date, event });
     },
   };

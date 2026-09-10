@@ -12,7 +12,13 @@
 
 import type { DbExecutor } from "@/db/client";
 import { createRepositories, type Repositories } from "@/db/repositories";
-import { type Notification, type Notifier, noopAdapters } from "@/domain";
+import {
+  type Mailer,
+  type Notification,
+  type Notifier,
+  noopAdapters,
+  type PushSender,
+} from "@/domain";
 import { type DispatchDeps, dispatchAll as dispatchAllNotifications } from "./dispatch";
 import { getResendConfig, getVapidConfig } from "./env";
 import { createNotifier, flushPendingNotifications } from "./notifier";
@@ -33,19 +39,32 @@ type NotificationRepos = Pick<
   "members" | "pushSubscriptions" | "pendingNotifications"
 >;
 
+/** Adapter overrides — only tests pass these; production reads them from env. */
+export interface NotificationServiceOverrides {
+  readonly mailer?: Mailer;
+  readonly pushSender?: PushSender;
+}
+
 /**
  * Build the services over a set of repositories (usually `createRepositories(db)`
  * against the base handle — notification work happens *after* the domain
  * transaction commits, not inside it).
  */
-export function createNotificationServices(repos: NotificationRepos): NotificationServices {
+export function createNotificationServices(
+  repos: NotificationRepos,
+  overrides: NotificationServiceOverrides = {},
+): NotificationServices {
   const mailer =
-    createResendMailer(getResendConfig()) ?? noopAdapters.noopMailer((m, p) => console.info(m, p));
+    overrides.mailer ??
+    createResendMailer(getResendConfig()) ??
+    noopAdapters.noopMailer((m, p) => console.info(m, p));
   const pushSender =
+    overrides.pushSender ??
     createWebPushSender({
       vapid: getVapidConfig(),
       pushSubscriptions: repos.pushSubscriptions,
-    }) ?? noopAdapters.noopPushSender((m, p) => console.info(m, p));
+    }) ??
+    noopAdapters.noopPushSender((m, p) => console.info(m, p));
 
   const dispatchDeps: DispatchDeps = { mailer, pushSender, members: repos.members };
   const clock = noopAdapters.systemClock;
@@ -56,15 +75,38 @@ export function createNotificationServices(repos: NotificationRepos): Notificati
     clock,
   });
 
+  // Every caller runs these **after** its transaction commits (SPEC.md: a slow
+  // send must not hold a DB transaction open). A send failure must therefore
+  // never propagate — the mutation already succeeded, and a thrown error would
+  // surface to the user as a failed op they might retry into a double-write.
+  // So the whole boundary is log-and-swallow; per-row/per-item guards inside
+  // `flush` / `dispatchAll` keep one bad send from stranding a batch.
+  const swallow = async (label: string, run: () => Promise<unknown>): Promise<void> => {
+    try {
+      await run();
+    } catch (error) {
+      console.error(`notifications: ${label} failed (mutation already committed)`, error);
+    }
+  };
+
   return {
-    notifier,
-    flush: () =>
-      flushPendingNotifications({
-        ...dispatchDeps,
-        pendingNotifications: repos.pendingNotifications,
-        clock,
-      }),
-    dispatchAll: (notifications) => dispatchAllNotifications(dispatchDeps, notifications),
+    notifier: {
+      notify: (notification) => swallow("notify", () => notifier.notify(notification)),
+    },
+    flush: async () => {
+      try {
+        return await flushPendingNotifications({
+          ...dispatchDeps,
+          pendingNotifications: repos.pendingNotifications,
+          clock,
+        });
+      } catch (error) {
+        console.error("notifications: flush failed", error);
+        return 0;
+      }
+    },
+    dispatchAll: (notifications) =>
+      swallow("dispatchAll", () => dispatchAllNotifications(dispatchDeps, notifications)),
   };
 }
 

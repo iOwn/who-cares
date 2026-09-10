@@ -1,4 +1,4 @@
-import { asc, eq, lte } from "drizzle-orm";
+import { lte } from "drizzle-orm";
 import type { PendingNotification, PendingNotificationRepository } from "@/domain";
 import type { DbExecutor } from "../client";
 import { pendingNotifications } from "../schema";
@@ -9,8 +9,8 @@ import { pendingNotifications } from "../schema";
  *
  * `upsert` targets `coalesce_key`: a second edit to the same record replaces the
  * payload and pushes `send_after` forward, so the window is genuinely rolling
- * and only the final state is ever sent. `listDue` is the flush every server
- * action and the daily cron run.
+ * and only the final state is ever sent. `claimDue` is a single
+ * `DELETE … RETURNING` so concurrent flushes can't double-send.
  */
 function toPending(row: {
   id: string;
@@ -52,17 +52,13 @@ export function createPendingNotificationRepository(db: DbExecutor): PendingNoti
         });
     },
 
-    async listDue(now: Date): Promise<PendingNotification[]> {
+    async claimDue(now: Date): Promise<PendingNotification[]> {
       const rows = await db
-        .select(columns)
-        .from(pendingNotifications)
+        .delete(pendingNotifications)
         .where(lte(pendingNotifications.sendAfter, now))
-        .orderBy(asc(pendingNotifications.sendAfter));
-      return rows.map(toPending);
-    },
-
-    async delete(id: string): Promise<void> {
-      await db.delete(pendingNotifications).where(eq(pendingNotifications.id, id));
+        .returning(columns);
+      // `RETURNING` has no `ORDER BY`; sort oldest-first in memory.
+      return rows.map(toPending).sort((a, b) => a.sendAfter.getTime() - b.sendAfter.getTime());
     },
   };
 }

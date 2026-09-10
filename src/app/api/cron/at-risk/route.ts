@@ -15,7 +15,7 @@
 import { db } from "@/auth/config";
 import { schema } from "@/db/client";
 import { createRepositories } from "@/db/repositories";
-import { runAtRiskEscalation } from "@/domain";
+import { noopAdapters, runAtRiskEscalation } from "@/domain";
 import { createNotificationServices, getCronSecret } from "@/notifications";
 
 export const dynamic = "force-dynamic";
@@ -35,20 +35,32 @@ export async function GET(request: Request): Promise<Response> {
   const households = await db.select({ id: schema.households.id }).from(schema.households);
 
   let notified = 0;
+  const failed: string[] = [];
   let flushed = await services.flush();
 
   for (const household of households) {
-    const { notifications } = await runAtRiskEscalation(
-      { ...repos, clock: { now: () => new Date() } },
-      { householdId: household.id },
-    );
-    await services.dispatchAll(notifications);
-    notified += notifications.length;
+    try {
+      const { notifications } = await runAtRiskEscalation(
+        { ...repos, clock: noopAdapters.systemClock },
+        { householdId: household.id },
+      );
+      await services.dispatchAll(notifications);
+      notified += notifications.length;
+    } catch (error) {
+      console.error(`at-risk escalation failed for household ${household.id}`, error);
+      failed.push(household.id);
+    }
   }
 
   // A second flush: an escalation dispatch above is immediate, but a settings
   // edit's queued row might have come due between the first flush and now.
   flushed += await services.flush();
 
-  return Response.json({ ok: true, households: households.length, notified, flushed });
+  return Response.json({
+    ok: failed.length === 0,
+    households: households.length,
+    notified,
+    flushed,
+    ...(failed.length > 0 ? { failed } : {}),
+  });
 }

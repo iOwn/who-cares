@@ -55,13 +55,12 @@ function createFakes(now: Date) {
     async upsert(pending) {
       queue.set(pending.coalesceKey, pending);
     },
-    async listDue(at) {
-      return [...queue.values()]
-        .filter((row) => row.sendAfter <= at)
+    async claimDue(at) {
+      const due = [...queue.entries()].filter(([, row]) => row.sendAfter <= at);
+      for (const [key] of due) queue.delete(key);
+      return due
+        .map(([, row]) => row)
         .sort((a, b) => a.sendAfter.getTime() - b.sendAfter.getTime());
-    },
-    async delete(id) {
-      for (const [key, row] of queue) if (row.id === id) queue.delete(key);
     },
   };
 
@@ -210,6 +209,40 @@ describe("flushPendingNotifications", () => {
     ]);
     expect(f.pushes).toHaveLength(1);
     expect(f.queue.size).toBe(0);
+  });
+
+  it("one un-sendable row does not strand the rest of the batch, and flush never throws", async () => {
+    const f = createFakes(NOW);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    f.mailer.send = async (m) => {
+      if (m.body === "poison") throw new Error("Resend 422");
+      f.emails.push(m);
+    };
+    const notifier = createNotifier(f);
+
+    await notifier.notify(
+      notification({
+        event: CHILDCARE_PATTERN_CHANGED_EVENT,
+        coalesceKey: "k-poison",
+        title: "x",
+        body: "poison",
+      }),
+    );
+    await notifier.notify(
+      notification({
+        event: CLOSURE_ADDED_EVENT,
+        coalesceKey: "k-good",
+        title: "Closure added",
+        body: "good",
+      }),
+    );
+
+    f.clock.now = () => new Date(NOW.getTime() + 6 * 60_000);
+    const sent = await flushPendingNotifications(f);
+
+    expect(sent).toBe(1);
+    expect(f.emails.map((e) => e.body)).toEqual(["good"]);
+    expect(f.queue.size).toBe(0); // both rows were claimed (delete-then-send)
   });
 
   it("an edit after the window has flushed sends a second notification", async () => {

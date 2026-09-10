@@ -78,20 +78,31 @@ export interface FlushDeps {
 }
 
 /**
- * Dispatch every queued notification whose 5-minute window has elapsed, then
- * drop its row. Returns how many were sent. Safe to call often and from
- * anywhere — the `sendAfter <= now` filter is the whole gate.
+ * Dispatch every queued notification whose 5-minute window has elapsed.
+ * Returns how many were sent. Safe to call often and from anywhere — every
+ * mutating Server Action does, opportunistically.
+ *
+ * `claimDue` removes the rows as it returns them (one `DELETE … RETURNING`), so
+ * a concurrent flush never double-sends. The cost is that a row whose dispatch
+ * then throws is *lost*, not retried — accepted for the two low-urgency,
+ * coalesced settings events (ADR-0012); the send failure is logged, and each
+ * row is guarded so one bad send can't strand the rest of the batch.
  */
 export async function flushPendingNotifications(deps: FlushDeps): Promise<number> {
-  const due = await deps.pendingNotifications.listDue(deps.clock.now());
-  for (const row of due) {
-    await dispatchNotification(deps, {
-      recipientId: row.recipientId,
-      event: row.event,
-      title: row.title,
-      body: row.body,
-    });
-    await deps.pendingNotifications.delete(row.id);
+  const claimed = await deps.pendingNotifications.claimDue(deps.clock.now());
+  let sent = 0;
+  for (const row of claimed) {
+    try {
+      await dispatchNotification(deps, {
+        recipientId: row.recipientId,
+        event: row.event,
+        title: row.title,
+        body: row.body,
+      });
+      sent += 1;
+    } catch (error) {
+      console.warn(`flush dropped ${row.event} (${row.coalesceKey}) after a send failure`, error);
+    }
   }
-  return due.length;
+  return sent;
 }

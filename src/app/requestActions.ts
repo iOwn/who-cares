@@ -162,18 +162,21 @@ export async function cancelAbsenceAction(absenceId: string): Promise<RequestAct
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: Awaited<ReturnType<typeof cancelAbsence>>;
   try {
-    const outcome = await db.transaction((tx) =>
+    outcome = await db.transaction((tx) =>
       cancelAbsence(createRepositories(tx), {
         absenceId,
         actingMemberId: session.member.id,
       }),
     );
-    await dispatch(outcome.notifications);
   } catch (thrown) {
     return toResult(thrown, "cancelAbsenceAction");
   }
 
+  // Outside the try, matching the accept/decline/withdraw trio: the absence
+  // change already committed, so a dispatch hiccup must not report it as failed.
+  await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };
 }
@@ -186,8 +189,9 @@ export async function shortenAbsenceAction(input: {
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: Awaited<ReturnType<typeof shortenAbsence>>;
   try {
-    const outcome = await db.transaction((tx) =>
+    outcome = await db.transaction((tx) =>
       shortenAbsence(createRepositories(tx), {
         absenceId: input.absenceId,
         actingMemberId: session.member.id,
@@ -195,11 +199,11 @@ export async function shortenAbsenceAction(input: {
         endDate: input.endDate,
       }),
     );
-    await dispatch(outcome.notifications);
   } catch (thrown) {
     return toResult(thrown, "shortenAbsenceAction");
   }
 
+  await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };
 }

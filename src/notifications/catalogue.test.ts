@@ -232,7 +232,7 @@ describe("notification catalogue — recipient rule", () => {
     const plan = planAtRiskEscalations({
       days: [bothAbsentDay, escalatedDay],
       memberIds: [MEMBER_1_ID, MEMBER_2_ID],
-      alreadyNotified: new Set(),
+      alreadyNotified: new Set<string>(),
       now: new Date("2025-01-06T09:00:00.000Z"),
     });
 

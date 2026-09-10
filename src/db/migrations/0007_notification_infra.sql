@@ -3,7 +3,7 @@ CREATE TABLE "at_risk_escalations" (
 	"date" date NOT NULL,
 	"event" text NOT NULL,
 	"notified_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "at_risk_escalations_household_id_date_pk" PRIMARY KEY("household_id","date")
+	CONSTRAINT "at_risk_escalations_household_id_date_event_pk" PRIMARY KEY("household_id","date","event")
 );
 --> statement-breakpoint
 CREATE TABLE "pending_notifications" (

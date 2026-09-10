@@ -51,12 +51,20 @@ export async function dispatchNotification(
   }
 }
 
-/** Send a batch, one after another (sequential — a shared DB connection can't parallelise). */
+/**
+ * Send a batch, one after another (sequential — a shared DB connection can't
+ * parallelise). One notification failing (a bounced email) must not sink the
+ * rest of the batch, so each is guarded — the caller is always post-commit.
+ */
 export async function dispatchAll(
   deps: DispatchDeps,
   notifications: readonly Notification[],
 ): Promise<void> {
   for (const notification of notifications) {
-    await dispatchNotification(deps, notification);
+    try {
+      await dispatchNotification(deps, notification);
+    } catch (error) {
+      console.warn(`dispatch of ${notification.event} failed`, error);
+    }
   }
 }

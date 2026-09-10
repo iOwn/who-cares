@@ -1,5 +1,5 @@
 {
-  "id": "f5567486-8b77-4ef0-bebf-a24d7cc49563",
+  "id": "f56ae1fe-08e3-4e2c-8b80-6f80e1165bd0",
   "prevId": "4e2b0cbc-9cd1-4f00-9a4d-e6a3d2f1b788",
   "version": "7",
   "dialect": "postgresql",
@@ -331,11 +331,12 @@
         }
       },
       "compositePrimaryKeys": {
-        "at_risk_escalations_household_id_date_pk": {
-          "name": "at_risk_escalations_household_id_date_pk",
+        "at_risk_escalations_household_id_date_event_pk": {
+          "name": "at_risk_escalations_household_id_date_event_pk",
           "columns": [
             "household_id",
-            "date"
+            "date",
+            "event"
           ]
         }
       },

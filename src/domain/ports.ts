@@ -81,16 +81,22 @@ export interface AssignmentRepository {
   delete(id: string): Promise<void>;
 }
 
+/** One `(date, event)` the at-risk backstop has already notified about. */
+export interface AtRiskEscalationRecord {
+  readonly date: CalendarDate;
+  readonly event: string;
+}
+
 /**
- * The "we already told both parents this day is at-risk" ledger (issue #55).
- * The once-daily cron (`runAtRiskEscalation`) reads it to skip days it has
- * already notified and appends a row for each new one — day state itself is
- * never stored (ADR-0003), only the fact that a notification went out.
+ * The "we already told both parents about this at-risk day" ledger (issue #55).
+ * The once-daily cron (`runAtRiskEscalation`) reads it to skip `(date, event)`
+ * pairs it has already notified and appends a row for each new one — day state
+ * itself is never stored (ADR-0003), only the fact that a notification went out.
  */
 export interface AtRiskEscalationRepository {
-  /** Dates in `householdId` already recorded as at-risk-notified. */
-  listNotifiedDates(householdId: string): Promise<CalendarDate[]>;
-  /** Record that both parents were notified about `date` (idempotent on `(household, date)`). */
+  /** `(date, event)` pairs in `householdId` already recorded as notified. */
+  listNotified(householdId: string): Promise<AtRiskEscalationRecord[]>;
+  /** Record a notification (idempotent on `(household, date, event)`). */
   record(householdId: string, date: CalendarDate, event: string, at: Date): Promise<void>;
 }
 
@@ -134,9 +140,13 @@ export interface PendingNotification {
 
 export interface PendingNotificationRepository {
   upsert(pending: PendingNotification): Promise<void>;
-  /** Rows whose `sendAfter` is at or before `now`, oldest first. */
-  listDue(now: Date): Promise<PendingNotification[]>;
-  delete(id: string): Promise<void>;
+  /**
+   * Atomically **remove and return** every row whose `sendAfter` is at or
+   * before `now` (a single `DELETE … RETURNING`). Claim-then-send: two
+   * concurrent flushes — a Server Action racing the daily cron — never both
+   * pick up the same row, so a coalesced notification is delivered once.
+   */
+  claimDue(now: Date): Promise<PendingNotification[]>;
 }
 
 /* ------------------------------------------------------------------ *
