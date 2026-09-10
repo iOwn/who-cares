@@ -120,8 +120,12 @@ dedicated drift check.
 - Statements within a file are separated by `--> statement-breakpoint`.
 - Migrations are **append-only** — Drizzle records each file's hash, so editing an applied
   file corrupts the history.
-- `src/db/migrate.ts` (`applyMigrations`) is the only thing that builds a schema. There is no
-  `CREATE TABLE` in test setup, and no `db:push` script pointing at a live database.
+- Replaying the `.sql` files is the only thing that builds a schema — there is no
+  `CREATE TABLE` in test setup, and no `db:push` (no diff-and-shove at a live database).
+  Two replayers, same files and journal: `src/db/migrate.ts` (`applyMigrations`) into
+  in-process PGlite for the tests, and `pnpm db:migrate` (`scripts/db-migrate.mjs`) into a
+  live `DATABASE_URL` via the `neon-serverless` driver for deploys. `pnpm db:migrate inspect`
+  reports what is pending without applying it.
 
 ### The harness in practice
 

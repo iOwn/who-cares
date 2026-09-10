@@ -15,9 +15,9 @@ Spawn a review agent with the following brief:
 You are a senior web dev. Review the opened PR. Write a concise comment that captures your findings in the PR. 
 ``` 
 
-## Subagents
+## Agents
 
-When spawning a new subagent, give the agent session a distinctive name.
+When spawning a new Agent, give the agent session a distinctive (non-generic) name that captures his task (via `/rename`).
 
 ## Next.js
 

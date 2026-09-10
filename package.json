@@ -21,6 +21,7 @@
     "e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "drizzle-kit generate --custom",
+    "db:migrate": "node scripts/db-migrate.mjs",
     "workbench": "ladle serve",
     "workbench:build": "ladle build",
     "prepare": "lefthook install"
