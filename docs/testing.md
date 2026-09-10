@@ -37,7 +37,11 @@ See **[ADR-0005](./adr/0005-domain-logic-is-framework-free-and-that-line-is-the-
   restriction, not the path.
 - **The boundary is mechanical**: importable → Vitest; needs a server or a browser →
   Playwright. Server actions, route handlers, and the Vercel Cron handler are thin adapters
-  over a tested domain service and are not unit-tested.
+  over a tested domain service and are not unit-tested — with one deliberate exception:
+  `src/app/settings/childcareActions.test.ts` (issue #92) `vi.mock`s the wiring to assert one
+  cross-cutting contract (every mutating action drains the coalescing queue first) that no
+  domain test and no E2E smoke (ADR-0008 never asserts dispatch) can cover. This is not
+  licence to unit-test action *bodies* — the domain behaviour still belongs in a pure helper.
 - **No RSC-in-Vitest shim.** A test that seems to need to render an RSC belongs in Playwright.
 - **Dependency injection first** — mailer, push sender, clock, repository are ports; tests
   inject fakes. `vi.mock` is a fallback only where a seam genuinely cannot take injection.
