@@ -10,6 +10,7 @@ export * from "./services/absenceCancellation";
 export * from "./services/bootstrapHousehold";
 export * from "./services/childcareDay";
 export * from "./services/dayState";
+export * from "./services/directClaim";
 export * from "./services/pickupRequestGeneration";
 export * from "./services/pickupRequestResolution";
 export * from "./services/recurringAbsenceGeneration";

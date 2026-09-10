@@ -213,6 +213,8 @@ export function Calendar({
         currentMemberId={currentMemberId}
         pickupRequests={pickupRequests}
         absences={absences}
+        assignments={assignments}
+        members={members}
       />
 
       {absenceAnchor != null ? (

@@ -10,6 +10,7 @@ import {
   AbsenceInputError,
   acceptRequest,
   cancelAbsence,
+  claimDay,
   declineRequest,
   type Notification,
   noopAdapters,
@@ -20,10 +21,11 @@ import {
 } from "@/domain";
 
 /**
- * Thin Server Actions for the pickup-request lifecycle (#52) — accept / decline
- * / withdraw a request, and cancel / shorten the absence behind one. Adapters
- * over the `pickupRequestResolution` / `absenceCancellation` domain services
- * (ADR-0005): no domain logic of their own, not unit-tested.
+ * Thin Server Actions for the pickup-request lifecycle (#52, #53) — accept /
+ * decline / withdraw a request, cancel / shorten the absence behind one, and
+ * directly claim a day. Adapters over the `pickupRequestResolution` /
+ * `absenceCancellation` / `directClaim` domain services (ADR-0005): no domain
+ * logic of their own, not unit-tested.
  *
  * Each runs its service in one `db.transaction` so the request transition and
  * its side effect (an `Assignment`, a batch of withdrawals) commit together;
@@ -116,6 +118,40 @@ export async function declineRequestAction(requestId: string): Promise<RequestAc
 
 export async function withdrawRequestAction(requestId: string): Promise<RequestActionResult> {
   return runRequestResolution("withdrawRequestAction", requestId, withdrawRequest);
+}
+
+/**
+ * Direct claim (#53, ADR-0001): the signed-in member takes a childcare day
+ * outright — the newest claim wins with no confirmation step. Overwrites any
+ * existing assignment, auto-withdraws an open request on the day, and dispatches
+ * the after-the-fact notices (a bumped parent, the withdrawn request's
+ * requester) once the transaction commits.
+ */
+export async function claimDayAction(date: CalendarDate): Promise<RequestActionResult> {
+  const session = await getCurrentSession();
+  if (!session) return EXPIRED;
+
+  let outcome: Awaited<ReturnType<typeof claimDay>>;
+  try {
+    outcome = await db.transaction((tx) =>
+      claimDay(
+        {
+          ...createRepositories(tx),
+          clock: noopAdapters.systemClock,
+          ids: noopAdapters.systemIdGenerator,
+        },
+        { householdId: session.household.id, date, actingMemberId: session.member.id },
+      ),
+    );
+  } catch (thrown) {
+    return toResult(thrown, "claimDayAction");
+  }
+
+  // Dispatch after commit, matching `recordAbsenceAction` — a slow or failing
+  // send must not roll back a claim that already landed.
+  await dispatch(outcome.notifications);
+  revalidatePath("/");
+  return { ok: true };
 }
 
 export async function cancelAbsenceAction(absenceId: string): Promise<RequestActionResult> {
