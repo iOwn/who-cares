@@ -162,6 +162,12 @@ export interface RunAtRiskEscalationResult {
  * after the ledger row is written is not retried — acceptable for a calm,
  * whole-day-granularity notification (ADR-0004), and the day's *state* is still
  * correct live regardless.
+ *
+ * The dispatch is **claim-based** (issue #92): `claimNotified` inserts the
+ * ledger row and reports whether it won the race, and only escalations it
+ * actually claimed are returned. So a retried or overlapping cron run — both
+ * reading the same empty ledger and planning the same days — dispatches the
+ * notifications exactly once between them, mirroring `claimDue` (ADR-0012).
  */
 export async function runAtRiskEscalation(
   deps: AtRiskEscalationDeps,
@@ -211,13 +217,20 @@ export async function runAtRiskEscalation(
   });
 
   const notifiedAt = deps.clock.now();
+  const claimed: AtRiskEscalation[] = [];
   for (const escalation of escalations) {
-    await deps.atRiskEscalations.record(householdId, escalation.date, escalation.event, notifiedAt);
+    const won = await deps.atRiskEscalations.claimNotified(
+      householdId,
+      escalation.date,
+      escalation.event,
+      notifiedAt,
+    );
+    if (won) claimed.push(escalation);
   }
 
   return {
-    escalations,
-    notifications: escalations.flatMap((e) => e.notifications),
+    escalations: claimed,
+    notifications: claimed.flatMap((e) => e.notifications),
   };
 }
 
