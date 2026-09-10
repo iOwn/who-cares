@@ -23,6 +23,12 @@
  * re-implementation of the schema, and there is no `CREATE TABLE` anywhere in
  * the test setup. A migration that does not parse, or that contradicts an
  * earlier one, fails every integration test rather than only production.
+ *
+ * ## The production counterpart
+ *
+ * `pnpm db:migrate` (`scripts/db-migrate.mjs`) replays these same files against
+ * a live `DATABASE_URL` via the `neon-serverless` driver. Same journal, same
+ * hashes, same idempotency — only the driver differs.
  */
 
 import { fileURLToPath } from "node:url";
