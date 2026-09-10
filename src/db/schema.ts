@@ -27,6 +27,7 @@ import {
   date,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -223,6 +224,84 @@ export const assignments = pgTable(
     check("assignments_source_valid", sql`${table.source} in ('accepted-request', 'direct-claim')`),
     unique("assignments_household_date_unique").on(table.householdId, table.date),
   ],
+);
+
+/* ------------------------------------------------------------------ *
+ * Notifications (issue #55) — delivery mechanics, not domain vocabulary.
+ * ------------------------------------------------------------------ */
+
+/**
+ * A browser Web Push subscription (SPEC.md "Push"). One row per opted-in
+ * browser; `endpoint` is the push service URL and is unique. A push that comes
+ * back `404`/`410` means the endpoint is dead — the sender drops the row.
+ */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: text("id").primaryKey(),
+  memberId: text("member_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique("push_subscriptions_endpoint_unique"),
+  /** The subscription's ECDH public key (`keys.p256dh`). */
+  p256dh: text("p256dh").notNull(),
+  /** The subscription's auth secret (`keys.auth`). */
+  auth: text("auth").notNull(),
+  /**
+   * The subscribing browser's `User-Agent` (issue #90) — nullable, best-effort.
+   * The `/settings` push card renders it as a "Chrome on macOS" row so a member
+   * can tell their registered browsers apart and drop one.
+   */
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+// No secondary index on `member_id` — same call as the base auth tables
+// (`sessions` / `accounts` carry none): the table holds a handful of rows for
+// the one household, so `listByMember`'s scan is free.
+
+/**
+ * The 5-minute coalescing queue (issue #5, #55). Only the two settings events
+ * (`childcare-pattern-changed`, `closure-added`) land here; everything else
+ * dispatches immediately. `coalesce_key` identifies the record being edited
+ * (`event:householdId` for the pattern, `event:householdId:date` for a
+ * closure) and is unique, so an `upsert` on it pushes `send_after` forward and
+ * replaces the payload — repeated edits within the window collapse into one
+ * notification of the final state. Drained by `flushPendingNotifications`
+ * (every server action + the daily cron).
+ */
+export const pendingNotifications = pgTable("pending_notifications", {
+  id: text("id").primaryKey(),
+  coalesceKey: text("coalesce_key").notNull().unique("pending_notifications_coalesce_key_unique"),
+  recipientId: text("recipient_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  event: text("event").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  sendAfter: timestamp("send_after", { withTimezone: true }).notNull(),
+});
+
+/**
+ * The "both parents were already told about this at-risk day" ledger (issue
+ * #55, ADR-0004). Day state stays live-derived and unstored (ADR-0003); this
+ * only records that the once-daily backstop notification went out, so a later
+ * cron tick skips it.
+ *
+ * Keyed on `(household, date, event)`, not just `(household, date)`: a day
+ * first flagged `day-at-risk-escalated` (event 10) can *still* later fire the
+ * more urgent `day-at-risk-both-absent` (event 9) when both parents go away —
+ * the two are separate ledger rows.
+ */
+export const atRiskEscalations = pgTable(
+  "at_risk_escalations",
+  {
+    householdId: text("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    /** `day-at-risk-both-absent` (event 9) or `day-at-risk-escalated` (event 10). */
+    event: text("event").notNull(),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.date, table.event] })],
 );
 
 /* ------------------------------------------------------------------ *

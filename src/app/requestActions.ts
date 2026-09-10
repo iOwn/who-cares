@@ -19,6 +19,7 @@ import {
   shortenAbsence,
   withdrawRequest,
 } from "@/domain";
+import { notificationServicesFor } from "@/notifications";
 
 /**
  * Thin Server Actions for the pickup-request lifecycle (#52, #53) — accept /
@@ -50,13 +51,16 @@ const GENERIC: RequestActionResult = {
   error: "Something went wrong. Please try again.",
 };
 
-/** Dispatch post-commit notifications through the (currently no-op) Notifier. */
+/**
+ * Dispatch post-commit notifications (email + web push) and, while we're here,
+ * flush any coalescing-queue rows whose 5-minute window has elapsed (#55 —
+ * opportunistic flush; the daily cron is the backstop). Runs against the base
+ * `db`, not a transaction — a slow send must never hold one open.
+ */
 async function dispatch(notifications: readonly Notification[]): Promise<void> {
-  const notifier = noopAdapters.noopNotifier();
-  for (const notification of notifications) {
-    // TODO(#55): real Notifier (email + web push + coalescing).
-    await notifier.notify(notification);
-  }
+  const services = notificationServicesFor(db);
+  await services.flush();
+  await services.dispatchAll(notifications);
 }
 
 function toResult(thrown: unknown, label: string): RequestActionResult {
@@ -158,18 +162,21 @@ export async function cancelAbsenceAction(absenceId: string): Promise<RequestAct
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: Awaited<ReturnType<typeof cancelAbsence>>;
   try {
-    const outcome = await db.transaction((tx) =>
+    outcome = await db.transaction((tx) =>
       cancelAbsence(createRepositories(tx), {
         absenceId,
         actingMemberId: session.member.id,
       }),
     );
-    await dispatch(outcome.notifications);
   } catch (thrown) {
     return toResult(thrown, "cancelAbsenceAction");
   }
 
+  // Outside the try, matching the accept/decline/withdraw trio: the absence
+  // change already committed, so a dispatch hiccup must not report it as failed.
+  await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };
 }
@@ -182,8 +189,9 @@ export async function shortenAbsenceAction(input: {
   const session = await getCurrentSession();
   if (!session) return EXPIRED;
 
+  let outcome: Awaited<ReturnType<typeof shortenAbsence>>;
   try {
-    const outcome = await db.transaction((tx) =>
+    outcome = await db.transaction((tx) =>
       shortenAbsence(createRepositories(tx), {
         absenceId: input.absenceId,
         actingMemberId: session.member.id,
@@ -191,11 +199,11 @@ export async function shortenAbsenceAction(input: {
         endDate: input.endDate,
       }),
     );
-    await dispatch(outcome.notifications);
   } catch (thrown) {
     return toResult(thrown, "shortenAbsenceAction");
   }
 
+  await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };
 }

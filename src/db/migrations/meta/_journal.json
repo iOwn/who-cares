@@ -50,6 +50,20 @@
       "when": 1788981651344,
       "tag": "0006_pickup_request_absence_set_null",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789025537490,
+      "tag": "0007_notification_infra",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789032209221,
+      "tag": "0008_push_subscription_user_agent",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import { Baloo_2, Nunito } from "next/font/google";
 import type { ReactNode } from "react";
 import "@/ui/tokens.css";
 import "@/ui/mixins.css";
+import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
 
 /**
  * The two families, with the weights pinned in docs/design-system.md "Fonts".
@@ -45,12 +46,17 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  // Matches the PWA manifest's `theme_color` — the installed-app status bar tint.
+  themeColor: "#3d7dd8",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${nunito.variable} ${baloo.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegistrar />
+      </body>
     </html>
   );
 }

@@ -10,32 +10,41 @@
 import type {
   AbsenceRepository,
   AssignmentRepository,
+  AtRiskEscalationRepository,
   ChildcarePatternRepository,
   ChildRepository,
   ClosureRepository,
   HouseholdRepository,
   MemberRepository,
+  PendingNotificationRepository,
   PickupRequestRepository,
+  PushSubscriptionRepository,
 } from "@/domain";
 import type { DbExecutor } from "../client";
 import { createAbsenceRepository } from "./absence";
 import { createAssignmentRepository } from "./assignment";
+import { createAtRiskEscalationRepository } from "./atRiskEscalation";
 import { createChildRepository } from "./child";
 import { createChildcarePatternRepository } from "./childcarePattern";
 import { createClosureRepository } from "./closure";
 import { createHouseholdRepository } from "./household";
 import { createMemberRepository } from "./member";
+import { createPendingNotificationRepository } from "./pendingNotification";
 import { createPickupRequestRepository } from "./pickupRequest";
+import { createPushSubscriptionRepository } from "./pushSubscription";
 
 export {
   createAbsenceRepository,
   createAssignmentRepository,
+  createAtRiskEscalationRepository,
   createChildcarePatternRepository,
   createChildRepository,
   createClosureRepository,
   createHouseholdRepository,
   createMemberRepository,
+  createPendingNotificationRepository,
   createPickupRequestRepository,
+  createPushSubscriptionRepository,
 };
 
 export interface Repositories {
@@ -47,6 +56,9 @@ export interface Repositories {
   readonly absences: AbsenceRepository;
   readonly pickupRequests: PickupRequestRepository;
   readonly assignments: AssignmentRepository;
+  readonly pushSubscriptions: PushSubscriptionRepository;
+  readonly pendingNotifications: PendingNotificationRepository;
+  readonly atRiskEscalations: AtRiskEscalationRepository;
 }
 
 export function createRepositories(db: DbExecutor): Repositories {
@@ -59,5 +71,8 @@ export function createRepositories(db: DbExecutor): Repositories {
     absences: createAbsenceRepository(db),
     pickupRequests: createPickupRequestRepository(db),
     assignments: createAssignmentRepository(db),
+    pushSubscriptions: createPushSubscriptionRepository(db),
+    pendingNotifications: createPendingNotificationRepository(db),
+    atRiskEscalations: createAtRiskEscalationRepository(db),
   };
 }
