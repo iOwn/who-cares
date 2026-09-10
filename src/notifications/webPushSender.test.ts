@@ -43,13 +43,24 @@ const sub = (over: Partial<StoredPushSubscription> = {}): StoredPushSubscription
 beforeEach(() => {
   sendNotification.mockReset();
   setVapidDetails.mockReset();
+  setVapidDetails.mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("createWebPushSender", () => {
   it("returns null without VAPID config", () => {
     const { repo } = repoWith([]);
     expect(createWebPushSender({ vapid: null, pushSubscriptions: repo })).toBeNull();
+  });
+
+  it("returns null (not throws) when the VAPID pair is malformed", () => {
+    const { repo } = repoWith([]);
+    setVapidDetails.mockImplementation(() => {
+      throw new Error("Vapid public key should be 65 bytes long");
+    });
+    expect(createWebPushSender({ vapid: VAPID, pushSubscriptions: repo })).toBeNull();
+    expect(console.error).toHaveBeenCalled();
   });
 
   it("posts the payload to every stored subscription for the member", async () => {

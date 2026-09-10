@@ -4,6 +4,7 @@ import { auth, getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
+import type { PushBrowserView } from "./PushCard";
 import { SettingsScreen } from "./SettingsScreen";
 import type { DeviceView } from "./SignedInDevices";
 
@@ -25,14 +26,23 @@ export default async function SettingsPage() {
 
   const requestHeaders = await headers();
   const repos = createRepositories(db);
-  const [sessions, active, pattern, closures] = await Promise.all([
+  const [sessions, active, pattern, closures, pushSubscriptions] = await Promise.all([
     auth.api.listSessions({ headers: requestHeaders }),
     auth.api.getSession({ headers: requestHeaders }),
     repos.childcarePattern.findByHousehold(current.household.id),
     repos.closures.listByHousehold(current.household.id),
+    repos.pushSubscriptions.listByMember(current.member.id),
   ]);
 
   const currentToken = active?.session.token ?? null;
+
+  const pushBrowsers: PushBrowserView[] = pushSubscriptions
+    .map((sub) => ({
+      endpoint: sub.endpoint,
+      userAgent: sub.userAgent ?? null,
+      addedAt: (sub.createdAt ?? new Date()).toISOString(),
+    }))
+    .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
 
   const devices: DeviceView[] = sessions
     .map((session) => ({
@@ -50,6 +60,7 @@ export default async function SettingsPage() {
     <SettingsScreen
       childName={current.child?.name ?? ""}
       devices={devices}
+      pushBrowsers={pushBrowsers}
       pattern={pattern}
       closures={closures}
       today={new Date().toISOString().slice(0, 10)}

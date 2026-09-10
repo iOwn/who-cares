@@ -107,6 +107,17 @@ export interface StoredPushSubscription {
   readonly endpoint: string;
   readonly p256dh: string;
   readonly auth: string;
+  /**
+   * The subscribing browser's `User-Agent` (issue #90) — best-effort, nullable
+   * (a client can withhold it). The `/settings` push card turns it into a
+   * friendly "Chrome on macOS" row so a member can recognise and drop a device.
+   */
+  readonly userAgent?: string | null;
+  /**
+   * When the row was created (issue #90). Set on reads; a writer omits it and
+   * the store defaults it. The push card shows it as "Added 3 days ago".
+   */
+  readonly createdAt?: Date;
 }
 
 /**

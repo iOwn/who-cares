@@ -15,6 +15,21 @@ const nextConfig: NextConfig = {
     // pieces are bundled. See ADR-0011 and docs/design-system.md.
     optimizePackageImports: ["react-aria-components"],
   },
+
+  // The service worker (`public/sw.js`, issue #90) must never be cached — a
+  // stale copy would keep an old `push` handler alive after a deploy. Everything
+  // else in `public/` keeps Next's default caching.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

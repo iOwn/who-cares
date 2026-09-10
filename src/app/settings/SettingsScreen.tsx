@@ -5,12 +5,15 @@ import type { CalendarDate, ChildcarePattern, Closure } from "@/domain";
 import { RouteHeader, SectionHeading } from "@/ui";
 import { ChildcareSettings } from "./ChildcareSettings";
 import { PasskeyCard } from "./PasskeyCard";
+import { type PushBrowserView, PushCard } from "./PushCard";
 import styles from "./SettingsScreen.module.css";
 import { type DeviceView, SignedInDevices } from "./SignedInDevices";
 
 export interface SettingsScreenProps {
   readonly childName: string;
   readonly devices: readonly DeviceView[];
+  /** This member's registered push browsers (issue #90). */
+  readonly pushBrowsers: readonly PushBrowserView[];
   /** Childcare-pattern + closures sections (issue #49). */
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
@@ -27,6 +30,7 @@ export interface SettingsScreenProps {
 export function SettingsScreen({
   childName,
   devices,
+  pushBrowsers,
   pattern,
   closures,
   today,
@@ -47,6 +51,11 @@ export function SettingsScreen({
         <section className={styles.section} aria-labelledby="settings-devices-heading">
           <SectionHeading id="settings-devices-heading">Signed-in devices</SectionHeading>
           <SignedInDevices devices={devices} />
+        </section>
+
+        <section className={styles.section} aria-labelledby="settings-push-heading">
+          <SectionHeading id="settings-push-heading">Notifications</SectionHeading>
+          <PushCard browsers={pushBrowsers} />
         </section>
 
         <ChildcareSettings pattern={pattern} closures={closures} today={today} />
