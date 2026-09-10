@@ -12,6 +12,7 @@ import {
   CLOSURE_ADDED_EVENT,
   type Member,
   type Notification,
+  patternVersionChangesSchedule,
   type Weekday,
 } from "@/domain";
 import {
@@ -25,8 +26,13 @@ import {
 /**
  * Thin Server Actions for the childcare-settings feature (#49). Adapters over
  * the repositories + the effective-dated-pattern rule (ADR-0002) — no domain
- * logic of their own, not unit-tested (ADR-0005). Kept in their own file so a
- * merge with the parallel #48 settings work stays mechanical.
+ * logic of their own (ADR-0005). Kept in their own file so a merge with the
+ * parallel #48 settings work stays mechanical.
+ *
+ * `childcareActions.test.ts` guards one cross-cutting contract only: every
+ * mutating action drains the coalescing queue at its top (`flushPending`,
+ * ADR-0012, issue #92). The domain behaviour itself is tested in
+ * `childcareDay.ts` / `notifier.ts`.
  */
 
 async function context() {
@@ -46,11 +52,25 @@ function revalidateAll() {
 }
 
 /**
+ * Drain any due coalesced notifications. ADR-0012 / `docs/notifications.md`: the
+ * `pending_notifications` queue is flushed "at the top of every mutating Server
+ * Action" — run **unconditionally**, whether or not the action also enqueues
+ * something, so a household that only edits or removes closures between cron
+ * ticks still delivers its own due notification. `flush()` is fully
+ * log-and-swallow guarded (`src/notifications/services.ts`), so calling it on
+ * every action is cheap and cannot break the mutation.
+ */
+async function flushPending(): Promise<void> {
+  await notificationServicesFor(db).flush();
+}
+
+/**
  * Coalesce a settings-change notification to the *other* member (catalogue
  * events 11 + 12). The `Notifier` queues it under `coalesceKey` with a 5-minute
  * window, so a burst of edits to the same record collapses into one
- * notification of the final state; `flush()` (here and on the daily cron) sends
- * it once the window elapses. A single-member household has no one to tell.
+ * notification of the final state; `flushPending()` (at the top of every action
+ * and on the daily cron) sends it once the window elapses. A single-member
+ * household has no one to tell.
  */
 async function notifyOtherMember(
   ctx: Awaited<ReturnType<typeof context>>,
@@ -60,9 +80,7 @@ async function notifyOtherMember(
   const other = members.find((m: Member) => m.id !== ctx.actor.id);
   if (!other) return;
 
-  const services = notificationServicesFor(db);
-  await services.flush();
-  await services.notifier.notify(build(other.id, ctx.actor.name));
+  await notificationServicesFor(db).notifier.notify(build(other.id, ctx.actor.name));
 }
 
 /** Insert (or replace, if one already starts on that date) a pattern version. */
@@ -79,12 +97,14 @@ export async function savePatternAction(input: {
   weekdays: Weekday[];
   effectiveFrom: CalendarDate;
 }): Promise<void> {
+  await flushPending();
   const ctx = await context();
   const { householdId, repos } = ctx;
   const existing = await repos.childcarePattern.findByHousehold(householdId);
-  const priorVersion = existing?.versions.find((v) => v.effectiveFrom === input.effectiveFrom);
-  const isRealChange =
-    !priorVersion || [...priorVersion.weekdays].sort().join() !== [...input.weekdays].sort().join();
+  // Compare against the version effective *for this date*, not just one starting
+  // on the exact same date — a future-dated version that restates the current
+  // weekdays changes no pickups and must not notify (issue #92).
+  const isRealChange = patternVersionChangesSchedule(existing, input.weekdays, input.effectiveFrom);
   const versions = upsertVersion(existing?.versions ?? [], {
     weekdays: input.weekdays,
     effectiveFrom: input.effectiveFrom,
@@ -124,6 +144,7 @@ export async function saveClosureAction(input: {
   date: CalendarDate;
   reason?: string;
 }): Promise<void> {
+  await flushPending();
   const ctx = await context();
   const { householdId, repos } = ctx;
   const reason = input.reason?.trim() ? input.reason.trim() : undefined;
@@ -156,6 +177,7 @@ export async function saveClosureAction(input: {
 }
 
 export async function removeClosureAction(id: string): Promise<void> {
+  await flushPending();
   const { householdId, repos } = await context();
   // `ClosureRepository.delete` takes a bare id; scope it to the household here
   // so a stray id can't drop another household's row (latent in single-

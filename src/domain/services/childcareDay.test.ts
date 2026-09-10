@@ -15,6 +15,7 @@ import type { ChildcarePattern, Closure } from "../types";
 import {
   childcareDayInputs,
   isChildcareDay,
+  patternVersionChangesSchedule,
   resolvePatternVersion,
   weekdayOf,
 } from "./childcareDay";
@@ -129,6 +130,40 @@ describe("resolvePatternVersion — the seam #50 builds on", () => {
 
   it("returns null for a missing pattern", () => {
     expect(resolvePatternVersion(null, "2025-03-03")).toBeNull();
+  });
+});
+
+describe("patternVersionChangesSchedule — the settings-notification gate (issue #92)", () => {
+  const monToFri = pattern(["mon", "tue", "wed", "thu", "fri"], "2025-01-06");
+
+  it("is true when there is no pattern yet", () => {
+    expect(patternVersionChangesSchedule(null, ["mon"], "2025-01-06")).toBe(true);
+  });
+
+  it("is true when the new version precedes every existing version", () => {
+    expect(patternVersionChangesSchedule(monToFri, ["mon", "tue"], "2025-01-01")).toBe(true);
+  });
+
+  it("is false for a future-dated version that restates the currently-effective weekdays", () => {
+    // No version starts on 2025-06-02, but Mon–Fri resolves as effective there.
+    expect(
+      patternVersionChangesSchedule(monToFri, ["fri", "mon", "wed", "thu", "tue"], "2025-06-02"),
+    ).toBe(false);
+  });
+
+  it("is true for a future-dated version that changes the weekdays", () => {
+    expect(patternVersionChangesSchedule(monToFri, ["mon", "tue"], "2025-06-02")).toBe(true);
+  });
+
+  it("compares against the exact-date version when one exists", () => {
+    const twoVersions = pattern.versions([
+      { weekdays: ["mon", "tue"], effectiveFrom: "2025-01-06" },
+      { weekdays: ["mon", "tue", "wed"], effectiveFrom: "2025-03-03" },
+    ]);
+    expect(patternVersionChangesSchedule(twoVersions, ["mon", "tue", "wed"], "2025-03-03")).toBe(
+      false,
+    );
+    expect(patternVersionChangesSchedule(twoVersions, ["mon"], "2025-03-03")).toBe(true);
   });
 });
 
