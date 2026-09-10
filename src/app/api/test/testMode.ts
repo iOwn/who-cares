@@ -8,6 +8,11 @@
  * 404 otherwise, so the seam is indistinguishable from a non-existent route
  * anywhere it is not deliberately switched on.
  *
+ * Belt **and** braces: even with `E2E_TEST_MODE` set, the seam refuses when
+ * `VERCEL_ENV === "production"`. Vercel's env-var scopes are an easy footgun —
+ * a var meant for Preview that also lands in Production would otherwise arm a
+ * database wipe on the live deploy.
+ *
  * Pure and env-only, so it is unit-tested in the `node` project
  * (`testMode.test.ts`) without spinning up a route.
  */
@@ -17,8 +22,12 @@ const ENABLED_VALUES = new Set(["1", "true", "on", "yes"]);
 
 type EnvLike = Record<string, string | undefined>;
 
-/** Whether the E2E test seam is switched on for this deployment. */
+/**
+ * Whether the E2E test seam is switched on for this deployment: `E2E_TEST_MODE`
+ * is a truthy spelling **and** this is not the Vercel production environment.
+ */
 export function isTestModeEnabled(env: EnvLike = process.env): boolean {
+  if (env.VERCEL_ENV === "production") return false;
   const raw = env.E2E_TEST_MODE;
   return typeof raw === "string" && ENABLED_VALUES.has(raw.trim().toLowerCase());
 }

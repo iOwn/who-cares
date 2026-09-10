@@ -25,7 +25,11 @@ export default defineConfig({
   // No local web server: E2E always targets an already-deployed URL.
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // No retries: `global-setup.ts` seeds once per invocation, and the one spec
+  // mutates that state (declares an absence, accepts a request). A retry would
+  // re-run the spec against the already-resolved day and fail differently — a
+  // green retry can't happen, so retrying only burns preview-run minutes.
+  retries: 0,
   workers: 1,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   use: {

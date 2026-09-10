@@ -11,11 +11,12 @@
  * otherwise. See `docs/testing.md` "E2E smoke scope".
  *
  * Deliberately NOT `src/testing/seed.ts` — that helper writes through
- * `db.$client.transaction`, which only the PGlite test driver exposes. This runs
- * the same inserts through the driver-agnostic Drizzle query builder against the
- * live Neon handle instead, inside one `db.transaction()` so the household's
- * `DEFERRABLE INITIALLY DEFERRED` graph triggers see the finished graph at
- * COMMIT.
+ * `db.$client.transaction`, which only the PGlite test driver exposes. The row
+ * shapes come from the pure, unit-tested `e2eSeedRows()` (its own drift guard,
+ * mirroring `seed.test.ts`'s `skipped` pin); this route only runs them through
+ * the driver-agnostic Drizzle query builder against the live Neon handle, inside
+ * one `db.transaction()` so the household's `DEFERRABLE INITIALLY DEFERRED`
+ * graph triggers see the finished graph at COMMIT.
  */
 
 import { getTableName, is, sql } from "drizzle-orm";
@@ -23,7 +24,7 @@ import { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/auth/config";
 import { getAllowlistedEmails } from "@/auth/env";
 import { schema } from "@/db/client";
-import { buildE2eHouseholdGraph } from "@/testing/e2eHousehold";
+import { buildE2eHouseholdGraph, e2eSeedRows } from "@/testing/e2eHousehold";
 import { assertTestModeEnabled, TestModeDisabledError } from "../testMode";
 
 export const dynamic = "force-dynamic";
@@ -55,37 +56,16 @@ export async function POST(): Promise<Response> {
   }
 
   const graph = buildE2eHouseholdGraph(getAllowlistedEmails());
+  const rows = e2eSeedRows(graph);
 
   try {
     await db.transaction(async (tx) => {
       await tx.execute(sql`TRUNCATE ${ALL_TABLES} RESTART IDENTITY CASCADE`);
 
-      await tx.insert(schema.households).values({
-        id: graph.household.id,
-        name: graph.household.name,
-      });
-      await tx.insert(schema.members).values(
-        graph.members.map((member, index) => ({
-          id: member.id,
-          householdId: member.householdId,
-          slot: index + 1,
-          name: member.name,
-          email: member.email,
-        })),
-      );
-      await tx.insert(schema.children).values({
-        id: graph.child.id,
-        householdId: graph.child.householdId,
-        name: graph.child.name,
-      });
-      await tx.insert(schema.childcarePatternVersions).values(
-        graph.pattern.versions.map((version) => ({
-          id: `${graph.pattern.householdId}:${version.effectiveFrom}`,
-          householdId: graph.household.id,
-          weekdays: [...version.weekdays],
-          effectiveFrom: version.effectiveFrom,
-        })),
-      );
+      await tx.insert(schema.households).values([...rows.households]);
+      await tx.insert(schema.members).values([...rows.members]);
+      await tx.insert(schema.children).values([...rows.children]);
+      await tx.insert(schema.childcarePatternVersions).values([...rows.childcarePatternVersions]);
     });
   } catch (error) {
     console.error("POST /api/test/seed failed", error);

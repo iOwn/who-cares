@@ -10,8 +10,14 @@ import { STORAGE_STATE } from "./global-setup";
  *
  * One pass over auth → DB write → the derived day-state read model → the request
  * lifecycle → UI. Assertions are on **app state only** — the day's display
- * state and the assignee shown — never on notification dispatch (that is covered
- * at the adapter boundary in Vitest).
+ * state, the request reaching parent B's inbox, the assignee shown — never on
+ * notification dispatch (that is covered at the adapter boundary in Vitest).
+ *
+ * The mid-flow day state is asserted as pending **or** at-risk: a request on a
+ * childcare day inside the 48h lead window is At-risk immediately (ADR-0003),
+ * and the target here is deliberately near, so which of the two shows depends on
+ * the day of the week the run happens to land on. Either way a request exists —
+ * the unambiguous check is parent B's bell count.
  *
  * `e2e/global-setup.ts` has already called `POST /api/test/seed` and
  * `POST /api/test/login` for both parents and saved a `storageState` each.
@@ -65,33 +71,36 @@ test.describe("smoke", () => {
       await page.getByRole("button", { name: "Next month" }).click();
     }
 
-    const dayCell = page.getByRole("button", { name: new RegExp(escapeRegExp(targetDay)) });
-    await dayCell.click();
+    // Open the day cell, then the "+ I'm out" sheet anchored to it. Target
+    // buttons unique to each sheet rather than a shared `getByRole("dialog")`,
+    // which would be ambiguous during the day-detail → absence-form swap.
+    await page.getByRole("button", { name: new RegExp(escapeRegExp(targetDay)) }).click();
+    await page.getByRole("button", { name: /I.?m out this day/i }).click();
 
-    const detail = page.getByRole("dialog");
-    await expect(detail).toBeVisible();
-    await expect(detail.getByText(new RegExp(escapeRegExp(targetDay)))).toBeVisible();
-    await detail.getByRole("button", { name: /I.?m out this day/i }).click();
+    const save = page.getByRole("button", { name: /Save absence/i });
+    await save.click();
+    await expect(save).toBeHidden();
 
-    const absenceForm = page.getByRole("dialog");
-    await absenceForm.getByRole("button", { name: /Save absence/i }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
+    // The request is raised: the day is no longer quiet — pending, or (on a near
+    // day inside the 48h window) at-risk.
+    const REQUEST_RAISED = new RegExp(
+      `${escapeRegExp(targetDay)}.*pickup (request waiting|at risk)`,
+    );
+    await expect(page.getByRole("button", { name: REQUEST_RAISED })).toBeVisible({
+      timeout: 15_000,
+    });
 
-    // The request is now raised: the day reads "pickup request waiting".
-    await expect(
-      page.getByRole("button", {
-        name: new RegExp(`${escapeRegExp(targetDay)}.*pickup request waiting`),
-      }),
-    ).toBeVisible({ timeout: 15_000 });
-
-    // --- Parent B: accept the request ----------------------------------
+    // --- Parent B: the request arrived, and gets accepted ---------------
     const contextB = await browser.newContext({ storageState: STORAGE_STATE.b });
     const pageB = await contextB.newPage();
     await pageB.goto("/");
 
-    await pageB.getByRole("button", { name: BELL }).click();
+    // Unambiguous "a request exists": the header bell now carries a count.
+    const bellB = pageB.getByRole("button", { name: /^Requests, 1 pending/ });
+    await expect(bellB).toBeVisible({ timeout: 15_000 });
+    await bellB.click();
+
     const requests = pageB.getByRole("complementary", { name: "Pickup requests" });
-    await expect(requests).toBeVisible();
     await expect(requests.getByText(/Alex is out/)).toBeVisible();
     await requests.getByRole("button", { name: "Accept" }).first().click();
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildE2eHouseholdGraph, E2E_MEMBER_NAMES, e2eMemberEmail } from "./e2eHousehold";
+import {
+  buildE2eHouseholdGraph,
+  E2E_MEMBER_NAMES,
+  e2eMemberEmail,
+  e2eSeedRows,
+} from "./e2eHousehold";
 
 const EMAILS = ["Parent-A@Example.com", "parent-b@example.com"];
 
@@ -40,5 +45,40 @@ describe("e2eMemberEmail", () => {
   it("maps 'a' to slot 1 and 'b' to slot 2", () => {
     expect(e2eMemberEmail(EMAILS, "a")).toBe("parent-a@example.com");
     expect(e2eMemberEmail(EMAILS, "b")).toBe("parent-b@example.com");
+  });
+});
+
+describe("e2eSeedRows", () => {
+  const rows = e2eSeedRows(buildE2eHouseholdGraph(EMAILS));
+
+  it("emits one household, two slotted members, one child, one pattern version", () => {
+    expect(rows.households).toEqual([{ id: "household-1", name: "The Test Household" }]);
+    expect(rows.members.map((m) => [m.slot, m.email])).toEqual([
+      [1, "parent-a@example.com"],
+      [2, "parent-b@example.com"],
+    ]);
+    expect(rows.members.every((m) => m.householdId === "household-1")).toBe(true);
+    expect(rows.children).toEqual([{ id: "child-1", householdId: "household-1", name: "Sam" }]);
+  });
+
+  it("derives the pattern-version id as `householdId:effectiveFrom`", () => {
+    expect(rows.childcarePatternVersions).toEqual([
+      {
+        id: "household-1:2025-01-06",
+        householdId: "household-1",
+        weekdays: ["mon", "tue", "wed", "thu", "fri"],
+        effectiveFrom: "2025-01-06",
+      },
+    ]);
+  });
+
+  it("covers exactly the household graph's populated tables", () => {
+    // If a future `HouseholdGraph` entity gains rows in the typical household,
+    // this list (and `e2eSeedRows` / the seed route) must grow with it.
+    const nonEmpty = Object.entries(rows)
+      .filter(([, value]) => value.length > 0)
+      .map(([key]) => key)
+      .sort();
+    expect(nonEmpty).toEqual(["childcarePatternVersions", "children", "households", "members"]);
   });
 });

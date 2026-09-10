@@ -17,6 +17,14 @@ describe("isTestModeEnabled", () => {
       expect(isTestModeEnabled({ E2E_TEST_MODE: value })).toBe(true);
     }
   });
+
+  it("stays off on Vercel production even when E2E_TEST_MODE is set", () => {
+    expect(isTestModeEnabled({ E2E_TEST_MODE: "1", VERCEL_ENV: "production" })).toBe(false);
+  });
+
+  it("allows the preview environment", () => {
+    expect(isTestModeEnabled({ E2E_TEST_MODE: "1", VERCEL_ENV: "preview" })).toBe(true);
+  });
 });
 
 describe("assertTestModeEnabled", () => {

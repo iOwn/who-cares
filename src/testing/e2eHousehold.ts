@@ -56,3 +56,61 @@ export function e2eMemberEmail(emails: readonly string[], member: E2eMemberKey):
   const graph = buildE2eHouseholdGraph(emails);
   return graph.members[member === "a" ? 0 : 1].email;
 }
+
+/* ------------------------------------------------------------------ *
+ * Insert rows for `POST /api/test/seed`.
+ * ------------------------------------------------------------------ */
+
+/**
+ * The exact rows `POST /api/test/seed` inserts, one array per table, shaped for
+ * Drizzle's `.values()`. Structural types deliberately — the route feeds each
+ * array straight to `tx.insert(schema.X)`, so a schema change that breaks the
+ * shape fails to compile *there*.
+ *
+ * `slot` (member index, 1-based) and the `householdId:effectiveFrom` pattern-
+ * version id are the two derived columns; keeping them here — pinned by
+ * `e2eHousehold.test.ts` — is the drift guard that `seed.test.ts`'s `skipped`
+ * list is for the PGlite helper. `makeTypicalHousehold` carries no closures /
+ * absences / requests / assignments, so those tables get no rows; the "empty
+ * typical-household shape" test fails loudly if that ever changes.
+ */
+export interface E2eSeedRows {
+  readonly households: readonly { id: string; name: string }[];
+  readonly members: readonly {
+    id: string;
+    householdId: string;
+    slot: number;
+    name: string;
+    email: string;
+  }[];
+  readonly children: readonly { id: string; householdId: string; name: string }[];
+  readonly childcarePatternVersions: readonly {
+    id: string;
+    householdId: string;
+    weekdays: string[];
+    effectiveFrom: string;
+  }[];
+}
+
+/** Turn a `HouseholdGraph` into the per-table insert rows the seed route writes. */
+export function e2eSeedRows(graph: HouseholdGraph): E2eSeedRows {
+  return {
+    households: [{ id: graph.household.id, name: graph.household.name }],
+    members: graph.members.map((member, index) => ({
+      id: member.id,
+      householdId: member.householdId,
+      slot: index + 1,
+      name: member.name,
+      email: member.email,
+    })),
+    children: [
+      { id: graph.child.id, householdId: graph.child.householdId, name: graph.child.name },
+    ],
+    childcarePatternVersions: graph.pattern.versions.map((version) => ({
+      id: `${graph.pattern.householdId}:${version.effectiveFrom}`,
+      householdId: graph.household.id,
+      weekdays: [...version.weekdays],
+      effectiveFrom: version.effectiveFrom,
+    })),
+  };
+}
