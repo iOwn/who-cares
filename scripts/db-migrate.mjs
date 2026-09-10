@@ -21,9 +21,10 @@
  *
  * Idempotent: Drizzle records every applied migration in
  * `drizzle.__drizzle_migrations` and decides what to run by comparing the
- * newest recorded `created_at` against each journal entry's timestamp. Each
- * migration runs in its own transaction, so a failure leaves nothing
- * half-applied.
+ * newest recorded `created_at` against each journal entry's timestamp. The
+ * whole pending batch runs inside one transaction (see `pg-core` `migrate`), so
+ * a failure rolls every pending migration back — the schema never lands
+ * half-migrated.
  */
 
 import { readFileSync } from "node:fs";
@@ -63,8 +64,11 @@ async function recordedCount() {
       "select count(*)::int as n from drizzle.__drizzle_migrations",
     );
     return rows[0].n;
-  } catch {
-    return null;
+  } catch (err) {
+    // The bookkeeping schema/table only exists once a migration has run. Any
+    // other failure (auth, network, permissions) is not "fresh" — let it throw.
+    if (err?.code === "42P01" || err?.code === "3F000") return null;
+    throw err;
   }
 }
 
@@ -99,8 +103,11 @@ try {
   console.log(`  done — ${after}/${expected} migrations recorded.\n`);
   await pool.end();
 } catch (err) {
-  console.error(`\n  migration failed: ${err.message}`);
-  console.error("  Each migration is transactional — nothing is left half-applied.");
+  // neon-serverless surfaces connection failures as ErrorEvent, not Error,
+  // sometimes with an empty message — fall through those to something useful.
+  const message = err?.message || err?.error?.message || err?.code || String(err);
+  console.error(`\n  migration failed: ${message}`);
+  console.error("  The pending batch runs in one transaction — it rolled back, schema unchanged.");
   await pool.end().catch(() => {});
   process.exit(1);
 }
