@@ -23,7 +23,9 @@ cat <<'EOF'
      App passwords. Name it "WhoCares" and copy the 16-character password.
    - In Vercel → Project → Settings → Environment Variables, set:
        GMAIL_USER         = you@gmail.com
-       GMAIL_APP_PASSWORD = xxxxxxxxxxxxxxxx   (the App Password, not your account password)
+       GMAIL_APP_PASSWORD = xxxxxxxxxxxxxxxx   (the App Password, not your account password —
+                                                 spaces in Google's "abcd efgh ijkl mnop" display
+                                                 are fine, the app strips them)
 EOF
 pause
 

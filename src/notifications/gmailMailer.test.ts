@@ -36,14 +36,14 @@ describe("createGmailMailer", () => {
     });
   });
 
-  it("sends the message from the configured Gmail address", async () => {
+  it("sends the message with a friendly display name over the configured Gmail address", async () => {
     sendMail.mockResolvedValue(undefined);
     const mailer = createGmailMailer(CONFIG);
 
     await mailer?.send({ to: "other@example.com", subject: "Hi", body: "Body text" });
 
     expect(sendMail).toHaveBeenCalledWith({
-      from: "parent@gmail.com",
+      from: "WhoCares <parent@gmail.com>",
       to: "other@example.com",
       subject: "Hi",
       text: "Body text",

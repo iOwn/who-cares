@@ -10,10 +10,21 @@
 import type { GmailMailerConfig } from "./gmailMailer";
 import type { VapidConfig } from "./webPushSender";
 
-/** Gmail SMTP config, or `null` when `GMAIL_USER` / `GMAIL_APP_PASSWORD` are unset. */
+/**
+ * Gmail SMTP config, or `null` when `GMAIL_USER` / `GMAIL_APP_PASSWORD` are unset.
+ *
+ * `GMAIL_APP_PASSWORD` has every whitespace character stripped, not just
+ * trimmed at the ends: Google's UI displays the 16-character App Password
+ * grouped into four 4-character blocks separated by spaces (e.g. `abcd efgh
+ * ijkl mnop`), and an operator following `scripts/setup-notifications.sh`
+ * commonly pastes it verbatim. A password with the internal spaces intact
+ * fails Gmail auth (535) on every send, silently — `services.ts` swallows
+ * and logs the error, so this would otherwise surface as "notifications
+ * just don't arrive" with nothing pointing back to the env var format.
+ */
 export function getGmailConfig(): GmailMailerConfig | null {
   const user = process.env.GMAIL_USER?.trim();
-  const appPassword = process.env.GMAIL_APP_PASSWORD?.trim();
+  const appPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
   if (!user || !appPassword) return null;
   return { user, appPassword };
 }

@@ -29,7 +29,11 @@ export function createGmailMailer(config: GmailMailerConfig | null): Mailer | nu
     async send(message: EmailMessage): Promise<void> {
       try {
         await transport.sendMail({
-          from: config.user,
+          // A display name, not just the bare address — Gmail SMTP requires
+          // the address half to match the authenticated account, but the
+          // "WhoCares" name is still ours to set (the previous Resend
+          // adapter's `EMAIL_FROM` gave the same "WhoCares <…>" shape).
+          from: `WhoCares <${config.user}>`,
           to: message.to,
           subject: message.subject,
           text: message.body,
