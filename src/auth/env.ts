@@ -16,9 +16,12 @@ export function requireEnv(name: string): string {
 }
 
 /**
- * The two allowlisted parent emails, in slot order (`ALLOWED_MEMBER_EMAILS`,
- * comma-separated). SPEC.md "Identity": deploy-time-configured, no invite
- * flow, no in-app setup screen.
+ * The two allowlisted parent emails, in slot order — `ALLOWED_MEMBER_A_EMAIL`
+ * / `ALLOWED_MEMBER_B_EMAIL` (issue #110; previously one comma-separated
+ * `ALLOWED_MEMBER_EMAILS`, split so each slot pairs 1:1 with its own
+ * `MEMBER_*_PASSWORD` below). SPEC.md "Identity": deploy-time-configured, no
+ * invite flow, no in-app setup screen. Every consumer goes through this
+ * function, so the split is invisible to them.
  *
  * Lower-cased here, at the one boundary where the env value enters the
  * system: Better Auth lower-cases `user.email` itself (its `userSchema`), so
@@ -28,18 +31,32 @@ export function requireEnv(name: string): string {
  * `Member` that a real (lower-cased) session email never finds.
  */
 export function getAllowlistedEmails(): AllowlistedEmails {
-  const emails = requireEnv("ALLOWED_MEMBER_EMAILS")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.length > 0);
+  const a = requireEnv("ALLOWED_MEMBER_A_EMAIL").trim().toLowerCase();
+  const b = requireEnv("ALLOWED_MEMBER_B_EMAIL").trim().toLowerCase();
 
-  if (emails.length !== 2) {
+  if (a.length === 0 || b.length === 0) {
     throw new Error(
-      `ALLOWED_MEMBER_EMAILS must list exactly two emails, got ${emails.length}: "${emails.join(", ")}"`,
+      `ALLOWED_MEMBER_A_EMAIL and ALLOWED_MEMBER_B_EMAIL must both be non-empty, got "${a}" and "${b}"`,
     );
   }
 
-  return [emails[0], emails[1]];
+  return [a, b];
+}
+
+/**
+ * The two members' credential-login passwords (issue #110), slot-aligned
+ * with `getAllowlistedEmails()` — `MEMBER_A_PASSWORD` is Member A's password,
+ * same slot as `ALLOWED_MEMBER_A_EMAIL`. The only consumer is
+ * `scripts/seed-members.mjs`; nothing else needs a member's password
+ * (sign-in itself is still magic-link, per ADR-0014, until the follow-on
+ * switch to `emailAndPassword`).
+ *
+ * Not trimmed or lower-cased — unlike emails, a password is an opaque
+ * secret, and silently mutating it would just make the env value diverge
+ * from what the operator actually typed.
+ */
+export function getMemberPasswords(): readonly [string, string] {
+  return [requireEnv("MEMBER_A_PASSWORD"), requireEnv("MEMBER_B_PASSWORD")];
 }
 
 /**

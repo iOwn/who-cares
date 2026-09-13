@@ -2,9 +2,10 @@
  * `POST /api/test/seed` — the destructive E2E fixture reset (issue #56, ADR-0008).
  *
  * Truncates every table (domain + Better Auth) and re-inserts the fixed smoke
- * household from `buildE2eHouseholdGraph()` with the two `ALLOWED_MEMBER_EMAILS`
- * addresses. Idempotent by construction — truncate-then-insert each call — so
- * Playwright's global setup can run it before every CI run.
+ * household from `buildE2eHouseholdGraph()` with the two `getAllowlistedEmails()`
+ * addresses (`ALLOWED_MEMBER_A_EMAIL` / `ALLOWED_MEMBER_B_EMAIL`, issue #110).
+ * Idempotent by construction — truncate-then-insert each call — so Playwright's
+ * global setup can run it before every CI run.
  *
  * Mounted only when `E2E_TEST_MODE` is set (the Vercel **preview** deploy, never
  * production): `assertTestModeEnabled()` makes the route return a bare 404
