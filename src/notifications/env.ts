@@ -3,19 +3,19 @@
  *
  * Unlike `src/auth/env.ts`, a missing var here is **not** fatal: the adapters
  * fall back to no-ops (`./services.ts`), so local dev and CI need no real
- * Resend / VAPID credentials. A production deploy that wants real delivery sets
+ * Gmail / VAPID credentials. A production deploy that wants real delivery sets
  * all of these — see `docs/notifications.md` and `scripts/setup-notifications.sh`.
  */
 
-import type { ResendMailerConfig } from "./resendMailer";
+import type { GmailMailerConfig } from "./gmailMailer";
 import type { VapidConfig } from "./webPushSender";
 
-/** Resend config, or `null` when `RESEND_API_KEY` / `EMAIL_FROM` are unset. */
-export function getResendConfig(): ResendMailerConfig | null {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim();
-  if (!apiKey || !from) return null;
-  return { apiKey, from };
+/** Gmail SMTP config, or `null` when `GMAIL_USER` / `GMAIL_APP_PASSWORD` are unset. */
+export function getGmailConfig(): GmailMailerConfig | null {
+  const user = process.env.GMAIL_USER?.trim();
+  const appPassword = process.env.GMAIL_APP_PASSWORD?.trim();
+  if (!user || !appPassword) return null;
+  return { user, appPassword };
 }
 
 /** VAPID config, or `null` when any of the three keys is unset. */

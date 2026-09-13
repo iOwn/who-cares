@@ -14,13 +14,16 @@ pause() { read -rp "   ↵ when done "; }
 bold "WhoCares — notification setup"
 echo "See docs/notifications.md for the why. This prints what to set in Vercel."
 
-step "1/3  Resend (email — the guaranteed channel)"
+step "1/3  Gmail SMTP (email — the guaranteed channel, ADR-0014)"
 cat <<'EOF'
-   - Sign in at https://resend.com , add + verify your sending domain.
-   - Create an API key (Sending access is enough).
+   - Sign in to the Gmail account WhoCares should send notification email from.
+   - Turn on 2-Step Verification (required for App Passwords):
+       https://myaccount.google.com/security
+   - Create an App Password: Google Account → Security → 2-Step Verification →
+     App passwords. Name it "WhoCares" and copy the 16-character password.
    - In Vercel → Project → Settings → Environment Variables, set:
-       RESEND_API_KEY = re_xxxxxxxx
-       EMAIL_FROM     = WhoCares <notify@your-verified-domain>
+       GMAIL_USER         = you@gmail.com
+       GMAIL_APP_PASSWORD = xxxxxxxxxxxxxxxx   (the App Password, not your account password)
 EOF
 pause
 

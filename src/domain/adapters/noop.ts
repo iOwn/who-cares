@@ -2,7 +2,7 @@
  * No-op / logging implementations of the service ports.
  *
  * These stand in wherever a real side effect is neither wanted nor available:
- * `next build`, local dev without Resend / VAPID keys, and any test that
+ * `next build`, local dev without Gmail / VAPID keys, and any test that
  * doesn't assert on dispatch. Tests that *do* assert on dispatch inject their
  * own spies instead.
  */

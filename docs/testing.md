@@ -224,6 +224,9 @@ Against a **personal Neon dev branch** (never a shared DB — seed is destructiv
 2. Point `.env` at your Neon dev branch and set the full auth env set
    (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_EMAILS`,
    `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus `E2E_TEST_MODE=1`**.
+   `GMAIL_USER` / `GMAIL_APP_PASSWORD` (ADR-0014, notification email) are optional here —
+   the smoke path never asserts on notification dispatch, and the mailer degrades to a
+   no-op without them.
 3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.
 4. In another: `PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm e2e`.
 

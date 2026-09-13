@@ -2,7 +2,7 @@
  * The real `Notifier` and its 5-minute coalescing window (issue #55,
  * `docs/testing.md` §4 point 2 — the coalescing-window cases).
  *
- * Pure ports in, fakes injected — no database, no Resend, no `web-push`.
+ * Pure ports in, fakes injected — no database, no Gmail SMTP, no `web-push`.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -215,7 +215,7 @@ describe("flushPendingNotifications", () => {
     const f = createFakes(NOW);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     f.mailer.send = async (m) => {
-      if (m.body === "poison") throw new Error("Resend 422");
+      if (m.body === "poison") throw new Error("Gmail SMTP 422");
       f.emails.push(m);
     };
     const notifier = createNotifier(f);
