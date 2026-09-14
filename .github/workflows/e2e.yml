@@ -58,6 +58,12 @@ jobs:
         id: smoke
         env:
           PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          # Vercel Protection Bypass for Automation (issue #99): clears the
+          # Vercel Authentication wall on the preview deploy. Read by
+          # `e2e/vercel-bypass.ts` via `playwright.config.ts` / global setup;
+          # a no-op (empty secret) until the operator provisions it in Vercel
+          # and stores it here as a GH Actions secret.
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: pnpm exec playwright test --project chromium
 
       # Failure only — green stays silent.
