@@ -1,5 +1,10 @@
 # Off Resend: email+password auth with env-seeded users, Gmail SMTP for notifications
 
+> **Superseded (auth half only) by [ADR-0015](./0015-magic-link-stays-gmail-smtp-fixes-auth-email.md).**
+> Sign-in stays `magicLink`, not `emailAndPassword` — the actual fix for Resend's `@gmail.com`
+> problem was moving the mail transport, not the auth mechanism. The Gmail SMTP half below
+> (notifications) is unaffected and still stands.
+
 The operator's send-from address is `@gmail.com`, which Resend can't send from — there's no
 verifiable domain to attach SPF/DKIM to. That single constraint forced two independent
 Resend consumers to move at once: Better Auth's `magicLink` sign-in (email is the delivery

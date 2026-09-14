@@ -6,6 +6,9 @@
  * `createGmailMailer` returns `null` when `GMAIL_USER` / `GMAIL_APP_PASSWORD`
  * are absent; `./services.ts` falls back to the no-op mailer so local dev,
  * CI, and `next build` need no real credentials (issue #55, issue #112).
+ * `src/auth/config.ts` (ADR-0015) is a second caller that never has a `null`
+ * config to pass — the overload below gives it back a plain `Mailer`, no
+ * caller-side null-narrowing required.
  */
 
 import { createTransport } from "nodemailer";
@@ -18,6 +21,8 @@ export interface GmailMailerConfig {
   readonly appPassword: string;
 }
 
+export function createGmailMailer(config: GmailMailerConfig): Mailer;
+export function createGmailMailer(config: GmailMailerConfig | null): Mailer | null;
 export function createGmailMailer(config: GmailMailerConfig | null): Mailer | null {
   if (!config) return null;
   const transport = createTransport({
