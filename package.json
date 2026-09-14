@@ -22,6 +22,7 @@
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "drizzle-kit generate --custom",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:seed": "tsx scripts/seed-members.mjs",
     "workbench": "ladle serve",
     "workbench:build": "ladle build",
     "prepare": "lefthook install"
@@ -58,6 +59,7 @@
     "drizzle-kit": "0.31.10",
     "lefthook": "2.1.12",
     "playwright": "1.63.0",
+    "tsx": "^4.20.7",
     "typescript": "^5.7.0",
     "vitest": "5.0.0",
     "vitest-browser-react": "2.3.0"

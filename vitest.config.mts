@@ -42,6 +42,15 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
+          // Vitest's 5000ms default is tight for the PGlite-backed integration
+          // tests (`src/db/repositories/*.test.ts`) — each spins up a fresh
+          // PGlite instance and replays every migration in `src/db/migrations/`
+          // (ADR-0006), so the cost grows with the migration count and, under
+          // `pnpm test`'s ~38 parallel isolated workers, with CPU contention.
+          // Observed flaking at the default while adding migration `0009`
+          // (issue #110) even though the test itself runs in ~1s standalone;
+          // 15s gives real headroom without hiding an actual hang.
+          testTimeout: 15_000,
           // `.test.ts` only. `.test.tsx` belongs to the `browser` project below
           // and must not be picked up by the node runner.
           include: ["src/**/*.test.ts"],

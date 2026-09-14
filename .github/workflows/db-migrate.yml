@@ -1,0 +1,38 @@
+# Applies pending Drizzle migrations to production on every push to `main`.
+# See docs/testing.md "Migration convention" and issue #98.
+#
+# Runs on `push: main` rather than gated on Vercel's `deployment_status` —
+# there is no ordering guarantee against the Vercel production deploy, which
+# is why migrations here stay additive-first and the whole pending batch runs
+# in one transaction (scripts/db-migrate.mjs rolls back on any failure rather
+# than landing a half-migrated schema). Preview deploys are untouched; Preview
+# still gets migrated manually (see docs/testing.md).
+#
+# Requires the `PRODUCTION_DATABASE_URL` repo secret (the production Neon
+# connection string) — set it with:
+#   gh secret set PRODUCTION_DATABASE_URL
+name: DB migrate (production)
+
+on:
+  push:
+    branches: [main]
+
+# Serialize runs so two migrate attempts never race the same database. Never
+# cancel one mid-flight — let it finish, then run the next push's migration.
+concurrency:
+  group: db-migrate-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: migrate (scripts/db-migrate.mjs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}

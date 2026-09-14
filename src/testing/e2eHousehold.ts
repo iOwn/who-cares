@@ -5,9 +5,9 @@
  * `POST /api/test/seed` wipes the database and re-inserts exactly this graph:
  * `makeTypicalHousehold()` — 2 members, 1 child, a Mon–Fri pattern from the
  * anchor, no closures / absences / requests / assignments — with the two
- * deploy-configured test-account emails (`ALLOWED_MEMBER_EMAILS`) injected so a
- * Better Auth session minted for one of them resolves to a `Member`
- * (`getCurrentSession`).
+ * deploy-configured test-account emails (`ALLOWED_MEMBER_A_EMAIL` /
+ * `ALLOWED_MEMBER_B_EMAIL`) injected so a Better Auth session minted for one
+ * of them resolves to a `Member` (`getCurrentSession`).
  *
  * A pure builder, kept here beside the factories rather than in the route so it
  * is unit-testable without pulling Next into the test (and without the route
@@ -31,8 +31,8 @@ export type E2eMemberKey = "a" | "b";
 
 /**
  * Build the fixed smoke-path household from the two configured test emails, in
- * `ALLOWED_MEMBER_EMAILS` (slot) order. Throws on anything but exactly two
- * distinct, non-empty emails — the same shape `getAllowlistedEmails()` enforces.
+ * `getAllowlistedEmails()` (slot) order. Throws on anything but exactly two
+ * distinct, non-empty emails — the same shape that function enforces.
  */
 export function buildE2eHouseholdGraph(emails: readonly string[]): HouseholdGraph {
   const normalised = emails.map((email) => email.trim().toLowerCase()).filter((e) => e.length > 0);
