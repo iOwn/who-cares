@@ -1,7 +1,7 @@
 # Notifications
 
 How WhoCares turns a domain event into an email + a web push (issue #55, issue
-#5 catalogue, SPEC.md "Notifications", ADR-0004, ADR-0012).
+#5 catalogue, SPEC.md "Notifications", ADR-0004, ADR-0012, ADR-0014).
 
 ## The pipeline
 
@@ -84,8 +84,13 @@ dropped and logged, not retried.
 
 `scripts/setup-notifications.sh` walks these; the short version:
 
-1. **Resend** — create an API key, verify a sending domain. Set `RESEND_API_KEY`
-   and `EMAIL_FROM` (e.g. `WhoCares <notify@yourdomain>`) in Vercel.
+1. **Gmail SMTP** (ADR-0014) — sign in to the Gmail account WhoCares should send
+   notification email from, turn on 2-Step Verification, then create an App
+   Password (Google Account → Security → 2-Step Verification → App passwords).
+   Set `GMAIL_USER` (the Gmail address) and `GMAIL_APP_PASSWORD` (the 16-character
+   App Password, not the account password) in Vercel. Gmail SMTP caps consumer
+   accounts around 500 sends/day — a non-issue for a two-user household app
+   (ADR-0014).
 2. **VAPID** — `npx web-push generate-vapid-keys`. Set
    `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    (`mailto:you@yourdomain`) in Vercel. The keypair is permanent — rotating it

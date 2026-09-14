@@ -3,9 +3,9 @@
  *
  * Method signatures only — no implementations, no DB, no `next/*`. Domain
  * services take these as constructor / parameter dependencies; tests inject
- * fakes, the app wires real adapters (PGlite-backed repositories in #38, Resend
- * mailer, `web-push` sender, etc.). No-op implementations for the service ports
- * live in `./adapters/noop`.
+ * fakes, the app wires real adapters (PGlite-backed repositories in #38, Gmail
+ * SMTP mailer, `web-push` sender, etc.). No-op implementations for the service
+ * ports live in `./adapters/noop`.
  *
  * All repository methods return `Promise`s so a real adapter can be async
  * without changing the interface.
@@ -196,7 +196,7 @@ export interface EmailMessage {
   readonly body: string;
 }
 
-/** Transactional email (Resend in production). */
+/** Transactional email (Gmail SMTP in production). */
 export interface Mailer {
   send(message: EmailMessage): Promise<void>;
 }

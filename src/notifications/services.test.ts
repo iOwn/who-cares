@@ -21,7 +21,7 @@ import { createNotificationServices } from "./services";
 
 const throwingMailer: Mailer = {
   async send() {
-    throw new Error("Resend 500");
+    throw new Error("Gmail SMTP 500");
   },
 };
 

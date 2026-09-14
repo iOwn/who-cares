@@ -1,6 +1,6 @@
 /**
  * Wire the notification ports to their real adapters (issue #55) — the one
- * place `process.env` meets Resend / `web-push` / the coalescing queue.
+ * place `process.env` meets Gmail SMTP / `web-push` / the coalescing queue.
  *
  * Every adapter degrades to a no-op when its credentials are absent, so a
  * caller always gets a working `notifier` / `flush` / `dispatchAll` — it just
@@ -20,9 +20,9 @@ import {
   type PushSender,
 } from "@/domain";
 import { type DispatchDeps, dispatchAll as dispatchAllNotifications } from "./dispatch";
-import { getResendConfig, getVapidConfig } from "./env";
+import { getGmailConfig, getVapidConfig } from "./env";
+import { createGmailMailer } from "./gmailMailer";
 import { createNotifier, flushPendingNotifications } from "./notifier";
-import { createResendMailer } from "./resendMailer";
 import { createWebPushSender } from "./webPushSender";
 
 export interface NotificationServices {
@@ -56,7 +56,7 @@ export function createNotificationServices(
 ): NotificationServices {
   const mailer =
     overrides.mailer ??
-    createResendMailer(getResendConfig()) ??
+    createGmailMailer(getGmailConfig()) ??
     noopAdapters.noopMailer((m, p) => console.info(m, p));
   const pushSender =
     overrides.pushSender ??

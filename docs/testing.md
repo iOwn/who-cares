@@ -235,7 +235,9 @@ Against a **personal Neon dev branch** (never a shared DB — seed is destructiv
    `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus
    `E2E_TEST_MODE=1`**. `pnpm db:seed` is not part of this path — `POST /api/test/login`
    still signs in via `magicLinkVerify`, which creates its own Better Auth user against the
-   domain rows `POST /api/test/seed` just inserted directly.
+   domain rows `POST /api/test/seed` just inserted directly. `GMAIL_USER` /
+   `GMAIL_APP_PASSWORD` (ADR-0014, notification email) are optional here — the smoke path
+   never asserts on notification dispatch, and the mailer degrades to a no-op without them.
 3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.
 4. In another: `PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm e2e`.
 
