@@ -126,6 +126,14 @@ dedicated drift check.
   in-process PGlite for the tests, and `pnpm db:migrate` (`scripts/db-migrate.mjs`) into a
   live `DATABASE_URL` via the `neon-serverless` driver for deploys. `pnpm db:migrate inspect`
   reports what is pending without applying it.
+- **Applied automatically in production** by `.github/workflows/db-migrate.yml` on every push
+  to `main`, against the `PRODUCTION_DATABASE_URL` repo secret (issue #98). This runs
+  independently of the Vercel production deploy — there's no ordering guarantee between the
+  two — which is why migrations stay additive-first and the whole pending batch runs in one
+  transaction (`scripts/db-migrate.mjs` rolls back on any failure rather than landing a
+  half-migrated schema). `pnpm db:seed` (issue #110) is deliberately **not** part of this
+  pipeline: it's a manual, on-demand step (initial provisioning, password rotation), not
+  something that should re-converge credentials on every push.
 
 ### The harness in practice
 
