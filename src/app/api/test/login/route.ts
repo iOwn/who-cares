@@ -1,7 +1,8 @@
 /**
  * `POST /api/test/login` — mint a Better Auth session for a named test member
  * (issue #56, ADR-0008). Body: `{ "member": "a" | "b" }` (slot 1 / slot 2 of
- * `ALLOWED_MEMBER_EMAILS`).
+ * `getAllowlistedEmails()` — `ALLOWED_MEMBER_A_EMAIL` / `ALLOWED_MEMBER_B_EMAIL`,
+ * issue #110).
  *
  * Mounted only when `E2E_TEST_MODE` is set — `assertTestModeEnabled()` returns a
  * bare 404 otherwise. The magic-link *email* path is not smoke-covered

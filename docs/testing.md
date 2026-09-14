@@ -209,7 +209,7 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
 - **Target**: the Vercel **preview deployment** for the PR — real runtime, real Neon branch,
   real Resend.
 - **Test seam** (`src/app/api/test/`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
-  `buildE2eHouseholdGraph(ALLOWED_MEMBER_EMAILS)` — idempotent, truncate-then-insert each call)
+  `buildE2eHouseholdGraph(getAllowlistedEmails())` — idempotent, truncate-then-insert each call)
   and `POST /api/test/login` `{ member: "a" | "b" }` (plants a magic-link verification token then
   runs `auth.api.magicLinkVerify`, relaying its `Set-Cookie` to the caller). Both call
   `assertTestModeEnabled()` first and return a bare **404** unless `E2E_TEST_MODE` is one of
@@ -230,8 +230,12 @@ Against a **personal Neon dev branch** (never a shared DB — seed is destructiv
 
 1. One-time: `npx playwright install chromium` (or `pnpm test:browser:setup`).
 2. Point `.env` at your Neon dev branch and set the full auth env set
-   (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_EMAILS`,
-   `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus `E2E_TEST_MODE=1`**.
+   (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_A_EMAIL`,
+   `ALLOWED_MEMBER_B_EMAIL` (issue #110; split from one `ALLOWED_MEMBER_EMAILS`),
+   `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus
+   `E2E_TEST_MODE=1`**. `pnpm db:seed` is not part of this path — `POST /api/test/login`
+   still signs in via `magicLinkVerify`, which creates its own Better Auth user against the
+   domain rows `POST /api/test/seed` just inserted directly.
 3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.
 4. In another: `PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm e2e`.
 
