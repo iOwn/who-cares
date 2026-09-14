@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { type FullConfig, request } from "playwright/test";
+import { vercelBypassHeaders } from "./vercel-bypass";
 
 /**
  * Global setup for the one E2E smoke path (ADR-0008, issue #56).
@@ -17,6 +18,13 @@ import { type FullConfig, request } from "playwright/test";
  *
  * A no-op when `PLAYWRIGHT_BASE_URL` is unset so `playwright test --list` still
  * loads; the spec itself skips in that case.
+ *
+ * Both `APIRequestContext`s below carry `vercelBypassHeaders()` (issue #99) so
+ * they clear Vercel Authentication on the preview deploy. When Vercel honors
+ * `x-vercel-set-bypass-cookie`, the response sets a bypass cookie that lands in
+ * the saved `storageState` alongside the auth session, so the browser context
+ * built from it (`smoke.spec.ts`) inherits the bypass too — on top of the
+ * belt-and-suspenders `extraHTTPHeaders` set in `playwright.config.ts`.
  */
 
 const AUTH_DIR = path.join(process.cwd(), "e2e", ".auth");
@@ -30,8 +38,9 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   if (!baseURL) return;
 
   await mkdir(AUTH_DIR, { recursive: true });
+  const extraHTTPHeaders = vercelBypassHeaders();
 
-  const seeder = await request.newContext({ baseURL });
+  const seeder = await request.newContext({ baseURL, extraHTTPHeaders });
   const seed = await seeder.post("/api/test/seed");
   if (!seed.ok()) {
     throw new Error(
@@ -41,7 +50,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   await seeder.dispose();
 
   for (const member of ["a", "b"] as const) {
-    const ctx = await request.newContext({ baseURL });
+    const ctx = await request.newContext({ baseURL, extraHTTPHeaders });
     const login = await ctx.post("/api/test/login", { data: { member } });
     if (!login.ok()) {
       throw new Error(

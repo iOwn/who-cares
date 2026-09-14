@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "playwright/test";
+import { vercelBypassHeaders } from "./e2e/vercel-bypass";
 
 /**
  * Playwright config for the one E2E smoke path (ADR-0008).
@@ -18,6 +19,13 @@ import { defineConfig, devices } from "playwright/test";
  * the `E2E_TEST_MODE` seed/login seam and saves a `storageState` per parent.
  * With `PLAYWRIGHT_BASE_URL` unset both are inert — global setup returns early
  * and the spec skips — so `playwright test --list` still loads.
+ *
+ * `extraHTTPHeaders` carries the Vercel Protection Bypass for Automation
+ * header (issue #99) so the browser context's requests clear Vercel
+ * Authentication on the preview deploy; `e2e/vercel-bypass.ts` has the full
+ * story. It's a no-op object when `VERCEL_AUTOMATION_BYPASS_SECRET` isn't
+ * set, which is the case for every local run and until the operator
+ * provisions the secret.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -36,6 +44,7 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    extraHTTPHeaders: vercelBypassHeaders(),
   },
   projects: [
     {
