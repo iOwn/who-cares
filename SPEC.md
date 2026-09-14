@@ -40,7 +40,7 @@ All-serverless, $0/mo:
 
 - **App**: Next.js (App Router), deployed on **Vercel Hobby**.
 - **Database**: **Neon** Postgres (scale-to-zero free tier).
-- **Auth**: self-hosted **Better Auth** — `magic-link` plugin (email via Resend) as the
+- **Auth**: self-hosted **Better Auth** — `magic-link` plugin (email via Gmail SMTP) as the
   permanent bootstrap + recovery path, `passkey` plugin (wraps SimpleWebAuthn) as an additive
   fast re-entry path via progressive enrollment, shipped in v1. DB-backed opaque session
   token in a `__Host-` cookie (`HttpOnly; Secure; SameSite=Lax`), 30–60 day sliding lifetime,
@@ -50,7 +50,7 @@ All-serverless, $0/mo:
   magic link, which also bootstraps that member's `Member` record (and, on the first
   sign-in overall, the `Household` + `Child`) automatically. No in-app setup screen, no
   password, no self-service reset — account recovery is magic-link-only.
-- **Email**: **Resend** free tier (3,000/mo).
+- **Email**: **Gmail SMTP** (personal account + App Password, ADR-0014/ADR-0015).
 - **Push**: standard `web-push` + one VAPID keypair + one service worker. Store each
   `PushSubscription` server-side, drop on 404/410. iOS delivery requires the PWA to be
   installed to the Home Screen (iOS 16.4+) — onboarding must guide the install; email is the

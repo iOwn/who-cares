@@ -238,12 +238,12 @@ Against a **personal Neon dev branch** (never a shared DB — seed is destructiv
 2. Point `.env` at your Neon dev branch and set the full auth env set
    (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_A_EMAIL`,
    `ALLOWED_MEMBER_B_EMAIL` (issue #110; split from one `ALLOWED_MEMBER_EMAILS`),
-   `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus
-   `E2E_TEST_MODE=1`**. `POST /api/test/login` signs in via `magicLinkVerify`, which creates
-   its own Better Auth user against the domain rows `POST /api/test/seed` just inserted
-   directly. `GMAIL_USER` /
-   `GMAIL_APP_PASSWORD` (ADR-0014, notification email) are optional here — the smoke path
-   never asserts on notification dispatch, and the mailer degrades to a no-op without them.
+   `GMAIL_USER`, `GMAIL_APP_PASSWORD` (ADR-0015 — `src/auth/config.ts` now sends
+   magic-link mail over Gmail SMTP and fails at module load without these; no
+   longer optional the way they are for notifications), `PASSKEY_RP_ID`,
+   `PASSKEY_ORIGIN`) **plus `E2E_TEST_MODE=1`**. `POST /api/test/login` signs in via
+   `magicLinkVerify`, which creates its own Better Auth user against the domain rows
+   `POST /api/test/seed` just inserted directly.
 3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.
 4. In another: `PLAYWRIGHT_BASE_URL=http://localhost:3000 pnpm e2e`.
 

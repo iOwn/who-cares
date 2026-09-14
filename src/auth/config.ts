@@ -15,7 +15,6 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
-import { Resend } from "resend";
 // Deep imports, not the `@/db` barrel: the barrel re-exports `./migrate`,
 // whose `new URL("./migrations", import.meta.url)` Turbopack tries to
 // resolve as a bundled asset the moment anything pulls the barrel into the
@@ -25,13 +24,31 @@ import { schema } from "@/db/client";
 import { createNeonDatabase } from "@/db/neon";
 import { createRepositories } from "@/db/repositories";
 import { bootstrapHousehold, isAllowlistedEmail, noopAdapters } from "@/domain";
-import { getAllowlistedEmails, getPasskeyRelyingParty, requireEnv } from "./env";
+// `src/notifications/`'s adapter, not a separate auth-local mailer — Gmail
+// SMTP is already the notification transport (ADR-0014); ADR-0015 puts
+// magic-link sign-in mail on the same transport rather than standing up a
+// second one. Only the config *reading* differs (`./env`'s `requireGmailConfig`
+// is fatal on a missing credential; notifications' `getGmailConfig` is not).
+import { createGmailMailer } from "@/notifications/gmailMailer";
+import {
+  getAllowlistedEmails,
+  getPasskeyRelyingParty,
+  requireEnv,
+  requireGmailConfig,
+} from "./env";
 
 const passkeyRp = getPasskeyRelyingParty();
 
 export const db = createNeonDatabase(requireEnv("DATABASE_URL"));
 
-const resend = new Resend(requireEnv("RESEND_API_KEY"));
+/**
+ * Eagerly constructed so a missing Gmail config fails at module load, same as
+ * every other required env var in this file — magic-link sign-in has no
+ * acceptable no-op path (issue #100, ADR-0015). `requireGmailConfig()` throws
+ * rather than returning `null`, so the `createGmailMailer` overload here
+ * returns a plain `Mailer`, never `null`.
+ */
+const gmailMailer = createGmailMailer(requireGmailConfig());
 
 /** 45 days — the middle of the "30-60 day sliding lifetime" the spec asks for. */
 const SESSION_LIFETIME_SECONDS = 60 * 60 * 24 * 45;
@@ -132,11 +149,15 @@ export const auth = betterAuth({
           // emails are registered (SPEC.md "Identity" — no invite flow).
           return;
         }
-        await resend.emails.send({
-          from: requireEnv("EMAIL_FROM"),
+        // No try/catch: a send failure must throw and propagate up through
+        // Better Auth's endpoint handler to the client's `signIn.magicLink()`
+        // call, surfacing in `SignInScreen`'s error state (issue #100,
+        // ADR-0015) — unlike notifications, auth has no acceptable
+        // swallow-and-log path for a failed send.
+        await gmailMailer.send({
           to: email,
           subject: "Sign in to WhoCares",
-          text: `Tap to sign in to WhoCares:\n\n${url}\n\nThis link expires in 5 minutes.`,
+          body: `Tap to sign in to WhoCares:\n\n${url}\n\nThis link expires in 5 minutes.`,
         });
       },
     }),

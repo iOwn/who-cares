@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getAllowlistedEmails, requireEnv } from "./env";
+import { getAllowlistedEmails, requireEnv, requireGmailConfig } from "./env";
 
 /**
  * `requireEnv` reads `process.env` directly, so every test below snapshots
@@ -7,7 +7,12 @@ import { getAllowlistedEmails, requireEnv } from "./env";
  * plain module-level reads, not something Vitest's env stubbing targets
  * specially, and restoring by hand keeps this file dependency-free.
  */
-const ENV_KEYS = ["ALLOWED_MEMBER_A_EMAIL", "ALLOWED_MEMBER_B_EMAIL"] as const;
+const ENV_KEYS = [
+  "ALLOWED_MEMBER_A_EMAIL",
+  "ALLOWED_MEMBER_B_EMAIL",
+  "GMAIL_USER",
+  "GMAIL_APP_PASSWORD",
+] as const;
 
 let snapshot: Record<string, string | undefined>;
 
@@ -65,6 +70,56 @@ describe("getAllowlistedEmails", () => {
     process.env.ALLOWED_MEMBER_B_EMAIL = "parent-b@whocares.invalid";
 
     expect(() => getAllowlistedEmails()).toThrow(/must both be non-empty/);
+  });
+});
+
+describe("requireGmailConfig", () => {
+  it("reads user + app password when both are set", () => {
+    process.env.GMAIL_USER = "parent@gmail.com";
+    process.env.GMAIL_APP_PASSWORD = "abcdefghijklmnop";
+
+    expect(requireGmailConfig()).toEqual({
+      user: "parent@gmail.com",
+      appPassword: "abcdefghijklmnop",
+    });
+  });
+
+  it("strips internal whitespace from the app password (Google's UI groups it in 4-char blocks)", () => {
+    process.env.GMAIL_USER = "parent@gmail.com";
+    process.env.GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop";
+
+    expect(requireGmailConfig()).toEqual({
+      user: "parent@gmail.com",
+      appPassword: "abcdefghijklmnop",
+    });
+  });
+
+  it("trims GMAIL_USER, matching notifications' reader of the same var", () => {
+    process.env.GMAIL_USER = "  parent@gmail.com\n";
+    process.env.GMAIL_APP_PASSWORD = "abcdefghijklmnop";
+
+    expect(requireGmailConfig()).toEqual({
+      user: "parent@gmail.com",
+      appPassword: "abcdefghijklmnop",
+    });
+  });
+
+  it("throws when GMAIL_USER is missing", () => {
+    process.env.GMAIL_APP_PASSWORD = "abcdefghijklmnop";
+
+    expect(() => requireGmailConfig()).toThrow("Missing required environment variable: GMAIL_USER");
+  });
+
+  it("throws when GMAIL_APP_PASSWORD is missing", () => {
+    process.env.GMAIL_USER = "parent@gmail.com";
+
+    expect(() => requireGmailConfig()).toThrow(
+      "Missing required environment variable: GMAIL_APP_PASSWORD",
+    );
+  });
+
+  it("throws when both are missing — auth has no no-op mailer path", () => {
+    expect(() => requireGmailConfig()).toThrow("Missing required environment variable: GMAIL_USER");
   });
 });
 
