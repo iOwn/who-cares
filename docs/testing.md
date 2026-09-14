@@ -223,6 +223,14 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
   triggers a failing `e2e.yml` run. `deployment_status` workflows only run from the copy of
   `e2e.yml` on `main`, so the first real end-to-end validation is a follow-up once this lands
   (ADR-0008).
+- **Vercel Authentication bypass** (issue #99): if Deployment Protection / Vercel
+  Authentication is on for Preview, the preview URL 401s every request — including the test
+  seam — before it reaches the app. `VERCEL_AUTOMATION_BYPASS_SECRET` must then be generated
+  in Vercel (Project → Settings → Deployment Protection → Protection Bypass for Automation)
+  and stored as a GitHub Actions secret of the same name; `e2e.yml` passes it through as an
+  env var, and `e2e/vercel-bypass.ts` turns it into the `x-vercel-protection-bypass` /
+  `x-vercel-set-bypass-cookie` headers Playwright sends. Unset, it's a no-op — needed only
+  while the Preview environment has that protection enabled.
 
 ### Running `pnpm e2e` locally
 

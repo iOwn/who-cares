@@ -15,6 +15,13 @@
  * This is a no-op — both call sites get `{}` — when the secret isn't set, so
  * local dev (`pnpm e2e` against a non-protected personal deploy) and any run
  * where the operator hasn't provisioned the secret yet are unaffected.
+ *
+ * Caution if the smoke spec ever grows to load a genuinely cross-origin
+ * resource (a third-party font/analytics host, an external OAuth redirect):
+ * `extraHTTPHeaders` is attached to the whole context, not scoped to
+ * `baseURL`'s origin, so the secret would go out to that host too. The app
+ * has no such resource today (ADR-0008's smoke path is same-origin only) —
+ * revisit with per-origin routing if that changes.
  */
 export function vercelBypassHeaders(): Record<string, string> {
   const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
