@@ -1,5 +1,10 @@
 # Runtime stack: Next.js on Vercel Hobby, Neon, Resend, once-daily Vercel Cron
 
+> **Superseded (Resend half only) by [ADR-0014](./0014-off-resend-email-password-auth-and-gmail-smtp-notifications.md).**
+> Resend was dropped for Gmail SMTP — the operator's `@gmail.com` send-from address has no
+> verifiable domain for SPF/DKIM. The rest of this decision (Vercel Hobby, Neon, once-daily
+> Cron) is unaffected and still stands.
+
 While pinning the stack (issue #8), three coherent, near-zero-cost shapes were on the table:
 an always-on Fly.io machine (~$2/mo, no serverless caveats, unlimited cron precision), a
 free Render web service (sleeps after 15 min idle, ~1 min cold start, no native cron), and
