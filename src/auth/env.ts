@@ -85,10 +85,23 @@ export function getPasskeyRelyingParty(): PasskeyRelyingParty {
  * incidental whitespace (a trailing newline pasted into Vercel, or Google's
  * UI displaying the 16-character App Password grouped into four 4-character
  * blocks) behaves identically for both consumers.
+ *
+ * `requireEnv` only rejects a falsy *raw* value, so a whitespace-only env var
+ * is truthy going in and would otherwise trim/strip down to `""` silently —
+ * exactly the failure mode this function exists to rule out. Both values are
+ * re-checked for emptiness after trimming/stripping, the same way
+ * `getAllowlistedEmails` above re-checks its two emails post-trim.
  */
 export function requireGmailConfig(): GmailMailerConfig {
-  return {
-    user: requireEnv("GMAIL_USER").trim(),
-    appPassword: requireEnv("GMAIL_APP_PASSWORD").replace(/\s+/g, ""),
-  };
+  const user = requireEnv("GMAIL_USER").trim();
+  if (user.length === 0) {
+    throw new Error("GMAIL_USER must not be blank");
+  }
+
+  const appPassword = requireEnv("GMAIL_APP_PASSWORD").replace(/\s+/g, "");
+  if (appPassword.length === 0) {
+    throw new Error("GMAIL_APP_PASSWORD must not be blank");
+  }
+
+  return { user, appPassword };
 }

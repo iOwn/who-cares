@@ -205,7 +205,9 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
 - **Asserts app state only** (day state + assignment / request rows), never notification
   dispatch.
 - **Target**: the Vercel **preview deployment** for the PR — real runtime, real Neon branch,
-  real Resend.
+  real Gmail SMTP (ADR-0015 — auth's `sendMagicLink` is fatal at module load without it, so the
+  preview deploy won't boot without real `GMAIL_USER`/`GMAIL_APP_PASSWORD` regardless of whether
+  this path exercises a send).
 - **Test seam** (`src/app/api/test/`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
   `buildE2eHouseholdGraph(getAllowlistedEmails())` — idempotent, truncate-then-insert each call)
   and `POST /api/test/login` `{ member: "a" | "b" }` (plants a magic-link verification token then
@@ -220,7 +222,9 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
   (Project → Settings → Environment Variables, Preview scope only) or every preview deploy
   triggers a failing `e2e.yml` run. `deployment_status` workflows only run from the copy of
   `e2e.yml` on `main`, so the first real end-to-end validation is a follow-up once this lands
-  (ADR-0008).
+  (ADR-0008). `GMAIL_USER`/`GMAIL_APP_PASSWORD` are also a hard prerequisite as of ADR-0015 —
+  unlike `E2E_TEST_MODE`, missing them doesn't fail one `e2e.yml` run, it fails the preview
+  deploy's own `next build`/boot before E2E ever gets to run.
 - **Vercel Authentication bypass** (issue #99): if Deployment Protection / Vercel
   Authentication is on for Preview, the preview URL 401s every request — including the test
   seam — before it reaches the app. `VERCEL_AUTOMATION_BYPASS_SECRET` must then be generated

@@ -118,6 +118,25 @@ describe("requireGmailConfig", () => {
     );
   });
 
+  it("throws when GMAIL_USER is whitespace-only — truthy pre-trim, empty post-trim", () => {
+    // `requireEnv` only rejects a falsy raw value; a whitespace-only string is
+    // truthy and sails past it, then trims down to "". Without an explicit
+    // post-trim check this would silently hand back an empty `user` instead
+    // of failing at module load — the one thing this function exists to
+    // prevent (auth has no no-op mailer to degrade into).
+    process.env.GMAIL_USER = "   ";
+    process.env.GMAIL_APP_PASSWORD = "abcdefghijklmnop";
+
+    expect(() => requireGmailConfig()).toThrow(/GMAIL_USER.*must not be blank/i);
+  });
+
+  it("throws when GMAIL_APP_PASSWORD is whitespace-only — truthy pre-strip, empty post-strip", () => {
+    process.env.GMAIL_USER = "parent@gmail.com";
+    process.env.GMAIL_APP_PASSWORD = "    ";
+
+    expect(() => requireGmailConfig()).toThrow(/GMAIL_APP_PASSWORD.*must not be blank/i);
+  });
+
   it("throws when both are missing — auth has no no-op mailer path", () => {
     expect(() => requireGmailConfig()).toThrow("Missing required environment variable: GMAIL_USER");
   });
