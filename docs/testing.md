@@ -131,9 +131,7 @@ dedicated drift check.
   independently of the Vercel production deploy — there's no ordering guarantee between the
   two — which is why migrations stay additive-first and the whole pending batch runs in one
   transaction (`scripts/db-migrate.mjs` rolls back on any failure rather than landing a
-  half-migrated schema). `pnpm db:seed` (issue #110) is deliberately **not** part of this
-  pipeline: it's a manual, on-demand step (initial provisioning, password rotation), not
-  something that should re-converge credentials on every push.
+  half-migrated schema).
 
 ### The harness in practice
 
@@ -241,9 +239,9 @@ Against a **personal Neon dev branch** (never a shared DB — seed is destructiv
    (`DATABASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `ALLOWED_MEMBER_A_EMAIL`,
    `ALLOWED_MEMBER_B_EMAIL` (issue #110; split from one `ALLOWED_MEMBER_EMAILS`),
    `RESEND_API_KEY`, `EMAIL_FROM`, `PASSKEY_RP_ID`, `PASSKEY_ORIGIN`) **plus
-   `E2E_TEST_MODE=1`**. `pnpm db:seed` is not part of this path — `POST /api/test/login`
-   still signs in via `magicLinkVerify`, which creates its own Better Auth user against the
-   domain rows `POST /api/test/seed` just inserted directly. `GMAIL_USER` /
+   `E2E_TEST_MODE=1`**. `POST /api/test/login` signs in via `magicLinkVerify`, which creates
+   its own Better Auth user against the domain rows `POST /api/test/seed` just inserted
+   directly. `GMAIL_USER` /
    `GMAIL_APP_PASSWORD` (ADR-0014, notification email) are optional here — the smoke path
    never asserts on notification dispatch, and the mailer degrades to a no-op without them.
 3. `pnpm build && pnpm start` (or `pnpm dev`) in one shell.

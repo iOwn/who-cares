@@ -71,6 +71,13 @@
       "when": 1789303983394,
       "tag": "0009_add_admin_plugin_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789373766665,
+      "tag": "0010_remove_admin_plugin_columns",
+      "breakpoints": true
     }
   ]
 }

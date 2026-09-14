@@ -14,7 +14,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { admin, magicLink } from "better-auth/plugins";
+import { magicLink } from "better-auth/plugins";
 import { Resend } from "resend";
 // Deep imports, not the `@/db` barrel: the barrel re-exports `./migrate`,
 // whose `new URL("./migrations", import.meta.url)` Turbopack tries to
@@ -125,35 +125,6 @@ export const auth = betterAuth({
   },
 
   plugins: [
-    /**
-     * Admin plugin (issue #110), added for its `auth.api.createUser` endpoint
-     * — `scripts/seed-members.mjs` (`pnpm db:seed`) calls it server-side to
-     * create/heal the two household members' credential accounts. No app
-     * surface (UI or route) calls any of this plugin's *other* endpoints
-     * (role management, ban, impersonation, etc.) — nothing grants a "role"
-     * that would let a signed-in member reach those routes' `adminMiddleware`
-     * session check, and `createUser` itself is the one admin route that
-     * skips that check when called directly (no `headers`/`request` on the
-     * call), which is exactly what the seed script relies on.
-     *
-     * This plugin does add two `databaseHooks` of its own to every user/
-     * session, not just to `createUser` — Better Auth merges a plugin's
-     * `init().options.databaseHooks` into the shared hook list regardless of
-     * which endpoint is in play (`node_modules/better-auth/dist/plugins/admin/admin.mjs`,
-     * `init()`): `user.create.before` defaults a new user's `role` to `"user"`
-     * (harmless — nothing here ever reads `role`), and `session.create.before`
-     * adds one `findUserById` + a `banned` check to every sign-in (harmless
-     * today too — nothing in this app ever sets `banned`, so it's an inert
-     * extra read, not a new code path this app exercises).
-     *
-     * The static trace behind "createUser skips the session check when
-     * called directly, and the household-bootstrap hook fires either way"
-     * lives in a research doc that is NOT on this branch —
-     * `docs/research/better-auth-seed-hashing.md` on
-     * `research/better-auth-seed-hashing` (unmerged); see
-     * https://github.com/iOwn/who-cares/blob/research/better-auth-seed-hashing/docs/research/better-auth-seed-hashing.md.
-     */
-    admin(),
     magicLink({
       async sendMagicLink({ email, url }) {
         if (!isAllowlistedEmail(email, getAllowlistedEmails())) {

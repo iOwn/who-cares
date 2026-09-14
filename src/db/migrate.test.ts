@@ -100,6 +100,21 @@ describe("applyMigrations", () => {
     ]);
   });
 
+  it("drops the admin-plugin columns added by 0009 and removed by 0010 (issue #118)", async () => {
+    const result = await db.$client.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND (table_name, column_name) IN (
+           ('users', 'role'),
+           ('users', 'banned'),
+           ('users', 'ban_reason'),
+           ('users', 'ban_expires'),
+           ('sessions', 'impersonated_by')
+         )`,
+    );
+    expect(result.rows).toEqual([]);
+  });
+
   it("creates the deferred household-graph constraint triggers", async () => {
     const result = await db.$client.query<{ tgname: string }>(
       `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal ORDER BY tgname`,

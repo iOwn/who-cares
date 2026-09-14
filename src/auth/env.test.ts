@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getAllowlistedEmails, getMemberPasswords, requireEnv } from "./env";
+import { getAllowlistedEmails, requireEnv } from "./env";
 
 /**
  * `requireEnv` reads `process.env` directly, so every test below snapshots
@@ -7,12 +7,7 @@ import { getAllowlistedEmails, getMemberPasswords, requireEnv } from "./env";
  * plain module-level reads, not something Vitest's env stubbing targets
  * specially, and restoring by hand keeps this file dependency-free.
  */
-const ENV_KEYS = [
-  "ALLOWED_MEMBER_A_EMAIL",
-  "ALLOWED_MEMBER_B_EMAIL",
-  "MEMBER_A_PASSWORD",
-  "MEMBER_B_PASSWORD",
-] as const;
+const ENV_KEYS = ["ALLOWED_MEMBER_A_EMAIL", "ALLOWED_MEMBER_B_EMAIL"] as const;
 
 let snapshot: Record<string, string | undefined>;
 
@@ -70,41 +65,6 @@ describe("getAllowlistedEmails", () => {
     process.env.ALLOWED_MEMBER_B_EMAIL = "parent-b@whocares.invalid";
 
     expect(() => getAllowlistedEmails()).toThrow(/must both be non-empty/);
-  });
-});
-
-describe("getMemberPasswords", () => {
-  it("reads the slot-ordered tuple from the two password env vars", () => {
-    process.env.MEMBER_A_PASSWORD = "correct-horse-battery-staple-a";
-    process.env.MEMBER_B_PASSWORD = "correct-horse-battery-staple-b";
-
-    expect(getMemberPasswords()).toEqual([
-      "correct-horse-battery-staple-a",
-      "correct-horse-battery-staple-b",
-    ]);
-  });
-
-  it("does not trim or lower-case passwords", () => {
-    process.env.MEMBER_A_PASSWORD = "  Spaced Out Password  ";
-    process.env.MEMBER_B_PASSWORD = "AnotherOne";
-
-    expect(getMemberPasswords()).toEqual(["  Spaced Out Password  ", "AnotherOne"]);
-  });
-
-  it("throws when MEMBER_A_PASSWORD is missing", () => {
-    process.env.MEMBER_B_PASSWORD = "b-password";
-
-    expect(() => getMemberPasswords()).toThrow(
-      "Missing required environment variable: MEMBER_A_PASSWORD",
-    );
-  });
-
-  it("throws when MEMBER_B_PASSWORD is missing", () => {
-    process.env.MEMBER_A_PASSWORD = "a-password";
-
-    expect(() => getMemberPasswords()).toThrow(
-      "Missing required environment variable: MEMBER_B_PASSWORD",
-    );
   });
 });
 
