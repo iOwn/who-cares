@@ -18,8 +18,7 @@ export function requireEnv(name: string): string {
 /**
  * The two allowlisted parent emails, in slot order — `ALLOWED_MEMBER_A_EMAIL`
  * / `ALLOWED_MEMBER_B_EMAIL` (issue #110; previously one comma-separated
- * `ALLOWED_MEMBER_EMAILS`, split so each slot pairs 1:1 with its own
- * `MEMBER_*_PASSWORD` below). SPEC.md "Identity": deploy-time-configured, no
+ * `ALLOWED_MEMBER_EMAILS`). SPEC.md "Identity": deploy-time-configured, no
  * invite flow, no in-app setup screen. Every consumer goes through this
  * function, so the split is invisible to them.
  *
@@ -41,22 +40,6 @@ export function getAllowlistedEmails(): AllowlistedEmails {
   }
 
   return [a, b];
-}
-
-/**
- * The two members' credential-login passwords (issue #110), slot-aligned
- * with `getAllowlistedEmails()` — `MEMBER_A_PASSWORD` is Member A's password,
- * same slot as `ALLOWED_MEMBER_A_EMAIL`. The only consumer is
- * `scripts/seed-members.mjs`; nothing else needs a member's password
- * (sign-in itself is still magic-link, per ADR-0014, until the follow-on
- * switch to `emailAndPassword`).
- *
- * Not trimmed or lower-cased — unlike emails, a password is an opaque
- * secret, and silently mutating it would just make the env value diverge
- * from what the operator actually typed.
- */
-export function getMemberPasswords(): readonly [string, string] {
-  return [requireEnv("MEMBER_A_PASSWORD"), requireEnv("MEMBER_B_PASSWORD")];
 }
 
 /**

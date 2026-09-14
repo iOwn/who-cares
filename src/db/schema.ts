@@ -406,16 +406,6 @@ export const user = pgTable("users", {
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  // Below: the `admin` plugin's schema (issue #110, `better-auth/plugins/admin`
-  // `schema.mjs`), added only so `scripts/seed-members.mjs` can call
-  // `auth.api.createUser`. All four are optional/unused by this app — no role
-  // is ever assigned, nobody is banned — kept exactly as the plugin declares
-  // them (types, nullability, `banned`'s `false` default) so Better Auth's own
-  // schema validation (`checkSchema`) never flags a mismatch.
-  role: text("role"),
-  banned: boolean("banned").notNull().default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires", { withTimezone: true }),
 });
 
 export const session = pgTable("sessions", {
@@ -429,9 +419,6 @@ export const session = pgTable("sessions", {
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  // The `admin` plugin's one `session` field (issue #110) — see the comment
-  // on `user` above. Unused: nothing in this app impersonates a session.
-  impersonatedBy: text("impersonated_by"),
 });
 
 export const account = pgTable("accounts", {

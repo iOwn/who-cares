@@ -47,12 +47,9 @@ All-serverless, $0/mo:
   no idle timeout, signed-in-devices list with per-device revoke.
 - **Identity**: no invite flow. The two parents' emails are a **deploy-time-configured
   allowlist** (env var / config) — anyone signing in with an allowlisted email joins via
-  magic link. No in-app setup screen. Both parents' credential accounts are created
-  server-side by [`scripts/seed-members.mjs`](./scripts/seed-members.mjs) (`pnpm db:seed`)
-  from env vars, not by signing up. No self-service password reset either: account
-  recovery is the operator setting a new `MEMBER_A_PASSWORD`/`MEMBER_B_PASSWORD` value and
-  re-running that same seed script, which overwrites the stored credential to match —
-  see the script's header comment for the exact procedure.
+  magic link, which also bootstraps that member's `Member` record (and, on the first
+  sign-in overall, the `Household` + `Child`) automatically. No in-app setup screen, no
+  password, no self-service reset — account recovery is magic-link-only.
 - **Email**: **Resend** free tier (3,000/mo).
 - **Push**: standard `web-push` + one VAPID keypair + one service worker. Store each
   `PushSubscription` server-side, drop on 404/410. iOS delivery requires the PWA to be
