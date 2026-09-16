@@ -165,7 +165,9 @@ primary Button. Props: `children`.
 
 ### 21. Spinner
 
-Inline + block loading. Calendar month load, inbox load. Props: `size, label` (SR).
+Inline + block loading. Calendar month load, inbox load; also the pull-to-refresh indicator
+(`app/PullToRefresh.tsx`, ADR-0016 — a composition in app code, not a primitive). Props:
+`size, label` (SR).
 
 ### 22. EmptyState
 

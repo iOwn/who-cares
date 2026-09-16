@@ -1,4 +1,4 @@
-import { expect, test } from "playwright/test";
+import { expect, type Page, test } from "playwright/test";
 import { STORAGE_STATE } from "./global-setup";
 
 /**
@@ -109,14 +109,16 @@ test.describe("smoke", () => {
       pageB.getByRole("button", { name: new RegExp(`${escapeRegExp(targetDay)}.*pickup sorted`) }),
     ).toBeVisible({ timeout: 15_000 });
 
-    await page.reload();
-    if (!targetInThisMonth) {
-      await page.getByRole("button", { name: "Next month" }).click();
-    }
+    // Parent A's tab never reloads — it *resumes* (issue #129, ADR-0016): a
+    // window `focus` is one of the signals `RefreshOnResume` listens for, and the
+    // first resume after load is never throttled, so one event is enough for
+    // `router.refresh()` to pull in parent B's acceptance. Unlike a reload it
+    // keeps client state, so the calendar is still on the target's month.
+    await resumeApp(page);
     const resolvedCell = page.getByRole("button", {
       name: new RegExp(`${escapeRegExp(targetDay)}.*pickup sorted`),
     });
-    await expect(resolvedCell).toBeVisible();
+    await expect(resolvedCell).toBeVisible({ timeout: 15_000 });
 
     // The assignment row names parent B as the assignee.
     await resolvedCell.click();
@@ -130,4 +132,15 @@ test.describe("smoke", () => {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Simulate the app coming back to the foreground. Playwright can't flip
+ * `document.visibilityState` on a headless page, but a synthetic window `focus`
+ * reaches the same `useOnResume` listener.
+ */
+function resumeApp(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+  });
 }

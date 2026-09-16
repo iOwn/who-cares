@@ -3,6 +3,9 @@ import { Baloo_2, Nunito } from "next/font/google";
 import type { ReactNode } from "react";
 import "@/ui/tokens.css";
 import "@/ui/mixins.css";
+import "./globals.css";
+import { PullToRefresh } from "./PullToRefresh";
+import { RefreshOnResume } from "./RefreshOnResume";
 import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
 
 /**
@@ -54,7 +57,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${nunito.variable} ${baloo.variable}`}>
       <body>
-        {children}
+        {/* Both freshness behaviours (issue #129, ADR-0016) sit here so `/` and
+            `/settings` get them alike. */}
+        <PullToRefresh>{children}</PullToRefresh>
+        <RefreshOnResume />
         <ServiceWorkerRegistrar />
       </body>
     </html>

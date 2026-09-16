@@ -1,0 +1,12 @@
+/* Element-level rules for the whole app. Tokens live in src/ui/tokens.css and
+ * shared mixins in src/ui/mixins.css; this file only carries what has to sit on
+ * `html` / `body` themselves. */
+
+html,
+body {
+  /* Pull-to-refresh is ours (src/app/PullToRefresh.tsx, ADR-0016): with the
+   * native overscroll gesture left on, Chrome Android in browser mode would
+   * fire its own full reload on top of our refresh. `none` also stops the
+   * rubber-band glow behind the indicator. */
+  overscroll-behavior-y: none;
+}

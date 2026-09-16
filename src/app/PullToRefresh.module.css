@@ -1,0 +1,42 @@
+/* Pull-to-refresh indicator (issue #129). A fixed pill that drops in from under
+ * the top edge as the finger pulls; its `transform` / `opacity` are set inline
+ * from the gesture state, so the CSS only owns the resting look and the
+ * settle animation. Page content is never moved — see PullToRefresh.tsx. */
+
+.indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) - var(--space-32));
+  left: 50%;
+  z-index: calc(var(--z-sticky) + 1);
+  display: grid;
+  place-items: center;
+  width: var(--space-32);
+  height: var(--space-32);
+  border: var(--border) solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* While the finger is down the pill tracks it directly (no transition). Once
+ * released — refreshing, or snapping back to idle — it eases into place. */
+.indicator[data-phase="refreshing"],
+.indicator[data-phase="idle"] {
+  transition:
+    transform var(--dur-base) var(--ease-standard),
+    opacity var(--dur-base) var(--ease-exit);
+}
+
+/* Spinner only spins while the refresh is in flight; before that it is the
+ * static partial ring, rotated with the pull as a "how far" cue. */
+.indicator:not([data-phase="refreshing"]) .spinner :global(*) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator {
+    transition: none;
+  }
+}
