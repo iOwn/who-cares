@@ -44,6 +44,12 @@ export const PULL_THRESHOLD_PX = 72;
 /** Indicator travel never exceeds this, however far the finger goes. */
 export const PULL_MAX_PX = 120;
 /**
+ * Finger travel that counts as "not moving yet". Below it the pull stays live
+ * but the indicator does not move — and, crucially, the host does not start
+ * cancelling native gestures. A tap or a jittery press never arms anything.
+ */
+export const PULL_START_SLOP_PX = 8;
+/**
  * Finger travel → indicator travel. Half feels like the platform gestures it
  * replaces (iOS / Android both damp the pull) and makes an accidental brush
  * across the top of the calendar much less likely to arm.
@@ -51,14 +57,17 @@ export const PULL_MAX_PX = 120;
 const RESISTANCE = 0.5;
 
 /**
- * Track the finger. `deltaY` is total travel since `touchstart` (down is
- * positive). Arms / disarms live as the finger crosses the threshold; moving
- * back above the starting point abandons the pull altogether.
+ * Track the finger. `deltaY` / `deltaX` are total travel since `touchstart`
+ * (down / right positive). Arms / disarms live as the finger crosses the
+ * threshold; moving back above the starting point abandons the pull, and so
+ * does a drag that is mostly sideways before the indicator has moved — that is
+ * a swipe or the start of a pinch, and it must keep its native meaning.
  */
-export function pullMove(state: PullState, deltaY: number): PullState {
+export function pullMove(state: PullState, deltaY: number, deltaX = 0): PullState {
   if (state.phase !== "pulling" && state.phase !== "armed") return state;
   if (deltaY <= 0) return IDLE_PULL;
-  const distance = Math.min(deltaY * RESISTANCE, PULL_MAX_PX);
+  if (state.distance === 0 && Math.abs(deltaX) > deltaY) return IDLE_PULL;
+  const distance = Math.min(Math.max(deltaY - PULL_START_SLOP_PX, 0) * RESISTANCE, PULL_MAX_PX);
   return { phase: distance >= PULL_THRESHOLD_PX ? "armed" : "pulling", distance };
 }
 

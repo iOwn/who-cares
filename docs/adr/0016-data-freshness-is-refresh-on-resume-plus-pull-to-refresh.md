@@ -34,8 +34,13 @@ touch events on `document`. The wrapper never applies a `transform` to the page
 content: doing so would make the fixed inbox panel and the sticky headers
 transform-relative. Instead a fixed pill drops in from under the top edge and
 fades up with the pull, parks at the threshold with a spinning `Spinner` while
-the transition is pending, then settles. A touch that starts inside a nested
-scroller (the inbox, a dialog body) never begins a pull, and
+the transition is pending (and for at least 400 ms, so a warm round-trip does not
+read as a blink), then settles. A touch that starts inside a nested scroller
+or a fixed overlay (the inbox, a sheet, a dialog body) never begins a pull — a
+refresh under a scrim would run invisibly, so those surfaces have no gesture
+and a parent closes them to pull. A second finger, or a mostly sideways drag,
+hands the gesture straight back to the browser: pinch-zoom is a WCAG 1.4.4
+guarantee the layout documents, and
 `overscroll-behavior-y: none` on `html`/`body` keeps Chrome Android's native
 pull-to-reload from firing alongside ours in browser mode.
 
@@ -52,5 +57,7 @@ The smoke path (ADR-0008) now dispatches a `focus` event where it used to
 `page.reload()`, so it exercises the resume path on every preview deploy — a
 regression there fails CI. The gesture and throttle rules are unit-tested in the
 `node` project; the touch wiring and the indicator are not (ADR-0005, ADR-0009)
-and are checked by hand on a real device. Desktop mouse users get no gesture;
+— they are exercised with synthetic touch events in Chrome, and a real-device
+pass (iOS Safari standalone, Android Chrome) on the preview deploy is part of
+each change's verification. Desktop mouse users get no gesture;
 resume-refresh and the browser's reload button cover them.

@@ -23,11 +23,7 @@ export const RESUME_REFRESH_MIN_INTERVAL_MS = 15_000;
  * installed app (the very case of #129) is never throttled, and the E2E smoke
  * can rely on a single synthetic `focus` event.
  */
-export function shouldRefreshOnResume(
-  lastRefreshAt: number | null,
-  now: number,
-  minInterval: number = RESUME_REFRESH_MIN_INTERVAL_MS,
-): boolean {
+export function shouldRefreshOnResume(lastRefreshAt: number | null, now: number): boolean {
   if (lastRefreshAt === null) return true;
-  return now - lastRefreshAt >= minInterval;
+  return now - lastRefreshAt >= RESUME_REFRESH_MIN_INTERVAL_MS;
 }

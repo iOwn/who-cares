@@ -44,10 +44,10 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
   // The machine state and the finger's start Y, read synchronously inside the
   // native listeners (React state would be a render behind).
   const pullRef = useRef<PullState>(IDLE_PULL);
-  const startYRef = useRef<number | null>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
   const refreshStartedAtRef = useRef(0);
 
-  const update = useCallback((next: PullState) => {
+  const commitPull = useCallback((next: PullState) => {
     if (next === pullRef.current) return;
     pullRef.current = next;
     setPull(next);
@@ -59,29 +59,37 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       if (!touch || event.touches.length > 1) return;
       const next = pullStart(pullRef.current, {
         scrollTop: document.scrollingElement?.scrollTop ?? 0,
-        inNestedScroller: isInNestedScroller(event.target),
+        inNestedScroller: isInOverlayOrScroller(event.target),
       });
-      if (next !== pullRef.current) startYRef.current = touch.clientY;
-      update(next);
+      if (next !== pullRef.current) startRef.current = { x: touch.clientX, y: touch.clientY };
+      commitPull(next);
     };
 
     const onTouchMove = (event: TouchEvent) => {
-      const startY = startYRef.current;
+      const start = startRef.current;
       const touch = event.touches[0];
-      if (startY === null || !touch) return;
+      if (!start || !touch) return;
       const phase = pullRef.current.phase;
       if (phase !== "pulling" && phase !== "armed") return;
-      const next = pullMove(pullRef.current, touch.clientY - startY);
-      // Once a pull is live, keep iOS from rubber-banding the page underneath
-      // the indicator. Requires the listener to be non-passive (see below).
-      if (next.phase !== "idle" && event.cancelable) event.preventDefault();
-      update(next);
+      // A second finger means a pinch, never a pull. Hand the gesture back to
+      // the browser untouched — pinch-zoom is a WCAG 1.4.4 guarantee (layout.tsx).
+      if (event.touches.length > 1) {
+        startRef.current = null;
+        commitPull(IDLE_PULL);
+        return;
+      }
+      const next = pullMove(pullRef.current, touch.clientY - start.y, touch.clientX - start.x);
+      // Once the indicator is actually moving, keep iOS from rubber-banding the
+      // page underneath it. Requires the non-passive listener registered below.
+      // Before that (inside the start slop) the browser keeps the event.
+      if (next.distance > 0 && event.cancelable) event.preventDefault();
+      commitPull(next);
     };
 
     const onTouchEnd = () => {
-      startYRef.current = null;
+      startRef.current = null;
       const next = pullEnd(pullRef.current);
-      update(next);
+      commitPull(next);
       if (next.phase === "refreshing") {
         refreshStartedAtRef.current = Date.now();
         announce("Refreshing…");
@@ -99,17 +107,20 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
       document.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [router, update]);
+  }, [router, commitPull]);
 
   // The refresh transition has landed: settle the indicator and say so — but
   // not before it has been visible long enough to register. A warm route can
   // round-trip in well under 100 ms, and a spinner that blinks reads as "did
   // anything happen?".
+  // Keyed on `pull.phase` as well as `isPending` so that, should a refresh ever
+  // complete without the transition flagging pending, the indicator still
+  // settles instead of parking in `refreshing` and blocking the next pull.
   useEffect(() => {
-    if (isPending || pullRef.current.phase !== "refreshing") return;
+    if (isPending || pull.phase !== "refreshing") return;
     const remaining = REFRESH_MIN_VISIBLE_MS - (Date.now() - refreshStartedAtRef.current);
     const settle = () => {
-      update(pullSettle(pullRef.current));
+      commitPull(pullSettle(pullRef.current));
       announce("Up to date");
     };
     if (remaining <= 0) {
@@ -118,7 +129,7 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
     }
     const timer = setTimeout(settle, remaining);
     return () => clearTimeout(timer);
-  }, [isPending, update]);
+  }, [isPending, pull.phase, commitPull]);
 
   const progress = Math.min(pull.distance / PULL_THRESHOLD_PX, 1);
   const visible = pull.phase !== "idle";
@@ -137,9 +148,9 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
         <Spinner
           size="sm"
           label=""
-          className={styles.spinner}
-          // Before release the static ring turns with the pull — a "how far to
-          // go" cue; once refreshing, the CSS rotation takes over.
+          // Before release the frozen ring turns with the pull — a "how far to
+          // go" cue; once refreshing, the spinner's own rotation takes over.
+          isSpinning={pull.phase === "refreshing"}
           style={pull.phase === "refreshing" ? undefined : { rotate: `${progress * 270}deg` }}
         />
       </div>
@@ -149,14 +160,19 @@ export function PullToRefresh({ children }: { children: ReactNode }) {
 }
 
 /**
- * Does the touch start inside an element that scrolls on its own (the inbox
- * panel, a dialog body)? Its scroll must stay its own — never a page refresh.
+ * Does the touch start inside something that is not the page itself — an
+ * element that scrolls on its own (a dialog body) or a fixed overlay (the inbox
+ * panel, a sheet, its scrim)? A drag there must stay what it is: scrolling that
+ * element, or nothing. A refresh under a scrim would run invisibly, and the
+ * inbox / a sheet keep their own state, so they get no gesture of their own —
+ * a parent closes them to pull, and resume-refresh covers the rest.
  */
-function isInNestedScroller(target: EventTarget | null): boolean {
+function isInOverlayOrScroller(target: EventTarget | null): boolean {
   let node = target instanceof Element ? target : null;
   while (node && node !== document.body) {
-    const overflowY = getComputedStyle(node).overflowY;
-    if (overflowY === "auto" || overflowY === "scroll") return true;
+    const style = getComputedStyle(node);
+    if (style.overflowY === "auto" || style.overflowY === "scroll") return true;
+    if (style.position === "fixed") return true;
     node = node.parentElement;
   }
   return false;

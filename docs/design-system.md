@@ -249,7 +249,8 @@ Confirmed + mechanically pinned in
    starts with `'use client'`. `src/ui/index.ts` is a **plain re-export barrel with no
    `'use client'` of its own** — the directive rides on each component file. Server Components
    that hit a boundary complaint deep-import `@/ui/<Component>`. `tokens.css` imported once in
-   the root layout.
+   the root layout, followed by `mixins.css` and `src/app/globals.css` — the latter carries only
+   what has to sit on `html` / `body` themselves (currently `overscroll-behavior-y`, ADR-0016).
 8. **Prop-naming lexicon** (keeps 22 primitives consistent):
 
    | prop | meaning | values |

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   IDLE_PULL,
   PULL_MAX_PX,
+  PULL_START_SLOP_PX,
   PULL_THRESHOLD_PX,
   type PullState,
   pullEnd,
@@ -34,12 +35,15 @@ describe("pullStart", () => {
 describe("pullMove", () => {
   const pulling = pullStart(IDLE_PULL, atTop);
 
+  // Finger travel past the start slop.
+  const finger = (px: number) => PULL_START_SLOP_PX + px;
+
   it("moves the indicator with resistance — half the finger travel", () => {
-    expect(pullMove(pulling, 60)).toEqual<PullState>({ phase: "pulling", distance: 30 });
+    expect(pullMove(pulling, finger(60))).toEqual<PullState>({ phase: "pulling", distance: 30 });
   });
 
   it("arms once the finger has travelled twice the threshold", () => {
-    expect(pullMove(pulling, PULL_THRESHOLD_PX * 2)).toEqual<PullState>({
+    expect(pullMove(pulling, finger(PULL_THRESHOLD_PX * 2))).toEqual<PullState>({
       phase: "armed",
       distance: PULL_THRESHOLD_PX,
     });
@@ -50,8 +54,8 @@ describe("pullMove", () => {
   });
 
   it("disarms when the finger comes back up short of the threshold", () => {
-    const armed = pullMove(pulling, PULL_THRESHOLD_PX * 2);
-    expect(pullMove(armed, 20)).toEqual<PullState>({ phase: "pulling", distance: 10 });
+    const armed = pullMove(pulling, finger(PULL_THRESHOLD_PX * 2));
+    expect(pullMove(armed, finger(20))).toEqual<PullState>({ phase: "pulling", distance: 10 });
   });
 
   it("drops back to idle when the finger moves above where it started", () => {
@@ -92,5 +96,29 @@ describe("pullSettle", () => {
   it("is a no-op in any other phase", () => {
     const pulling = pullStart(IDLE_PULL, atTop);
     expect(pullSettle(pulling)).toBe(pulling);
+  });
+});
+
+describe("pullMove — direction and slop", () => {
+  const pulling = pullStart(IDLE_PULL, atTop);
+
+  it("ignores finger jitter below the start slop so a tap never arms a pull", () => {
+    expect(pullMove(pulling, PULL_START_SLOP_PX - 1)).toEqual<PullState>({
+      phase: "pulling",
+      distance: 0,
+    });
+  });
+
+  it("measures travel from the end of the slop, not from the first touch", () => {
+    expect(pullMove(pulling, PULL_START_SLOP_PX + 60).distance).toBe(30);
+  });
+
+  it("abandons a mostly-horizontal drag (a swipe, a pinch) before it has moved the indicator", () => {
+    expect(pullMove(pulling, 10, 40)).toBe(IDLE_PULL);
+  });
+
+  it("keeps a vertical pull that drifts sideways once it is under way", () => {
+    const underWay = pullMove(pulling, PULL_START_SLOP_PX + 40);
+    expect(pullMove(underWay, PULL_START_SLOP_PX + 60, 100).distance).toBe(30);
   });
 });
