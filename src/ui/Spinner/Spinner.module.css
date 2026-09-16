@@ -19,6 +19,11 @@
   animation: spinner-rotate var(--dur-slow) linear infinite;
 }
 
+/* `isSpinning={false}` — the same static partial ring reduced-motion leaves. */
+.paused {
+  animation: none;
+}
+
 /* --- size (box + stroke) --- */
 .sizeSm {
   width: 1rem;

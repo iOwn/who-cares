@@ -32,15 +32,21 @@ export interface SpinnerProps
     VariantProps<typeof ring> {
   /** Visually-hidden label announced to assistive tech. Default "Loading"; `""` silences it. */
   label?: string;
+  /**
+   * Whether the ring rotates. `false` freezes it as the static partial ring —
+   * for a host that shows the spinner before the work has actually started
+   * (the pull-to-refresh indicator during the pull). Default `true`.
+   */
+  isSpinning?: boolean;
 }
 
 export const Spinner = forwardRef<HTMLSpanElement, SpinnerProps>(function Spinner(
-  { size, label = "Loading", className, style, ...props },
+  { size, label = "Loading", isSpinning = true, className, style, ...props },
   ref,
 ) {
   return (
     <span {...props} ref={ref} className={cx(styles.base, className)} style={style} role="status">
-      <span className={ring({ size })} aria-hidden />
+      <span className={cx(ring({ size }), !isSpinning && styles.paused)} aria-hidden />
       {label ? <span className={styles.srOnly}>{label}</span> : null}
     </span>
   );

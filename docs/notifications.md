@@ -129,3 +129,7 @@ registered subscription. That client half:
 
 Not wired yet: a deep-linking push. `sw.js` reads `data.url`, but the server
 payload (`webPushSender`) sends none, so a tapped notification opens `/`.
+
+Related but not push: the installed app also refreshes its data on resume and
+on pull-to-refresh (`RefreshOnResume`, `PullToRefresh`, ADR-0016) — the
+Home-Screen install hides the browser's reload control, so these stand in for it.

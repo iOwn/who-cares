@@ -34,3 +34,11 @@ export const Block: Story = () => (
     <Spinner size="lg" label="Loading requests" />
   </div>
 );
+
+/** Frozen — a host that shows the ring before the work starts (pull-to-refresh mid-pull). */
+export const Paused: Story = () => (
+  <Row>
+    <Spinner size="sm" isSpinning={false} label="" />
+    <Spinner size="md" isSpinning={false} label="" />
+  </Row>
+);
