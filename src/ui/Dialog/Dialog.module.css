@@ -109,8 +109,16 @@
 }
 
 .headerBar {
+  /* 2.125rem: the width of an `IconButton size="sm"` (IconButton.module.css) —
+     reserved on BOTH sides so a single close button on one side still leaves the
+     title optically centred. The title track is the flexible one so it shrinks
+     (and wraps) instead of pushing the trailing slot out of the row (#137). */
+  --dialog-header-slot: 2.125rem;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns:
+    minmax(var(--dialog-header-slot), auto)
+    minmax(0, 1fr)
+    minmax(var(--dialog-header-slot), auto);
   align-items: center;
   gap: var(--space-8);
 }
@@ -122,6 +130,9 @@
   font-weight: var(--font-weight-extrabold);
   line-height: var(--leading-snug);
   text-align: center;
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 .headerSlot {

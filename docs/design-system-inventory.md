@@ -100,6 +100,13 @@ grabber handle only for `sheet`. States: open/closed, focus trap, Escape, scrim
 (`--color-scrim`), focus restore. **The Inbox side-panel is NOT a Dialog** — it's feature
 layout (fullscreen route on mobile, panel region on desktop).
 
+`Dialog.Header`'s slot contract (#137): the leading/trailing slots each reserve a
+minimum equal to a small icon button (`IconButton size="sm"`'s width), on both sides
+regardless of which slot is actually filled, so a single button keeps the title
+optically centred. The title track is the flexible one — it shrinks and **wraps**
+rather than push a slot out of the row; it is never truncated (it doubles as the
+dialog's accessible name).
+
 ### 10. SegmentedControl
 
 2–n exclusive segments. Main/List (Grid/List), ImOut/Recurring (One-off/Recurring). Track

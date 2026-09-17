@@ -1,6 +1,8 @@
 import type { Story, StoryDefault } from "@ladle/react";
+import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../Button";
+import { IconButton } from "../IconButton";
 import { Dialog, DialogTrigger } from "./Dialog";
 
 export default {
@@ -51,6 +53,28 @@ export const Sheet: Story = () => (
             }
           />
           <p>A bottom sheet with a grabber handle and rounded top corners.</p>
+        </>
+      )}
+    </Dialog>
+  </DialogTrigger>
+);
+
+/** Regression for #137: a long title must wrap, not collide with the close button. */
+export const SheetLongTitle: Story = () => (
+  <DialogTrigger>
+    <Button variant="secondary">Open day detail (long title)</Button>
+    <Dialog presentation="sheet">
+      {({ close }) => (
+        <>
+          <Dialog.Header
+            title="Wednesday, September 24, 2025"
+            trailing={
+              <IconButton variant="ghost" size="sm" aria-label="Close" onPress={close}>
+                <X size={18} aria-hidden />
+              </IconButton>
+            }
+          />
+          <p>The title wraps to a second line instead of overflowing into the close button.</p>
         </>
       )}
     </Dialog>
