@@ -4,9 +4,21 @@
  * `dispatchAll` *after* its DB transaction has committed, so a send failure
  * must never propagate — it would surface to the user as a failed op they
  * might retry into a double-write. This pins that.
+ *
+ * It is also where outbound delivery is gated off on a deployment running the
+ * E2E test seam (issue #139) — pinned at the bottom. `nodemailer` is mocked
+ * (as in `gmailMailer.test.ts`) so a regression there fails the assertion
+ * instead of opening a real SMTP connection from the test run.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { createTransport, sendMail } = vi.hoisted(() => {
+  const sendMail = vi.fn(async () => undefined);
+  return { sendMail, createTransport: vi.fn(() => ({ sendMail })) };
+});
+vi.mock("nodemailer", () => ({ createTransport }));
+
 import {
   CHILDCARE_PATTERN_CHANGED_EVENT,
   type Mailer,
@@ -77,9 +89,15 @@ function repos(queue: PendingNotification[] = []) {
 }
 
 beforeEach(() => {
+  createTransport.mockClear();
+  sendMail.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "info").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("createNotificationServices — post-commit resilience", () => {
@@ -119,5 +137,55 @@ describe("createNotificationServices — post-commit resilience", () => {
     ];
     const services = createNotificationServices(repos(queue), { mailer: throwingMailer });
     await expect(services.flush()).resolves.toBe(0);
+  });
+});
+
+describe("createNotificationServices — outbound delivery on a test-seam deploy", () => {
+  const notification = {
+    recipientId: MEMBER_1_ID,
+    event: PICKUP_REQUEST_ACCEPTED_EVENT,
+    title: "t",
+    body: "b",
+  } as const;
+
+  /** What the Vercel preview deploy actually looks like: real creds, seam armed. */
+  function stubPreviewEnv(testMode: string | null) {
+    vi.stubEnv("GMAIL_USER", "who.cares@gmail.com");
+    vi.stubEnv("GMAIL_APP_PASSWORD", "abcd efgh ijkl mnop");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    if (testMode === null) vi.stubEnv("E2E_TEST_MODE", undefined);
+    else vi.stubEnv("E2E_TEST_MODE", testMode);
+  }
+
+  it("builds no Gmail transport at all when E2E_TEST_MODE is on", async () => {
+    stubPreviewEnv("1");
+
+    await createNotificationServices(repos()).dispatchAll([notification]);
+
+    // The seeded smoke household carries the two allowlisted addresses, so a
+    // send here lands real mail in a real inbox (issue #139).
+    expect(createTransport).not.toHaveBeenCalled();
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it("still sends when the seam is off and credentials are present", async () => {
+    stubPreviewEnv(null);
+
+    await createNotificationServices(repos()).dispatchAll([notification]);
+
+    expect(createTransport).toHaveBeenCalledWith({
+      service: "gmail",
+      auth: { user: "who.cares@gmail.com", pass: "abcdefghijklmnop" },
+    });
+    expect(sendMail).toHaveBeenCalled();
+  });
+
+  it("an explicit mailer override still wins over the gate (unit tests keep working)", async () => {
+    stubPreviewEnv("1");
+    const send = vi.fn(async () => undefined);
+
+    await createNotificationServices(repos(), { mailer: { send } }).dispatchAll([notification]);
+
+    expect(send).toHaveBeenCalled();
   });
 });

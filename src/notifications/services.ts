@@ -4,7 +4,9 @@
  *
  * Every adapter degrades to a no-op when its credentials are absent, so a
  * caller always gets a working `notifier` / `flush` / `dispatchAll` — it just
- * sends nothing in an unconfigured environment (dev, CI, `next build`).
+ * sends nothing in an unconfigured environment (dev, CI, `next build`). A
+ * deployment with the E2E test seam armed degrades the same way even when the
+ * credentials *are* present (issue #139) — see the gate in the factory below.
  *
  * Deep-imports `@/db/repositories`, never the `@/db` barrel — see the comment
  * in `src/auth/config.ts` for why the barrel must stay out of the Next graph.
@@ -19,6 +21,7 @@ import {
   noopAdapters,
   type PushSender,
 } from "@/domain";
+import { isTestModeEnabled } from "@/testing/testMode";
 import { type DispatchDeps, dispatchAll as dispatchAllNotifications } from "./dispatch";
 import { getGmailConfig, getVapidConfig } from "./env";
 import { createGmailMailer } from "./gmailMailer";
@@ -54,17 +57,33 @@ export function createNotificationServices(
   repos: NotificationRepos,
   overrides: NotificationServiceOverrides = {},
 ): NotificationServices {
+  // A deployment with the E2E test seam armed is a test rig: `/api/test/seed`
+  // truncates the database and re-inserts the fixed smoke household, and the
+  // Playwright run then drives real absences and claims through it. Its
+  // members carry the two allowlisted addresses, so with credentials present
+  // every one of those steps would post a real "Bailey will cover the pickup"
+  // mail into a real inbox (issue #139). Fall back to the no-op adapters
+  // before the env ones so nothing leaves the deployment at all — redirecting
+  // the mail elsewhere would still relay it and bounce.
+  //
+  // Magic-link auth mail is deliberately NOT gated here: it goes out through
+  // `src/auth/config.ts`, only ever in response to a human typing their own
+  // address, so a preview deploy stays signable-in by hand.
+  const suppressDelivery = isTestModeEnabled();
+  const noopMailer = () => noopAdapters.noopMailer((m, p) => console.info(m, p));
+  const noopPushSender = () => noopAdapters.noopPushSender((m, p) => console.info(m, p));
+
   const mailer =
     overrides.mailer ??
-    createGmailMailer(getGmailConfig()) ??
-    noopAdapters.noopMailer((m, p) => console.info(m, p));
+    (suppressDelivery ? noopMailer() : (createGmailMailer(getGmailConfig()) ?? noopMailer()));
   const pushSender =
     overrides.pushSender ??
-    createWebPushSender({
-      vapid: getVapidConfig(),
-      pushSubscriptions: repos.pushSubscriptions,
-    }) ??
-    noopAdapters.noopPushSender((m, p) => console.info(m, p));
+    (suppressDelivery
+      ? noopPushSender()
+      : (createWebPushSender({
+          vapid: getVapidConfig(),
+          pushSubscriptions: repos.pushSubscriptions,
+        }) ?? noopPushSender()));
 
   const dispatchDeps: DispatchDeps = {
     mailer,

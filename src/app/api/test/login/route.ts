@@ -20,7 +20,7 @@ import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { getAllowlistedEmails } from "@/auth/env";
 import { e2eMemberEmail } from "@/testing/e2eHousehold";
-import { assertTestModeEnabled, TestModeDisabledError } from "../testMode";
+import { assertTestModeEnabled, TestModeDisabledError } from "@/testing/testMode";
 
 export const dynamic = "force-dynamic";
 

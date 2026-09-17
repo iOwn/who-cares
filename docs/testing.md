@@ -203,12 +203,15 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
 - **One happy path**, Chromium only: magic-link sign-in → parent A declares an absence over a
   near childcare day → pickup request raised → parent B accepts → day renders **Resolved**.
 - **Asserts app state only** (day state + assignment / request rows), never notification
-  dispatch.
+  dispatch — and as of issue #139 there is no dispatch to assert: a deploy with the seam armed
+  gets the no-op mailer + push sender, so the smoke run cannot post real "Bailey will cover the
+  pickup" mail to the `ALLOWED_MEMBER_*_EMAIL` inboxes. See
+  [`notifications.md`](./notifications.md#preview-deploys-send-nothing-issue-139).
 - **Target**: the Vercel **preview deployment** for the PR — real runtime, real Neon branch,
   real Gmail SMTP (ADR-0015 — auth's `sendMagicLink` is fatal at module load without it, so the
   preview deploy won't boot without real `GMAIL_USER`/`GMAIL_APP_PASSWORD` regardless of whether
   this path exercises a send).
-- **Test seam** (`src/app/api/test/`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
+- **Test seam** (`src/app/api/test/`, gate in `src/testing/testMode.ts`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
   `buildE2eHouseholdGraph(getAllowlistedEmails())` — idempotent, truncate-then-insert each call)
   and `POST /api/test/login` `{ member: "a" | "b" }` (plants a magic-link verification token then
   runs `auth.api.magicLinkVerify`, relaying its `Set-Cookie` to the caller). Both call
@@ -404,7 +407,7 @@ None of this is committed in the planning effort. When the build starts:
   projects, declared under `test.projects`. See also `docs/design-system.md` for what
   `src/ui/` adds.
 - `src/testing/factories.ts`, `src/testing/seed.ts` — the shared fixture module.
-- `src/app/api/test/{seed,login}/route.ts` + `src/app/api/test/testMode.ts` — `E2E_TEST_MODE`-gated
+- `src/app/api/test/{seed,login}/route.ts` + `src/testing/testMode.ts` — `E2E_TEST_MODE`-gated
   seam.
 - `e2e/` — one Playwright spec + `playwright.config.ts` + global setup.
 - `biome.json` — lint + format + import-sort config.
