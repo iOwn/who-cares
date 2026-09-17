@@ -250,7 +250,8 @@ Confirmed + mechanically pinned in
    `'use client'` of its own** — the directive rides on each component file. Server Components
    that hit a boundary complaint deep-import `@/ui/<Component>`. `tokens.css` imported once in
    the root layout, followed by `mixins.css` and `src/app/globals.css` — the latter carries only
-   what has to sit on `html` / `body` themselves (currently `overscroll-behavior-y`, ADR-0016).
+   what has to sit on `html` / `body` themselves (`overscroll-behavior-y`, ADR-0016) plus the
+   universal `box-sizing: border-box` reset (see item 12).
 8. **Prop-naming lexicon** (keeps 22 primitives consistent):
 
    | prop | meaning | values |
@@ -275,6 +276,9 @@ Confirmed + mechanically pinned in
 11. **Forms boundary** — the library ships **styled field primitives** on RAC (`TextField`,
     `DateField`, `DateRangeField`, …). Validation logic + form-state management belong to each
     feature. No form-state / validation library.
+12. **Box-sizing** — `src/app/globals.css` (mirrored in `.ladle/workbench.css`) applies a
+    universal `* { box-sizing: border-box; }` reset. Primitives may write `width: 100%`
+    alongside padding and a border without repeating `box-sizing` locally (issue #136).
 
 ### Worked examples the build doc should include
 

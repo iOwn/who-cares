@@ -26,3 +26,13 @@
   --font-nunito: "Nunito", system-ui, sans-serif;
   --font-baloo: "Baloo 2", system-ui, sans-serif;
 }
+
+/* Mirrors the box-sizing reset in src/app/globals.css (issue #136) — that
+ * file is the source of truth. Without it here too, primitives that overflow
+ * their container under content-box would render fine in the catalogue and
+ * only break in the real app, which is exactly why stories never caught it. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
