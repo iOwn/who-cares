@@ -26,7 +26,7 @@ import { db } from "@/auth/config";
 import { getAllowlistedEmails } from "@/auth/env";
 import { schema } from "@/db/client";
 import { buildE2eHouseholdGraph, e2eSeedRows } from "@/testing/e2eHousehold";
-import { assertTestModeEnabled, TestModeDisabledError } from "../testMode";
+import { assertTestModeEnabled, TestModeDisabledError } from "@/testing/testMode";
 
 export const dynamic = "force-dynamic";
 

@@ -104,6 +104,27 @@ dropped and logged, not retried.
 
 With none of these set the app still runs — it just sends nothing.
 
+### Preview deploys send nothing (issue #139)
+
+A deployment with the E2E test seam armed — `E2E_TEST_MODE` set and
+`VERCEL_ENV !== "production"`, i.e. `isTestModeEnabled()` in
+`src/testing/testMode.ts` — gets the **no-op** mailer and push sender from
+`createNotificationServices()`, even though the Preview scope carries real
+`GMAIL_*` credentials.
+
+Without that gate, every preview deploy runs `e2e/smoke.spec.ts`, which seeds
+the fixed household (whose members hold the two `ALLOWED_MEMBER_*_EMAIL`
+addresses) and then drives a real absence → pickup request → claim. Each step
+posts a genuine "Bailey will cover the pickup" mail to a real inbox. Pointing
+the preview allowlist at throwaway addresses instead would still *relay* the
+mail and bounce it back into the Gmail account, so the gate sits at the
+adapter, not at the recipient.
+
+**Magic-link auth mail is deliberately not gated** — it goes out through
+`src/auth/config.ts`, only ever in response to a human typing their own
+address, so a preview deploy stays signable-in by hand. The `overrides`
+argument also still wins, so unit tests are unaffected.
+
 ## Web push delivery (issue #90, ADR-0013)
 
 The server pipeline above is channel-agnostic; delivery to a browser needs a

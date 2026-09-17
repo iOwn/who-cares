@@ -13,6 +13,14 @@
  * a var meant for Preview that also lands in Production would otherwise arm a
  * database wipe on the live deploy.
  *
+ * It is also the **outbound-delivery** gate: `createNotificationServices`
+ * (`src/notifications/services.ts`) falls back to the no-op mailer + push
+ * sender whenever this is on, so the E2E smoke run against a preview deploy
+ * cannot post a real "Bailey will cover the pickup" mail into a real inbox
+ * (issue #139). That second caller is why the predicate lives here rather
+ * than beside the two routes it started next to — `src/notifications/` has no
+ * business importing from an app route folder.
+ *
  * Pure and env-only, so it is unit-tested in the `node` project
  * (`testMode.test.ts`) without spinning up a route.
  */
