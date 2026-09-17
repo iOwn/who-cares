@@ -1,6 +1,17 @@
 /* Element-level rules for the whole app. Tokens live in src/ui/tokens.css and
  * shared mixins in src/ui/mixins.css; this file only carries what has to sit on
- * `html` / `body` themselves. */
+ * `html` / `body` themselves — the one deliberate exception is the box-sizing
+ * reset below, which has to be universal to do its job. Next ships no reset
+ * and ADR-0010 rules out Tailwind (so no preflight either), and every
+ * primitive is authored as `width: 100%` plus padding plus a border; under the
+ * default `content-box` each one overflows its container by exactly that
+ * padding + border (issue #136). */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 html,
 body {
