@@ -48,18 +48,26 @@ export async function dispatchNotification(
     body: notification.body,
   });
 
+  // The app-icon badge count (issue #134, ADR-0017) rides along with every push,
+  // not just the request events, which is what makes it self-correcting: a
+  // withdrawal push carries the lower count that withdrawal produced.
+  //
+  // Read here, at dispatch time, rather than when the notification was built —
+  // a coalesced one may have sat in `pending_notifications` for five minutes
+  // (ADR-0012), and the icon should show the count as of the send.
+  //
+  // Guarded separately from the send below: the badge is a nicety and the
+  // notification is the point, so a failed count costs the icon a number, never
+  // the parent their notification. `badge` then goes out `undefined`, the
+  // payload omits the key, and `sw.js` leaves whatever is on the icon alone.
+  let badge: number | undefined;
   try {
-    // The app-icon badge count (issue #134, ADR-0017) rides along with every
-    // push, not just the request events, which is what makes it self-correcting:
-    // a withdrawal push carries the lower count that withdrawal produced.
-    //
-    // Read here, at dispatch time, rather than when the notification was built —
-    // a coalesced one may have sat in `pending_notifications` for five minutes
-    // (ADR-0012), and the icon should show the count as of the send.
-    //
-    // Inside this `try` on purpose: a failed count degrades exactly like a
-    // failed push — logged and swallowed — and the email still went out above.
-    const badge = await deps.pickupRequests.countOpenForRecipient(notification.recipientId);
+    badge = await deps.pickupRequests.countOpenForRecipient(notification.recipientId);
+  } catch (error) {
+    console.warn(`badge count for ${notification.event} failed`, error);
+  }
+
+  try {
     await deps.pushSender.send({
       memberId: notification.recipientId,
       title: notification.title,

@@ -338,9 +338,10 @@ describe("dispatch — the app-icon badge count (issue #134)", () => {
     expect(f.pushes[0].badge).toBe(2);
   });
 
-  it("still sends the email when the count can't be read", async () => {
-    // Email is the guaranteed channel; a failed count must degrade exactly like
-    // a failed push — logged and swallowed.
+  it("still sends both channels when the count can't be read, minus the badge", async () => {
+    // The badge is a nicety; the notification is the point. A failed count costs
+    // the icon its number, never the parent their notification — and the absent
+    // `badge` makes `sw.js` leave whatever is on the icon alone.
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const f = createFakes(NOW);
     f.pickupRequests.countOpenForRecipient = async () => {
@@ -350,6 +351,7 @@ describe("dispatch — the app-icon badge count (issue #134)", () => {
     await expect(createNotifier(f).notify(notification())).resolves.toBeUndefined();
 
     expect(f.emails).toHaveLength(1);
-    expect(f.pushes).toEqual([]);
+    expect(f.pushes).toHaveLength(1);
+    expect(f.pushes[0].badge).toBeUndefined();
   });
 });

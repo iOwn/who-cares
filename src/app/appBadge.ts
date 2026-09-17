@@ -7,9 +7,13 @@
  * `refreshPolicy.ts` / `RefreshOnResume.tsx` and
  * `installEligibility.ts` / `InstallPrompt.tsx`.
  *
- * `public/sw.js` applies the same rule to the `badge` field of a push payload.
- * It is a static file outside the bundle and cannot import this one, so those
- * few lines are duplicated there on purpose — keep the two in step.
+ * `public/sw.js` has its own `applyAppBadge` for the `badge` field of a push
+ * payload — it is a static file outside the bundle and cannot import this one.
+ * What must stay in step is the shared half: clear at zero, floor to an integer.
+ * The two deliberately differ on junk input, because their inputs differ. Here
+ * the count always exists, so anything unusable clears the icon. There the key
+ * may be absent entirely, which means "the server sent no count" and must leave
+ * the icon exactly as it was rather than wiping a good badge.
  */
 
 /** Set the icon badge to `count`, or take it off the icon entirely. */

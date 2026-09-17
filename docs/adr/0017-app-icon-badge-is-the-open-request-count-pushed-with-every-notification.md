@@ -30,9 +30,12 @@ without anyone opening the app.
 **The count is read at dispatch time, not when the notification is built.** A
 coalescable event can sit in `pending_notifications` for five minutes
 (ADR-0012); the icon should show what is true when the push actually goes out.
-Reading it inside the existing push `try` also means a failed count degrades
-exactly like a failed push — logged and swallowed, email still sent, since email
-is the guaranteed channel (SPEC.md).
+The read has its own guard, separate from the send: the badge is a nicety and
+the notification is the point, so a failed count costs the icon a number and
+nothing else. `badge` then goes out `undefined`, `webPushSender` omits the key,
+and `sw.js` leaves whatever is on the icon alone rather than wiping a good badge
+over one bad payload. Email is unaffected throughout — it is the guaranteed
+channel (SPEC.md) and is already sent before any of this.
 
 **The app re-asserts the count whenever it is open.** `useAppBadge`, called from
 `AppShell`, applies the count on change and again on resume through the shared
@@ -55,7 +58,11 @@ against `pickup_requests` for a household of two; no index was added. The rule
 that turns a count into a badge exists twice — `badgeUpdateFor` in
 `src/app/appBadge.ts` and `applyAppBadge` in `public/sw.js` — because the worker
 is a static file outside the bundle and cannot import from `src/`; both are
-commented to point at each other and must be kept in step. Android Chrome does
+commented to point at each other, and their shared half (clear at zero, floor to
+an integer) must be kept in step. They differ on junk input by design, because
+their inputs differ: the client always has a count, so anything unusable clears;
+the worker may get no `badge` key at all, which means no count was sent and the
+icon must be left as it is. Android Chrome does
 not implement the Badging API and iOS 16.4+ rejects it until notification
 permission is granted; both are a silent no-op, with no messaging in `/settings`,
 because the in-app bell already covers those parents. The pure decision is

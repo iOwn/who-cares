@@ -58,11 +58,12 @@ self.addEventListener("push", (event) => {
 /**
  * Mirror the payload's unresolved count onto the app icon (issue #134).
  *
- * Duplicates `badgeUpdateFor` in `src/app/appBadge.ts` — this file is static,
- * outside the bundle, and cannot import it — so keep the two rules in step. An
- * absent `badge` leaves the icon alone rather than clearing it: the server
- * omits the key when it could not read the count, and a badge nobody can
- * explain is worse than a slightly stale one.
+ * Shares its clear-at-zero / floor-to-integer half with `badgeUpdateFor` in
+ * `src/app/appBadge.ts` — this file is static, outside the bundle, and cannot
+ * import it — so keep that half in step. The junk-input half is deliberately
+ * different: an absent or non-numeric `badge` means the server sent no count
+ * (it omits the key when the read failed), so leave the icon exactly as it was.
+ * Wiping a good badge because one payload lacked a number would be worse.
  *
  * Best-effort: Android Chrome has no Badging API, and iOS rejects without
  * notification permission. Both are a silent no-op.

@@ -155,8 +155,10 @@ tally. Two halves keep it right:
 
 The count → badge rule lives twice: `badgeUpdateFor` (`src/app/appBadge.ts`) and
 `applyAppBadge` (`public/sw.js`), because the worker is a static file and cannot
-import from `src/`. Keep them in step. Android Chrome has no Badging API and iOS
-rejects it without notification permission — both a silent no-op.
+import from `src/`. Keep the shared half — clear at zero, floor to an integer —
+in step; they differ on junk input on purpose, since an absent `badge` key means
+"no count was sent" and must leave the icon alone. Android Chrome has no Badging
+API and iOS rejects it without notification permission — both a silent no-op.
 
 Related but not push: the installed app also refreshes its data on resume and
 on pull-to-refresh (`RefreshOnResume`, `PullToRefresh`, ADR-0016) — the
