@@ -91,6 +91,9 @@ function createFakes(seed: {
     async listByHousehold() {
       return [...requests];
     },
+    async countOpenForRecipient(memberId) {
+      return requests.filter((r) => r.state === "Open" && r.recipientId === memberId).length;
+    },
     async save(r) {
       const i = requests.findIndex((x) => x.id === r.id);
       if (i >= 0) requests[i] = r;

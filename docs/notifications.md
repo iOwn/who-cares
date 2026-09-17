@@ -110,8 +110,9 @@ The server pipeline above is channel-agnostic; delivery to a browser needs a
 registered subscription. That client half:
 
 - **Service worker** — `public/sw.js`, a minimal static file (no offline cache):
-  `push` → `showNotification`, `notificationclick` → focus/open the app. Served
-  `no-cache` and registered once from the root layout (`ServiceWorkerRegistrar`).
+  `push` → `showNotification` + the app-icon badge, `notificationclick` →
+  focus/open the app. Served `no-cache` and registered once from the root layout
+  (`ServiceWorkerRegistrar`).
 - **PWA manifest** — `app/manifest.ts` (`display: standalone`) plus code-generated
   icons (`app/appIcon.tsx` → `app/icon-192.png` / `app/icon-512.png` /
   `app/apple-icon.tsx`). No binary assets in the tree.
@@ -127,8 +128,35 @@ registered subscription. That client half:
   Share → "Add to Home Screen" steps instead of the enable button. Email remains
   the guaranteed channel throughout (SPEC.md).
 
+Push payload (`webPushSender` → `sw.js`):
+
+```json
+{ "title": "…", "body": "…", "url": "…?", "tag": "…?", "badge": 2 }
+```
+
 Not wired yet: a deep-linking push. `sw.js` reads `data.url`, but the server
 payload (`webPushSender`) sends none, so a tapped notification opens `/`.
+
+## App-icon badge (issue #134, ADR-0017)
+
+The installed app's icon carries the number of **open pickup requests addressed
+to the member** — the same count the header bell shows, never a broader "unread"
+tally. Two halves keep it right:
+
+- **While the app is closed** — `dispatchNotification` reads
+  `pickupRequests.countOpenForRecipient` and puts it on the push as
+  `PushMessage.badge`; `sw.js` mirrors it onto the icon in the `push` handler.
+  Every event carries it, not just the request ones, so a withdrawal push clears
+  the badge that withdrawal resolved. The count is read at **dispatch** time, so
+  a notification coalesced for five minutes still ships a current number.
+- **While the app is open** — `useAppBadge` in `AppShell` re-asserts the server's
+  count on change and on resume (via `useOnResume`, alongside ADR-0016's
+  refresh), so the badge and the bell can never disagree.
+
+The count → badge rule lives twice: `badgeUpdateFor` (`src/app/appBadge.ts`) and
+`applyAppBadge` (`public/sw.js`), because the worker is a static file and cannot
+import from `src/`. Keep them in step. Android Chrome has no Badging API and iOS
+rejects it without notification permission — both a silent no-op.
 
 Related but not push: the installed app also refreshes its data on resume and
 on pull-to-refresh (`RefreshOnResume`, `PullToRefresh`, ADR-0016) — the

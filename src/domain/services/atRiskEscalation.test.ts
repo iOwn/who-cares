@@ -231,6 +231,9 @@ function createFakes(seed: {
     async listByHousehold() {
       return [...requests];
     },
+    async countOpenForRecipient(memberId) {
+      return requests.filter((r) => r.state === "Open" && r.recipientId === memberId).length;
+    },
     async save() {},
   };
 

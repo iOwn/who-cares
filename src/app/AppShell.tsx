@@ -16,6 +16,7 @@ import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
 import { InstallPrompt } from "./InstallPrompt";
+import { useAppBadge } from "./useAppBadge";
 import { useWallClock } from "./useWallClock";
 
 export interface AppShellProps {
@@ -39,7 +40,8 @@ export interface AppShellProps {
  * function props, `Calendar` owns paging state, and the bell toggles the inbox.
  *
  * The bell's count is the number of **open** requests addressed to the current
- * member; the inbox lists those, mounted only while open.
+ * member; the inbox lists those, mounted only while open. That same count is
+ * mirrored onto the installed app's icon badge (`useAppBadge`, issue #134).
  */
 export function AppShell({
   childName,
@@ -64,6 +66,11 @@ export function AppShell({
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
     [pickupRequests, currentMemberId],
   );
+
+  // The same number the bell shows, mirrored onto the installed app's icon
+  // (issue #134, ADR-0017). Lives here because this is where the count already
+  // is, and it re-renders with fresh requests after every `router.refresh()`.
+  useAppBadge(myOpenRequests.length);
 
   return (
     <>

@@ -149,6 +149,9 @@ describe("notification catalogue — recipient rule", () => {
         async listByHousehold() {
           return [];
         },
+        async countOpenForRecipient() {
+          return 0;
+        },
         async save(r: unknown) {
           saved.push(r);
         },

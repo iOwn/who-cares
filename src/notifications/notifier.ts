@@ -21,19 +21,14 @@
 import {
   COALESCE_WINDOW_MS,
   isCoalescableEvent,
-  type Mailer,
-  type MemberRepository,
   type Notification,
   type Notifier,
   type PendingNotificationRepository,
-  type PushSender,
 } from "@/domain";
-import { dispatchNotification } from "./dispatch";
+import { type DispatchDeps, dispatchNotification } from "./dispatch";
 
-export interface NotifierDeps {
-  readonly mailer: Mailer;
-  readonly pushSender: PushSender;
-  readonly members: MemberRepository;
+/** Everything `dispatchNotification` needs, plus the queue and a clock. */
+export interface NotifierDeps extends DispatchDeps {
   readonly pendingNotifications: PendingNotificationRepository;
   readonly clock: { now(): Date };
   /** New ids for queue rows. Defaults to `crypto.randomUUID`. */
@@ -69,10 +64,7 @@ export function createNotifier(deps: NotifierDeps): Notifier {
   };
 }
 
-export interface FlushDeps {
-  readonly mailer: Mailer;
-  readonly pushSender: PushSender;
-  readonly members: MemberRepository;
+export interface FlushDeps extends DispatchDeps {
   readonly pendingNotifications: PendingNotificationRepository;
   readonly clock: { now(): Date };
 }

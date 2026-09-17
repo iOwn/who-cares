@@ -64,13 +64,35 @@ function createFakes(now: Date) {
     },
   };
 
+  // The unresolved count each push carries as its app-icon badge (issue #134).
+  // Mutable on purpose: a test moves it between `notify()` and `flush()` to pin
+  // that the count is read when the notification is *sent*, not when queued.
+  const openRequests = { count: 0 };
+  const pickupRequests = {
+    async countOpenForRecipient() {
+      return openRequests.count;
+    },
+  };
+
   const clock = { now: () => new Date(now.getTime()) };
   const newId = () => {
     seq += 1;
     return `pending-${seq}`;
   };
 
-  return { emails, pushes, queue, mailer, pushSender, members, pendingNotifications, clock, newId };
+  return {
+    emails,
+    pushes,
+    queue,
+    mailer,
+    pushSender,
+    members,
+    pendingNotifications,
+    pickupRequests,
+    openRequests,
+    clock,
+    newId,
+  };
 }
 
 const NOW = new Date("2025-01-06T09:00:00.000Z");
@@ -268,5 +290,66 @@ describe("flushPendingNotifications", () => {
 
     expect(f.emails).toHaveLength(2);
     expect(f.emails[1].body).toBe("second change");
+  });
+});
+
+describe("dispatch — the app-icon badge count (issue #134)", () => {
+  it("carries the recipient's unresolved count on the push", async () => {
+    const f = createFakes(NOW);
+    f.openRequests.count = 3;
+
+    await createNotifier(f).notify(notification());
+
+    expect(f.pushes).toHaveLength(1);
+    expect(f.pushes[0].badge).toBe(3);
+  });
+
+  it("sends a zero count so a resolved last request takes the badge off", async () => {
+    // The badge rides on *every* push, not just the request events — that is
+    // what makes it self-correcting: the withdrawal notification itself is what
+    // clears the icon the withdrawn request had lit up.
+    const f = createFakes(NOW);
+    f.openRequests.count = 0;
+
+    await createNotifier(f).notify(notification());
+
+    expect(f.pushes[0].badge).toBe(0);
+  });
+
+  it("reads the count at flush time, not when the notification was queued", async () => {
+    // A coalesced notification can sit in the queue for five minutes (ADR-0012).
+    // The icon should show what is true when it is sent.
+    const f = createFakes(NOW);
+    f.openRequests.count = 1;
+
+    await createNotifier(f).notify(
+      notification({
+        event: CHILDCARE_PATTERN_CHANGED_EVENT,
+        coalesceKey: `${CHILDCARE_PATTERN_CHANGED_EVENT}:household-1`,
+      }),
+    );
+    expect(f.pushes).toEqual([]);
+
+    f.openRequests.count = 2;
+    f.clock.now = () => new Date(NOW.getTime() + COALESCE_WINDOW_MS + 1);
+    await flushPendingNotifications(f);
+
+    expect(f.pushes).toHaveLength(1);
+    expect(f.pushes[0].badge).toBe(2);
+  });
+
+  it("still sends the email when the count can't be read", async () => {
+    // Email is the guaranteed channel; a failed count must degrade exactly like
+    // a failed push — logged and swallowed.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const f = createFakes(NOW);
+    f.pickupRequests.countOpenForRecipient = async () => {
+      throw new Error("db down");
+    };
+
+    await expect(createNotifier(f).notify(notification())).resolves.toBeUndefined();
+
+    expect(f.emails).toHaveLength(1);
+    expect(f.pushes).toEqual([]);
   });
 });
