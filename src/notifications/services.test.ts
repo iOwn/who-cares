@@ -14,6 +14,7 @@ import {
   type PendingNotification,
   type PendingNotificationRepository,
   PICKUP_REQUEST_ACCEPTED_EVENT,
+  type PickupRequestRepository,
   type PushSubscriptionRepository,
 } from "@/domain";
 import { MEMBER_1_ID, makeMember } from "@/testing";
@@ -55,7 +56,24 @@ function repos(queue: PendingNotification[] = []) {
       return due;
     },
   };
-  return { members, pushSubscriptions, pendingNotifications };
+  // Only `countOpenForRecipient` is ever reached from here — it is what
+  // `dispatchNotification` reads for the app-icon badge (issue #134).
+  const pickupRequests: PickupRequestRepository = {
+    async findById() {
+      return null;
+    },
+    async findByDate() {
+      return null;
+    },
+    async listByHousehold() {
+      return [];
+    },
+    async countOpenForRecipient() {
+      return 0;
+    },
+    async save() {},
+  };
+  return { members, pushSubscriptions, pendingNotifications, pickupRequests };
 }
 
 beforeEach(() => {

@@ -36,7 +36,7 @@ export interface NotificationServices {
 
 type NotificationRepos = Pick<
   Repositories,
-  "members" | "pushSubscriptions" | "pendingNotifications"
+  "members" | "pushSubscriptions" | "pendingNotifications" | "pickupRequests"
 >;
 
 /** Adapter overrides — only tests pass these; production reads them from env. */
@@ -66,7 +66,12 @@ export function createNotificationServices(
     }) ??
     noopAdapters.noopPushSender((m, p) => console.info(m, p));
 
-  const dispatchDeps: DispatchDeps = { mailer, pushSender, members: repos.members };
+  const dispatchDeps: DispatchDeps = {
+    mailer,
+    pushSender,
+    members: repos.members,
+    pickupRequests: repos.pickupRequests,
+  };
   const clock = noopAdapters.systemClock;
 
   const notifier = createNotifier({

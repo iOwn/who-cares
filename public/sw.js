@@ -7,7 +7,13 @@
  * app when one is tapped.
  *
  * Payload shape (see `src/notifications/webPushSender.ts`):
- *   { "title": string, "body": string, "url"?: string }
+ *   { "title": string, "body": string, "url"?: string, "tag"?: string,
+ *     "badge"?: number }
+ *
+ * `badge` is the recipient's unresolved count at send time (issue #134) — this
+ * is the only path that can move the app-icon badge while the app is closed,
+ * which is the whole point of the feature. `src/app/useAppBadge.ts` re-asserts
+ * it from server truth whenever the app is open.
  *
  * Served statically from `/sw.js` (root scope) with a no-cache header — see the
  * `headers()` entry in `next.config.ts`.
@@ -44,8 +50,32 @@ self.addEventListener("push", (event) => {
     options.renotify = true;
   }
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([self.registration.showNotification(title, options), applyAppBadge(payload.badge)]),
+  );
 });
+
+/**
+ * Mirror the payload's unresolved count onto the app icon (issue #134).
+ *
+ * Shares its clear-at-zero / floor-to-integer half with `badgeUpdateFor` in
+ * `src/app/appBadge.ts` — this file is static, outside the bundle, and cannot
+ * import it — so keep that half in step. The junk-input half is deliberately
+ * different: an absent or non-numeric `badge` means the server sent no count
+ * (it omits the key when the read failed), so leave the icon exactly as it was.
+ * Wiping a good badge because one payload lacked a number would be worse.
+ *
+ * Best-effort: Android Chrome has no Badging API, and iOS rejects without
+ * notification permission. Both are a silent no-op.
+ */
+function applyAppBadge(badge) {
+  if (typeof badge !== "number" || !Number.isFinite(badge)) return Promise.resolve();
+  if (!("setAppBadge" in self.navigator)) return Promise.resolve();
+
+  const applied =
+    badge < 1 ? self.navigator.clearAppBadge() : self.navigator.setAppBadge(Math.floor(badge));
+  return Promise.resolve(applied).catch(() => {});
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

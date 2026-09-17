@@ -82,6 +82,41 @@ describe("createWebPushSender", () => {
     expect(JSON.parse(payload as string)).toEqual({ title: "Hi", body: "there" });
   });
 
+  it("carries the app-icon badge count when one was read (issue #134)", async () => {
+    const { repo } = repoWith([sub()]);
+    sendNotification.mockResolvedValue(undefined);
+
+    const sender = createWebPushSender({ vapid: VAPID, pushSubscriptions: repo });
+    await sender?.send({ memberId: "m1", title: "Hi", body: "there", badge: 2 });
+
+    const [, payload] = sendNotification.mock.calls[0];
+    expect(JSON.parse(payload as string)).toEqual({ title: "Hi", body: "there", badge: 2 });
+  });
+
+  it("keeps a zero badge in the payload — it is what clears the icon", async () => {
+    const { repo } = repoWith([sub()]);
+    sendNotification.mockResolvedValue(undefined);
+
+    const sender = createWebPushSender({ vapid: VAPID, pushSubscriptions: repo });
+    await sender?.send({ memberId: "m1", title: "Hi", body: "there", badge: 0 });
+
+    const [, payload] = sendNotification.mock.calls[0];
+    expect(JSON.parse(payload as string)).toHaveProperty("badge", 0);
+  });
+
+  it("omits the badge key entirely when no count was read", async () => {
+    // `sw.js` leaves the icon alone rather than clearing it for an absent key —
+    // a badge nobody can explain is worse than a slightly stale one.
+    const { repo } = repoWith([sub()]);
+    sendNotification.mockResolvedValue(undefined);
+
+    const sender = createWebPushSender({ vapid: VAPID, pushSubscriptions: repo });
+    await sender?.send({ memberId: "m1", title: "Hi", body: "there" });
+
+    const [, payload] = sendNotification.mock.calls[0];
+    expect(JSON.parse(payload as string)).not.toHaveProperty("badge");
+  });
+
   it("drops a subscription the push service reports as gone (404 / 410)", async () => {
     const { repo, deleted } = repoWith([
       sub({ endpoint: "https://dead" }),

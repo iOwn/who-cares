@@ -8,12 +8,20 @@
  * ports, so a test injects fakes and the real wiring lives in `./services.ts`.
  */
 
-import type { Mailer, MemberRepository, Notification, PushSender } from "@/domain";
+import type {
+  Mailer,
+  MemberRepository,
+  Notification,
+  PickupRequestRepository,
+  PushSender,
+} from "@/domain";
 
 export interface DispatchDeps {
   readonly mailer: Mailer;
   readonly pushSender: PushSender;
   readonly members: MemberRepository;
+  /** Only the badge count is needed here — see the push branch below (#134). */
+  readonly pickupRequests: Pick<PickupRequestRepository, "countOpenForRecipient">;
 }
 
 /**
@@ -40,11 +48,31 @@ export async function dispatchNotification(
     body: notification.body,
   });
 
+  // The app-icon badge count (issue #134, ADR-0017) rides along with every push,
+  // not just the request events, which is what makes it self-correcting: a
+  // withdrawal push carries the lower count that withdrawal produced.
+  //
+  // Read here, at dispatch time, rather than when the notification was built —
+  // a coalesced one may have sat in `pending_notifications` for five minutes
+  // (ADR-0012), and the icon should show the count as of the send.
+  //
+  // Guarded separately from the send below: the badge is a nicety and the
+  // notification is the point, so a failed count costs the icon a number, never
+  // the parent their notification. `badge` then goes out `undefined`, the
+  // payload omits the key, and `sw.js` leaves whatever is on the icon alone.
+  let badge: number | undefined;
+  try {
+    badge = await deps.pickupRequests.countOpenForRecipient(notification.recipientId);
+  } catch (error) {
+    console.warn(`badge count for ${notification.event} failed`, error);
+  }
+
   try {
     await deps.pushSender.send({
       memberId: notification.recipientId,
       title: notification.title,
       body: notification.body,
+      badge,
     });
   } catch (error) {
     console.warn(`web push for ${notification.event} failed`, error);

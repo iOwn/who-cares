@@ -41,7 +41,14 @@ export function createWebPushSender(deps: WebPushDeps): PushSender | null {
   return {
     async send(message): Promise<void> {
       const subscriptions = await deps.pushSubscriptions.listByMember(message.memberId);
-      const payload = JSON.stringify({ title: message.title, body: message.body });
+      // `badge` is the app-icon count (issue #134); the key is omitted entirely
+      // when the count could not be read, so `sw.js` leaves the icon alone
+      // rather than clearing a badge it has no number for.
+      const payload = JSON.stringify({
+        title: message.title,
+        body: message.body,
+        ...(typeof message.badge === "number" ? { badge: message.badge } : {}),
+      });
 
       for (const subscription of subscriptions) {
         try {

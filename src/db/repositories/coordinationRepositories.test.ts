@@ -128,6 +128,51 @@ describe("PickupRequestRepository", () => {
     expect((await repos.pickupRequests.findById("r1"))?.state).toBe("Accepted");
   });
 
+  it("counts only the Open requests addressed to a member (issue #134)", async () => {
+    // The scalar behind the header bell and the app-icon badge. `makePickupRequest`
+    // defaults `requesterId`/`recipientId` to members 1 and 2 respectively.
+    await repos.pickupRequests.save(
+      makePickupRequest({ id: "r1", date: "2025-01-06", absenceId: "abs-1", state: "Open" }),
+    );
+    await repos.pickupRequests.save(
+      makePickupRequest({ id: "r2", date: "2025-01-07", absenceId: "abs-1", state: "Open" }),
+    );
+    // Terminal states are resolved — they must not keep a badge lit.
+    await repos.pickupRequests.save(
+      makePickupRequest({ id: "r3", date: "2025-01-08", absenceId: "abs-1", state: "Accepted" }),
+    );
+    // Addressed the other way round: the requester's own ask isn't their count.
+    await repos.pickupRequests.save(
+      makePickupRequest({
+        id: "r4",
+        date: "2025-01-09",
+        absenceId: "abs-1",
+        requesterId: MEMBER_2_ID,
+        recipientId: MEMBER_1_ID,
+        state: "Open",
+      }),
+    );
+
+    expect(await repos.pickupRequests.countOpenForRecipient(MEMBER_2_ID)).toBe(2);
+    expect(await repos.pickupRequests.countOpenForRecipient(MEMBER_1_ID)).toBe(1);
+  });
+
+  it("counts zero for a member with nothing waiting", async () => {
+    expect(await repos.pickupRequests.countOpenForRecipient(MEMBER_2_ID)).toBe(0);
+  });
+
+  it("drops the count once the last open request is answered", async () => {
+    await repos.pickupRequests.save(
+      makePickupRequest({ id: "r1", date: "2025-01-06", absenceId: "abs-1", state: "Open" }),
+    );
+    expect(await repos.pickupRequests.countOpenForRecipient(MEMBER_2_ID)).toBe(1);
+
+    await repos.pickupRequests.save(
+      makePickupRequest({ id: "r1", date: "2025-01-06", absenceId: "abs-1", state: "Accepted" }),
+    );
+    expect(await repos.pickupRequests.countOpenForRecipient(MEMBER_2_ID)).toBe(0);
+  });
+
   it("rejects a second request on the same date", async () => {
     await repos.pickupRequests.save(
       makePickupRequest({ id: "r1", date: "2025-01-06", absenceId: "abs-1" }),

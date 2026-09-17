@@ -71,6 +71,13 @@ export interface PickupRequestRepository {
   findById(id: string): Promise<PickupRequest | null>;
   findByDate(householdId: string, date: CalendarDate): Promise<PickupRequest | null>;
   listByHousehold(householdId: string): Promise<PickupRequest[]>;
+  /**
+   * How many requests are still **Open** and addressed to this member — the
+   * "unresolved" count behind both the in-app bell and the app-icon badge
+   * (issue #134). Deliberately the same rule `AppShell` applies client-side to
+   * `listByHousehold`'s result; see ADR-0017.
+   */
+  countOpenForRecipient(memberId: string): Promise<number>;
   save(request: PickupRequest): Promise<void>;
 }
 
@@ -206,6 +213,12 @@ export interface PushMessage {
   readonly memberId: string;
   readonly title: string;
   readonly body: string;
+  /**
+   * The recipient's unresolved count as of send time (issue #134). Rides along
+   * in the push payload so `public/sw.js` can mirror it onto the app icon while
+   * the app is closed; omitted when it could not be read. See ADR-0017.
+   */
+  readonly badge?: number;
 }
 
 /** Web push (`web-push` + VAPID in production). */

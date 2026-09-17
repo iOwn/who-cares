@@ -224,6 +224,9 @@ function createFakes(options: {
     async listByHousehold(householdId) {
       return savedRequests.filter((r) => r.householdId === householdId);
     },
+    async countOpenForRecipient(memberId) {
+      return savedRequests.filter((r) => r.state === "Open" && r.recipientId === memberId).length;
+    },
     async save(request) {
       const i = savedRequests.findIndex((r) => r.id === request.id);
       if (i >= 0) savedRequests[i] = request;

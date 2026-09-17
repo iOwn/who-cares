@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 import type { CalendarDate, PickupRequest, PickupRequestRepository } from "@/domain";
 import type { DbExecutor } from "../client";
 import { pickupRequests } from "../schema";
@@ -78,6 +78,19 @@ export function createPickupRequestRepository(db: DbExecutor): PickupRequestRepo
         .where(eq(pickupRequests.householdId, householdId))
         .orderBy(asc(pickupRequests.date));
       return rows.map(toPickupRequest);
+    },
+
+    async countOpenForRecipient(memberId: string): Promise<number> {
+      // The scalar behind the app-icon badge (issue #134, ADR-0017). Mirrors
+      // the `state === "Open" && recipientId === me` filter `AppShell` runs
+      // over `listByHousehold` for the header bell — one definition of
+      // "unresolved", counted here so a push can carry it without loading the
+      // household's whole request list.
+      const [row] = await db
+        .select({ value: count() })
+        .from(pickupRequests)
+        .where(and(eq(pickupRequests.recipientId, memberId), eq(pickupRequests.state, "Open")));
+      return row?.value ?? 0;
     },
 
     async save(request: PickupRequest): Promise<void> {
