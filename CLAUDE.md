@@ -8,16 +8,32 @@ issue or report it to the user — do **not** pass `--no-verify` / `-n` to `git 
 enforces this, but the rule stands regardless.
 
 ## Developing
+### 1. Implementing
 
-When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR. 
+When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR.
+
+### 2. Reviewing
+
 Spawn a review agent with the following brief:
 ```
 You are a senior web dev. Review the opened PR. Write a concise comment that captures your findings in the PR. 
 ``` 
+Load the PR via
+```bash
+gh pr diff <pr-id>
+```
+Check for
+- Are the acceptance criteria fulfilled?
+- How is the overall code quality?
+- Are changes covered with tests where necessary?
+- Are there security or performance issues?
 
-## Agents
-
-When spawning a new Agent, give the agent session a distinctive (non-generic) name that captures his task (via `/rename`).
+Write a review comment in the pr and set
+```bash
+gh pr review <pr-id> --approve --body "<your conclusion>"
+# or
+gh pr review <pr-id> --request-changes --body "<your conclusion>"
+```
 
 ## Next.js
 
