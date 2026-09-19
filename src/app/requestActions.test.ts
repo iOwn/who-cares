@@ -147,6 +147,21 @@ describe("answerAllRequestsAction — accept", () => {
     expect(result).toEqual({ ok: true, answered: 0, skipped: 0 });
     expect(dispatchAll).not.toHaveBeenCalled();
   });
+
+  it("refuses an id list longer than the loop is willing to run", async () => {
+    // `requestIds` is client-supplied and each id costs ~3 queries inside one
+    // transaction, so the loop is bounded rather than trusting the caller.
+    seedOpenRequests();
+
+    const result = await answerAllRequestsAction(
+      Array.from({ length: 101 }, (_, i) => `req-${i}`),
+      "accept",
+    );
+
+    expect(result).toEqual({ ok: false, error: "Something went wrong. Please try again." });
+    expect(store.requests.get("req-0")?.state).toBe("Open");
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
 });
 
 describe("answerAllRequestsAction — decline", () => {

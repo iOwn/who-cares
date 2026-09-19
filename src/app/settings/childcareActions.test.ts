@@ -20,6 +20,8 @@ import { CLOSURE_ADDED_EVENT, MAX_CLOSURE_RANGE_DAYS, type Notification } from "
 import { HOUSEHOLD_ID, MEMBER_1_ID, MEMBER_2_ID, makeHousehold, makeMember } from "@/testing";
 
 const notify = vi.fn(async () => {});
+/** Mocked so a test can assert the closure range is written as one unit. */
+const transaction = vi.fn(async (fn: (tx: unknown) => unknown) => fn({}));
 const dispatchAll = vi.fn(async (_notifications: readonly Notification[]) => {});
 
 const repos = {
@@ -53,9 +55,7 @@ vi.mock("@/auth", () => ({
     household: makeHousehold({ id: HOUSEHOLD_ID }),
   })),
 }));
-vi.mock("@/auth/config", () => ({
-  db: { transaction: async (fn: (tx: unknown) => unknown) => fn({}) },
-}));
+vi.mock("@/auth/config", () => ({ db: { transaction } }));
 vi.mock("@/db/repositories", () => ({ createRepositories: () => repos }));
 vi.mock("@/notifications", async (importActual) => ({
   ...(await importActual<typeof import("@/notifications")>()),
@@ -74,6 +74,7 @@ const dispatched = (): readonly Notification[] => dispatchAll.mock.calls.at(-1)?
 beforeEach(() => {
   notify.mockClear();
   dispatchAll.mockClear();
+  transaction.mockClear();
   repos.closures.save.mockClear();
   repos.closures.delete.mockClear();
   repos.childcarePattern.findByHousehold.mockResolvedValue(null);
@@ -137,18 +138,45 @@ describe("saveClosureAction — a range is one action (issue #131)", () => {
     expect(dispatchAll).not.toHaveBeenCalled();
   });
 
-  it("rejects an end before the start", async () => {
-    await expect(saveClosureAction({ date: "2025-06-06", endDate: "2025-06-02" })).rejects.toThrow(
-      /can't be before/,
-    );
+  // Validation comes back as a **result**, never a throw: Next replaces a
+  // message thrown out of a Server Action with a generic one plus a digest in a
+  // production build, and both of these are messages a real user can trigger.
+  it("returns an error for an end before the start", async () => {
+    const result = await saveClosureAction({ date: "2025-06-06", endDate: "2025-06-02" });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "The last closure date can't be before the first.",
+    });
     expect(repos.closures.save).not.toHaveBeenCalled();
   });
 
-  it("caps how many days one action may close", async () => {
-    await expect(saveClosureAction({ date: "2025-01-01", endDate: "2025-12-31" })).rejects.toThrow(
-      new RegExp(String(MAX_CLOSURE_RANGE_DAYS)),
-    );
+  it("returns an error past the cap on how many days one action may close", async () => {
+    const result = await saveClosureAction({ date: "2025-01-01", endDate: "2025-12-31" });
+
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toMatch(new RegExp(String(MAX_CLOSURE_RANGE_DAYS)));
     expect(repos.closures.save).not.toHaveBeenCalled();
+  });
+
+  it("writes the whole range in one transaction", async () => {
+    // A failure part-way through must not leave half a holiday week closed and
+    // notify about none of it — `savePatternAction` wraps its write the same way.
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-04" });
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a generic error and sends nothing when the write fails", async () => {
+    repos.closures.save.mockRejectedValueOnce(new Error("connection reset"));
+
+    const result = await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-04" });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Something went wrong saving that. Please try again.",
+    });
+    expect(dispatchAll).not.toHaveBeenCalled();
   });
 
   it("ignores a range when editing — an edit is always the one row", async () => {

@@ -70,6 +70,15 @@ const SUPERSEDED_NOTE =
   "That day was already covered by someone else, so the request was withdrawn instead.";
 
 /**
+ * How many ids one "Accept all" / "Decline all" will look at. The Inbox can
+ * only ever show this member's `Open` requests, and a household would have to
+ * declare months of absence to approach it — but `requestIds` comes from the
+ * client, and each id costs ~3 queries inside one transaction, so the loop is
+ * bounded rather than trusting the caller.
+ */
+const MAX_BATCH_ANSWER = 100;
+
+/**
  * Shared shape for the accept / decline / withdraw trio: run the domain service
  * in one transaction, then — outside the `try`, matching `recordAbsenceAction` —
  * dispatch its notification and revalidate. `superseded` (a direct claim landed
@@ -152,6 +161,10 @@ export async function answerAllRequestsAction(
   const session = await getCurrentSession();
   if (!session) return { ok: false, error: EXPIRED_MESSAGE };
   if (requestIds.length === 0) return { ok: true, answered: 0, skipped: 0 };
+  if (requestIds.length > MAX_BATCH_ANSWER) {
+    console.error(`answerAllRequestsAction refused ${requestIds.length} ids`);
+    return { ok: false, error: GENERIC_MESSAGE };
+  }
 
   const service = answer === "accept" ? acceptRequest : declineRequest;
 

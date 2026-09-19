@@ -99,7 +99,7 @@ every caller respects it by passing one action's worth:
 | `cancelAbsenceAction` / `shortenAbsenceAction` | every withdrawal + "still stands" that change produced |
 | `claimDayAction` | the bumped parent + the withdrawn request's requester |
 | `answerAllRequestsAction` | every day the "Accept all" / "Decline all" answered |
-| `saveClosureAction` | every date in the closure range that was newly closed |
+| `saveClosureAction` | every date in the closure range that was newly closed (the range commits as one transaction; the dispatch follows it) |
 | `/api/cron/at-risk` | one household's newly at-risk days |
 
 Two separate taps stay two notifications — nothing merges across actions.

@@ -6,7 +6,6 @@ import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
 import {
-  AbsenceInputError,
   type CalendarDate,
   CHILDCARE_PATTERN_CHANGED_EVENT,
   type ChildcarePatternVersion,
@@ -30,9 +29,10 @@ import {
  * logic of their own (ADR-0005). Kept in their own file so a merge with the
  * parallel #48 settings work stays mechanical.
  *
- * `childcareActions.test.ts` guards the two cross-cutting contracts: a closure
- * range writes one row per date but sends **one** notification (issue #131,
- * ADR-0018), and event 12 fires on an add, never on an edit. The domain
+ * `childcareActions.test.ts` guards the cross-cutting contracts: a closure range
+ * writes one row per date, in one transaction, but sends **one** notification
+ * (issue #131, ADR-0018); event 12 fires on an add, never on an edit; and
+ * user-facing validation comes back as a result rather than a throw. The domain
  * behaviour itself is tested in `childcareDay.ts`.
  */
 
@@ -127,6 +127,16 @@ async function closureBelongsToHousehold(
   return owned.some((closure) => closure.id === id);
 }
 
+/**
+ * Discriminated result rather than a thrown error. A message thrown out of a
+ * Server Action does **not** survive a production build — Next replaces it with
+ * a generic string plus a digest to avoid leaking server detail
+ * (`node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md`),
+ * so validation a real user can hit (an inverted range, a shutdown longer than
+ * the cap) has to come back as a value. Same shape `requestActions.ts` uses.
+ */
+export type SaveClosureResult = { ok: true; addedCount: number } | { ok: false; error: string };
+
 export async function saveClosureAction(input: {
   /** Present when editing an existing closure. */
   id?: string;
@@ -139,7 +149,7 @@ export async function saveClosureAction(input: {
    */
   endDate?: CalendarDate;
   reason?: string;
-}): Promise<void> {
+}): Promise<SaveClosureResult> {
   const ctx = await context();
   const { householdId, repos } = ctx;
   const reason = input.reason?.trim() ? input.reason.trim() : undefined;
@@ -155,29 +165,45 @@ export async function saveClosureAction(input: {
   // Editing is always the one row being edited; a range only applies to adds.
   const endDate = editId ? input.date : (input.endDate ?? input.date);
   if (endDate < input.date) {
-    throw new AbsenceInputError("The last closure date can't be before the first.");
+    return { ok: false, error: "The last closure date can't be before the first." };
   }
   const dates = eachDateInclusive(input.date, endDate);
   if (dates.length > MAX_CLOSURE_RANGE_DAYS) {
-    throw new AbsenceInputError(
-      `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
-    );
+    return {
+      ok: false,
+      error: `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
+    };
   }
 
-  // One closure per date: reuse the row already on that date if there is one.
-  const added: CalendarDate[] = [];
-  for (const date of dates) {
-    const onDate = await repos.closures.findByDate(householdId, date);
-    const isNewClosure = !editId && !onDate;
-    const id = editId ?? onDate?.id ?? crypto.randomUUID();
+  // The whole range commits together, the same way `savePatternAction` wraps its
+  // own multi-statement write: a failure part-way through a 31-day stretch would
+  // otherwise leave half the days closed *and* — since the notification is built
+  // from what was added — tell the other parent about none of it.
+  let added: CalendarDate[];
+  try {
+    added = await db.transaction(async (tx) => {
+      const closures = createRepositories(tx).closures;
+      // One closure per date: reuse the row already on that date if there is one.
+      const addedDates: CalendarDate[] = [];
+      for (const date of dates) {
+        const onDate = await closures.findByDate(householdId, date);
+        const isNewClosure = !editId && !onDate;
+        const id = editId ?? onDate?.id ?? crypto.randomUUID();
 
-    await repos.closures.save({ id, householdId, date, ...(reason ? { reason } : {}) });
-    // Catalogue event 12 fires on a closure being *added*, not on a later edit
-    // to one that already exists — so a range spanning a day that is already
-    // closed produces no notification for that day.
-    if (isNewClosure) added.push(date);
+        await closures.save({ id, householdId, date, ...(reason ? { reason } : {}) });
+        // Catalogue event 12 fires on a closure being *added*, not on a later
+        // edit to one that already exists — so a range spanning a day that is
+        // already closed produces no notification for that day.
+        if (isNewClosure) addedDates.push(date);
+      }
+      return addedDates;
+    });
+  } catch (thrown) {
+    console.error("saveClosureAction failed", thrown);
+    return { ok: false, error: "Something went wrong saving that. Please try again." };
   }
 
+  // After commit, so a slow send can't hold the transaction open (ADR-0005).
   await notifyOtherMember(ctx, added, (recipientId, actorName, date) => ({
     recipientId,
     event: CLOSURE_ADDED_EVENT,
@@ -185,6 +211,7 @@ export async function saveClosureAction(input: {
     ...closureAddedNotification(actorName, date),
   }));
   revalidateAll();
+  return { ok: true, addedCount: added.length };
 }
 
 export async function removeClosureAction(id: string): Promise<void> {
