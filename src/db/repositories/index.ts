@@ -16,7 +16,6 @@ import type {
   ClosureRepository,
   HouseholdRepository,
   MemberRepository,
-  PendingNotificationRepository,
   PickupRequestRepository,
   PushSubscriptionRepository,
 } from "@/domain";
@@ -29,7 +28,6 @@ import { createChildcarePatternRepository } from "./childcarePattern";
 import { createClosureRepository } from "./closure";
 import { createHouseholdRepository } from "./household";
 import { createMemberRepository } from "./member";
-import { createPendingNotificationRepository } from "./pendingNotification";
 import { createPickupRequestRepository } from "./pickupRequest";
 import { createPushSubscriptionRepository } from "./pushSubscription";
 
@@ -42,7 +40,6 @@ export {
   createClosureRepository,
   createHouseholdRepository,
   createMemberRepository,
-  createPendingNotificationRepository,
   createPickupRequestRepository,
   createPushSubscriptionRepository,
 };
@@ -57,7 +54,6 @@ export interface Repositories {
   readonly pickupRequests: PickupRequestRepository;
   readonly assignments: AssignmentRepository;
   readonly pushSubscriptions: PushSubscriptionRepository;
-  readonly pendingNotifications: PendingNotificationRepository;
   readonly atRiskEscalations: AtRiskEscalationRepository;
 }
 
@@ -72,7 +68,6 @@ export function createRepositories(db: DbExecutor): Repositories {
     pickupRequests: createPickupRequestRepository(db),
     assignments: createAssignmentRepository(db),
     pushSubscriptions: createPushSubscriptionRepository(db),
-    pendingNotifications: createPendingNotificationRepository(db),
     atRiskEscalations: createAtRiskEscalationRepository(db),
   };
 }

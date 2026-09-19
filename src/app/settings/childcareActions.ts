@@ -6,10 +6,13 @@ import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
 import {
+  AbsenceInputError,
   type CalendarDate,
   CHILDCARE_PATTERN_CHANGED_EVENT,
   type ChildcarePatternVersion,
   CLOSURE_ADDED_EVENT,
+  eachDateInclusive,
+  MAX_CLOSURE_RANGE_DAYS,
   type Member,
   type Notification,
   patternVersionChangesSchedule,
@@ -17,10 +20,8 @@ import {
 } from "@/domain";
 import {
   closureAddedNotification,
-  closureCoalesceKey,
   notificationServicesFor,
   patternChangedNotification,
-  patternCoalesceKey,
 } from "@/notifications";
 
 /**
@@ -29,10 +30,10 @@ import {
  * logic of their own (ADR-0005). Kept in their own file so a merge with the
  * parallel #48 settings work stays mechanical.
  *
- * `childcareActions.test.ts` guards one cross-cutting contract only: every
- * mutating action drains the coalescing queue at its top (`flushPending`,
- * ADR-0012, issue #92). The domain behaviour itself is tested in
- * `childcareDay.ts` / `notifier.ts`.
+ * `childcareActions.test.ts` guards the two cross-cutting contracts: a closure
+ * range writes one row per date but sends **one** notification (issue #131,
+ * ADR-0018), and event 12 fires on an add, never on an edit. The domain
+ * behaviour itself is tested in `childcareDay.ts`.
  */
 
 async function context() {
@@ -52,35 +53,25 @@ function revalidateAll() {
 }
 
 /**
- * Drain any due coalesced notifications. ADR-0012 / `docs/notifications.md`: the
- * `pending_notifications` queue is flushed "at the top of every mutating Server
- * Action" — run **unconditionally**, whether or not the action also enqueues
- * something, so a household that only edits or removes closures between cron
- * ticks still delivers its own due notification. `flush()` is fully
- * log-and-swallow guarded (`src/notifications/services.ts`), so calling it on
- * every action is cheap and cannot break the mutation.
- */
-async function flushPending(): Promise<void> {
-  await notificationServicesFor(db).flush();
-}
-
-/**
- * Coalesce a settings-change notification to the *other* member (catalogue
- * events 11 + 12). The `Notifier` queues it under `coalesceKey` with a 5-minute
- * window, so a burst of edits to the same record collapses into one
- * notification of the final state; `flushPending()` (at the top of every action
- * and on the daily cron) sends it once the window elapses. A single-member
- * household has no one to tell.
+ * Send this action's settings-change notifications to the *other* member
+ * (catalogue events 11 + 12), after the write. `build` is called once per
+ * subject — one date for a single closure, several for a range — and the whole
+ * batch goes through `dispatchAll`, which bundles it into one notification
+ * (ADR-0018). A single-member household has no one to tell.
  */
 async function notifyOtherMember(
   ctx: Awaited<ReturnType<typeof context>>,
-  build: (recipientId: string, actorName: string) => Notification,
+  subjects: readonly string[],
+  build: (recipientId: string, actorName: string, subject: string) => Notification,
 ): Promise<void> {
+  if (subjects.length === 0) return;
   const members = await ctx.repos.members.listByHousehold(ctx.householdId);
   const other = members.find((m: Member) => m.id !== ctx.actor.id);
   if (!other) return;
 
-  await notificationServicesFor(db).notifier.notify(build(other.id, ctx.actor.name));
+  await notificationServicesFor(db).dispatchAll(
+    subjects.map((subject) => build(other.id, ctx.actor.name, subject)),
+  );
 }
 
 /** Insert (or replace, if one already starts on that date) a pattern version. */
@@ -97,7 +88,6 @@ export async function savePatternAction(input: {
   weekdays: Weekday[];
   effectiveFrom: CalendarDate;
 }): Promise<void> {
-  await flushPending();
   const ctx = await context();
   const { householdId, repos } = ctx;
   const existing = await repos.childcarePattern.findByHousehold(householdId);
@@ -118,10 +108,9 @@ export async function savePatternAction(input: {
   );
 
   if (isRealChange) {
-    await notifyOtherMember(ctx, (recipientId, actorName) => ({
+    await notifyOtherMember(ctx, [input.effectiveFrom], (recipientId, actorName) => ({
       recipientId,
       event: CHILDCARE_PATTERN_CHANGED_EVENT,
-      coalesceKey: patternCoalesceKey(householdId),
       ...patternChangedNotification(actorName),
     }));
   }
@@ -142,42 +131,63 @@ export async function saveClosureAction(input: {
   /** Present when editing an existing closure. */
   id?: string;
   date: CalendarDate;
+  /**
+   * Last date of an inclusive range (issue #131). One `Closure` row is still
+   * written **per date** — CONTEXT.md keeps a closure a single day — but it is
+   * one action, so the other parent gets one bundled notification instead of
+   * one per day. Omitted, or when editing, it is just `date`.
+   */
+  endDate?: CalendarDate;
   reason?: string;
 }): Promise<void> {
-  await flushPending();
   const ctx = await context();
   const { householdId, repos } = ctx;
   const reason = input.reason?.trim() ? input.reason.trim() : undefined;
 
-  // One closure per date: reuse the row already on that date if there is one.
   // A client-supplied `id` is only honoured if it's this household's row —
   // otherwise `save`'s upsert could re-parent someone else's closure (latent
   // until multi-household, but cheap to close now).
-  const onDate = await repos.closures.findByDate(householdId, input.date);
   const editId =
     input.id && (await closureBelongsToHousehold(repos, householdId, input.id))
       ? input.id
       : undefined;
-  const isNewClosure = !editId && !onDate;
-  const id = editId ?? onDate?.id ?? crypto.randomUUID();
 
-  await repos.closures.save({ id, householdId, date: input.date, ...(reason ? { reason } : {}) });
-
-  // Catalogue event 12 fires on a closure being *added*, not on a later edit to
-  // one that already exists.
-  if (isNewClosure) {
-    await notifyOtherMember(ctx, (recipientId, actorName) => ({
-      recipientId,
-      event: CLOSURE_ADDED_EVENT,
-      coalesceKey: closureCoalesceKey(householdId, input.date),
-      ...closureAddedNotification(actorName, input.date),
-    }));
+  // Editing is always the one row being edited; a range only applies to adds.
+  const endDate = editId ? input.date : (input.endDate ?? input.date);
+  if (endDate < input.date) {
+    throw new AbsenceInputError("The last closure date can't be before the first.");
   }
+  const dates = eachDateInclusive(input.date, endDate);
+  if (dates.length > MAX_CLOSURE_RANGE_DAYS) {
+    throw new AbsenceInputError(
+      `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
+    );
+  }
+
+  // One closure per date: reuse the row already on that date if there is one.
+  const added: CalendarDate[] = [];
+  for (const date of dates) {
+    const onDate = await repos.closures.findByDate(householdId, date);
+    const isNewClosure = !editId && !onDate;
+    const id = editId ?? onDate?.id ?? crypto.randomUUID();
+
+    await repos.closures.save({ id, householdId, date, ...(reason ? { reason } : {}) });
+    // Catalogue event 12 fires on a closure being *added*, not on a later edit
+    // to one that already exists — so a range spanning a day that is already
+    // closed produces no notification for that day.
+    if (isNewClosure) added.push(date);
+  }
+
+  await notifyOtherMember(ctx, added, (recipientId, actorName, date) => ({
+    recipientId,
+    event: CLOSURE_ADDED_EVENT,
+    subjectLabel: date,
+    ...closureAddedNotification(actorName, date),
+  }));
   revalidateAll();
 }
 
 export async function removeClosureAction(id: string): Promise<void> {
-  await flushPending();
   const { householdId, repos } = await context();
   // `ClosureRepository.delete` takes a bare id; scope it to the household here
   // so a stray id can't drop another household's row (latent in single-

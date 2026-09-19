@@ -1,19 +1,26 @@
 /**
  * The one place a `Notification` becomes an email **and** a web push (SPEC.md:
  * one tier, no informational-only channel). Everything above — the request
- * services, the at-risk backstop, the coalescing queue — produces
+ * services, the at-risk backstop, the settings actions — produces
  * `Notification`s; this sends them.
+ *
+ * It is also the choke point where **per-action bundling** happens (issue #131,
+ * ADR-0018): `dispatchAll` runs its batch through `bundleNotifications` first,
+ * so one action is at most one notification per `(recipient, event)`. Every
+ * caller already funnels a whole action's notifications through here, which is
+ * why none of them needs to know about bundling.
  *
  * Framework-free: it takes the `Mailer` / `PushSender` / `MemberRepository`
  * ports, so a test injects fakes and the real wiring lives in `./services.ts`.
  */
 
-import type {
-  Mailer,
-  MemberRepository,
-  Notification,
-  PickupRequestRepository,
-  PushSender,
+import {
+  bundleNotifications,
+  type Mailer,
+  type MemberRepository,
+  type Notification,
+  type PickupRequestRepository,
+  type PushSender,
 } from "@/domain";
 
 export interface DispatchDeps {
@@ -52,9 +59,9 @@ export async function dispatchNotification(
   // not just the request events, which is what makes it self-correcting: a
   // withdrawal push carries the lower count that withdrawal produced.
   //
-  // Read here, at dispatch time, rather than when the notification was built —
-  // a coalesced one may have sat in `pending_notifications` for five minutes
-  // (ADR-0012), and the icon should show the count as of the send.
+  // Read here, at dispatch time, rather than when the notification was built,
+  // so a batch whose earlier sends already resolved requests still ships a
+  // current number.
   //
   // Guarded separately from the send below: the badge is a nicety and the
   // notification is the point, so a failed count costs the icon a number, never
@@ -80,15 +87,23 @@ export async function dispatchNotification(
 }
 
 /**
- * Send a batch, one after another (sequential — a shared DB connection can't
- * parallelise). One notification failing (a bounced email) must not sink the
- * rest of the batch, so each is guarded — the caller is always post-commit.
+ * Bundle one action's notifications per `(recipient, event)` (issue #131,
+ * ADR-0018), then send what is left, one after another (sequential — a shared
+ * DB connection can't parallelise).
+ *
+ * Callers pass **one action's worth** at a time, which is what makes the
+ * bundling boundary right: a cancel's ten withdrawals collapse into one mail,
+ * but two separate taps stay two mails. The daily cron calls it once per
+ * household for the same reason.
+ *
+ * One notification failing (a bounced email) must not sink the rest of the
+ * batch, so each is guarded — the caller is always post-commit.
  */
 export async function dispatchAll(
   deps: DispatchDeps,
   notifications: readonly Notification[],
 ): Promise<void> {
-  for (const notification of notifications) {
+  for (const notification of bundleNotifications(notifications)) {
     try {
       await dispatchNotification(deps, notification);
     } catch (error) {

@@ -1,7 +1,8 @@
 # Web push delivery is a minimal static service worker plus opt-in per-browser enrollment
 
 Issue #55 shipped the server side of notifications — the `Notifier`, the Resend
-and `web-push` adapters, coalescing, the at-risk cron — but left web push inert:
+and `web-push` adapters, the coalescing queue (since removed — ADR-0018), the
+at-risk cron — but left web push inert:
 nothing registered a `PushSubscription`, so `webPushSender` had no endpoints and
 email carried every notification. Issue #90 is the client half: the service
 worker, the PWA manifest, subscription enrollment, and the iOS onboarding

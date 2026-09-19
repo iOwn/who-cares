@@ -15,7 +15,7 @@ live from pattern + closures + absences (ADR-0003) and have no cheap scalar
 query, and would also make the icon disagree with the bell; a true unread count
 across all twelve notification events would need a per-member read-state table,
 and a `Notification` in this codebase is a transient event object that exists
-only long enough to become an email and a push (ADR-0012), never an inbox row.
+only long enough to become an email and a push, never an inbox row.
 One definition of "unresolved", shown in two places, is the point.
 
 **The count rides along in every push payload.** `dispatchNotification` reads
@@ -28,8 +28,10 @@ carries the lower count that withdrawal produced, so the icon converges on truth
 without anyone opening the app.
 
 **The count is read at dispatch time, not when the notification is built.** A
-coalescable event can sit in `pending_notifications` for five minutes
-(ADR-0012); the icon should show what is true when the push actually goes out.
+batch dispatched after a multi-day action resolves requests as it goes, so the
+icon should show what is true when each push actually goes out. (This also
+covered the coalescing queue that ADR-0012 once held the notification in; that
+queue is gone — ADR-0018 — and the rule outlived it.)
 The read has its own guard, separate from the send: the badge is a nicety and
 the notification is the point, so a failed count costs the icon a number and
 nothing else. `badge` then goes out `undefined`, `webPushSender` omits the key,

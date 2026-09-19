@@ -1,21 +1,26 @@
 /**
  * The childcare-settings Server Actions are thin adapters (ADR-0005) and are not
- * unit-tested for their domain behaviour — that lives in `childcareDay.ts` /
- * `notifier.ts`. This file guards one cross-cutting contract only: **every
- * mutating action drains the coalescing queue at its top** (ADR-0012,
- * `docs/notifications.md`, issue #92), unconditionally — so a household that
- * only edits or removes closures still delivers its own due notification.
+ * unit-tested for their domain behaviour — that lives in `childcareDay.ts`.
+ * This file guards the cross-cutting contracts the notification rewrite
+ * (issue #131, ADR-0018) rests on:
+ *
+ *   - a closure **range** writes one `Closure` row per date (CONTEXT.md keeps a
+ *     closure a single day) but is **one action**, so it hands `dispatchAll` one
+ *     batch and the other parent gets one bundled notification;
+ *   - event 12 still fires on an *add* only, so a range that overlaps days
+ *     already closed notifies about the new ones alone;
+ *   - nothing here flushes a queue any more — there is no queue.
  *
  * The wiring (`db`, auth, repositories, the notification services) is `vi.mock`ed
  * — a `"use server"` module cannot take injection.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CLOSURE_ADDED_EVENT, MAX_CLOSURE_RANGE_DAYS, type Notification } from "@/domain";
 import { HOUSEHOLD_ID, MEMBER_1_ID, MEMBER_2_ID, makeHousehold, makeMember } from "@/testing";
 
-const flush = vi.fn(async () => 0);
 const notify = vi.fn(async () => {});
-const dispatchAll = vi.fn(async () => {});
+const dispatchAll = vi.fn(async (_notifications: readonly Notification[]) => {});
 
 const repos = {
   childcarePattern: {
@@ -23,9 +28,14 @@ const repos = {
     save: vi.fn(async () => {}),
   },
   closures: {
-    findByDate: vi.fn(async (): Promise<{ id: string; householdId: string } | null> => null),
+    findByDate: vi.fn(
+      async (
+        _householdId: string,
+        _date: string,
+      ): Promise<{ id: string; householdId: string } | null> => null,
+    ),
     listByHousehold: vi.fn(async (): Promise<{ id: string }[]> => []),
-    save: vi.fn(async () => {}),
+    save: vi.fn(async (_closure: { id: string; date: string }) => {}),
     delete: vi.fn(async () => {}),
   },
   members: {
@@ -49,52 +59,133 @@ vi.mock("@/auth/config", () => ({
 vi.mock("@/db/repositories", () => ({ createRepositories: () => repos }));
 vi.mock("@/notifications", async (importActual) => ({
   ...(await importActual<typeof import("@/notifications")>()),
-  notificationServicesFor: () => ({ flush, notifier: { notify }, dispatchAll }),
+  notificationServicesFor: () => ({ notifier: { notify }, dispatchAll }),
 }));
 
 const { removeClosureAction, saveClosureAction, savePatternAction } = await import(
   "./childcareActions"
 );
 
+/** The dates the action actually wrote, in order. */
+const savedDates = () => repos.closures.save.mock.calls.map(([closure]) => closure.date);
+/** The one batch handed to `dispatchAll`. */
+const dispatched = (): readonly Notification[] => dispatchAll.mock.calls.at(-1)?.[0] ?? [];
+
 beforeEach(() => {
-  flush.mockClear();
   notify.mockClear();
+  dispatchAll.mockClear();
+  repos.closures.save.mockClear();
+  repos.closures.delete.mockClear();
   repos.childcarePattern.findByHousehold.mockResolvedValue(null);
   repos.closures.findByDate.mockResolvedValue(null);
   repos.closures.listByHousehold.mockResolvedValue([]);
 });
 
-describe("every mutating childcare-settings action flushes the coalescing queue first (issue #92)", () => {
-  it("savePatternAction flushes", async () => {
-    await savePatternAction({ weekdays: ["mon"], effectiveFrom: "2025-01-06" });
-    expect(flush).toHaveBeenCalledTimes(1);
+describe("saveClosureAction — a range is one action (issue #131)", () => {
+  it("writes one closure row per date in the range", async () => {
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-06" });
+
+    expect(savedDates()).toEqual([
+      "2025-06-02",
+      "2025-06-03",
+      "2025-06-04",
+      "2025-06-05",
+      "2025-06-06",
+    ]);
   });
 
-  it("saveClosureAction flushes", async () => {
-    await saveClosureAction({ date: "2025-01-06" });
-    expect(flush).toHaveBeenCalledTimes(1);
+  it("hands the whole range to dispatchAll in one call, to be bundled", async () => {
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-04" });
+
+    expect(dispatchAll).toHaveBeenCalledTimes(1);
+    expect(dispatched().map((n) => n.subjectLabel)).toEqual([
+      "2025-06-02",
+      "2025-06-03",
+      "2025-06-04",
+    ]);
+    for (const notification of dispatched()) {
+      expect(notification.event).toBe(CLOSURE_ADDED_EVENT);
+      expect(notification.recipientId).toBe(MEMBER_2_ID); // the non-actor
+    }
   });
 
-  it("removeClosureAction flushes even though it never enqueues anything", async () => {
+  it("treats a missing endDate as a single day", async () => {
+    await saveClosureAction({ date: "2025-06-02" });
+
+    expect(savedDates()).toEqual(["2025-06-02"]);
+    expect(dispatched()).toHaveLength(1);
+  });
+
+  it("notifies only about the days it actually added", async () => {
+    // The middle day is already closed — the row is rewritten, but event 12
+    // fires on an *add*, so it is not in the batch.
+    repos.closures.findByDate.mockImplementation(async (_h: string, date: string) =>
+      date === "2025-06-03" ? { id: "existing", householdId: HOUSEHOLD_ID } : null,
+    );
+
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-04" });
+
+    expect(savedDates()).toEqual(["2025-06-02", "2025-06-03", "2025-06-04"]);
+    expect(dispatched().map((n) => n.subjectLabel)).toEqual(["2025-06-02", "2025-06-04"]);
+  });
+
+  it("sends nothing when every day in the range was already closed", async () => {
+    repos.closures.findByDate.mockResolvedValue({ id: "existing", householdId: HOUSEHOLD_ID });
+
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-03" });
+
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("rejects an end before the start", async () => {
+    await expect(saveClosureAction({ date: "2025-06-06", endDate: "2025-06-02" })).rejects.toThrow(
+      /can't be before/,
+    );
+    expect(repos.closures.save).not.toHaveBeenCalled();
+  });
+
+  it("caps how many days one action may close", async () => {
+    await expect(saveClosureAction({ date: "2025-01-01", endDate: "2025-12-31" })).rejects.toThrow(
+      new RegExp(String(MAX_CLOSURE_RANGE_DAYS)),
+    );
+    expect(repos.closures.save).not.toHaveBeenCalled();
+  });
+
+  it("ignores a range when editing — an edit is always the one row", async () => {
     repos.closures.listByHousehold.mockResolvedValue([{ id: "c1" }]);
+    repos.closures.findByDate.mockResolvedValue({ id: "c1", householdId: HOUSEHOLD_ID });
+
+    await saveClosureAction({ id: "c1", date: "2025-06-02", endDate: "2025-06-06" });
+
+    expect(savedDates()).toEqual(["2025-06-02"]);
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+});
+
+describe("savePatternAction", () => {
+  it("notifies the other member once on a real change", async () => {
+    await savePatternAction({ weekdays: ["mon"], effectiveFrom: "2025-01-06" });
+
+    expect(dispatchAll).toHaveBeenCalledTimes(1);
+    expect(dispatched()).toHaveLength(1);
+    expect(dispatched()[0].recipientId).toBe(MEMBER_2_ID);
+  });
+});
+
+describe("removeClosureAction", () => {
+  it("deletes a closure this household owns", async () => {
+    repos.closures.listByHousehold.mockResolvedValue([{ id: "c1" }]);
+
     await removeClosureAction("c1");
-    expect(flush).toHaveBeenCalledTimes(1);
+
     expect(repos.closures.delete).toHaveBeenCalledWith("c1");
   });
 
-  it("removeClosureAction flushes before bailing on a foreign closure id", async () => {
+  it("bails on a foreign closure id", async () => {
     repos.closures.listByHousehold.mockResolvedValue([{ id: "mine" }]);
-    await removeClosureAction("someone-elses");
-    expect(flush).toHaveBeenCalledTimes(1);
-    expect(repos.closures.delete).not.toHaveBeenCalled();
-  });
 
-  it("saveClosureAction on an unchanged existing closure still flushes (no enqueue path)", async () => {
-    repos.closures.findByDate.mockResolvedValue({ id: "c1", householdId: HOUSEHOLD_ID });
-    repos.closures.listByHousehold.mockResolvedValue([{ id: "c1" }]);
-    notify.mockClear();
-    await saveClosureAction({ id: "c1", date: "2025-01-06" });
-    expect(flush).toHaveBeenCalledTimes(1);
-    expect(notify).not.toHaveBeenCalled();
+    await removeClosureAction("someone-elses");
+
+    expect(repos.closures.delete).not.toHaveBeenCalled();
   });
 });

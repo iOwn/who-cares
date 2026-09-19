@@ -32,7 +32,8 @@ are load-bearing.
 | [ADR-0009](./docs/adr/0009-component-tests-are-a-narrow-interaction-contract-tier.md) | A narrow component-test tier covers the interaction / a11y contract of four `src/ui/` primitives only (`Dialog`, `SegmentedControl`, `DateField`, `DateRangeField`) via Vitest browser mode; supersedes ADR-0005's "no component tier" line. |
 | [ADR-0010](./docs/adr/0010-css-modules-and-custom-property-tokens-over-tailwind.md) | Component styling is CSS Modules + a two-layer design-token layer in CSS custom properties (not Tailwind / vanilla-extract); `cva` + `clsx` map variants to classes. |
 | [ADR-0011](./docs/adr/0011-primitives-are-built-on-react-aria-components.md) | The `src/ui/` primitives are built on React Aria Components (not Radix or shadcn/ui) — the only option with a real headless, screen-reader-tested date-range picker for the 4-week booking cap. |
-| [ADR-0012](./docs/adr/0012-coalesced-notifications-queue-drained-opportunistically.md) | The two coalescable notification events wait in a `pending_notifications` queue drained at the top of every Server Action + the daily cron (no timer, no second scheduler); a lone edit's notification can lag up to a day. |
+| [ADR-0012](./docs/adr/0012-coalesced-notifications-queue-drained-opportunistically.md) | The two coalescable notification events wait in a `pending_notifications` queue drained at the top of every Server Action + the daily cron (no timer, no second scheduler); a lone edit's notification can lag up to a day. **Superseded by ADR-0018.** |
+| [ADR-0018](./docs/adr/0018-the-unit-of-notification-is-the-user-action.md) | The unit of notification is the user action, not the record: one action sends at most one notification per (recipient, event), bundled at `dispatchAll` and sent immediately; supersedes ADR-0012's 5-minute coalescing queue outright. |
 
 ## Stack & hosting plan
 
@@ -153,7 +154,9 @@ specified below.
 - As the requested parent, I can **Accept** (I become the assignee, day resolves) or
   **Decline** (day goes to at-risk; the request is terminal, never re-raised — see ADR
   discussion in the Pickup-request lifecycle decision). Each day is accepted/declined
-  individually; there's no batch-accept even when several requests arrive from one absence.
+  individually — there is no bulk state change. The inbox's "Accept all" / "Decline all" is a
+  shortcut exactly equivalent to answering each day in turn, offered so one intent is one
+  action and therefore one notification (ADR-0018).
 - A request auto-**Withdraws** if its absence is cancelled/shortened, or if the day gets
   claimed out from under it before I respond.
 
@@ -176,9 +179,11 @@ specified below.
 - Every event fires email + web push together — one tier, no informational-only channel.
 - Recipient is always the single non-actor member, except the two actor-less events
   (both-absent, 48h-silence) which notify both.
-- Edits to the same absence/pattern/closure record within a 5-minute window coalesce into one
-  notification of the final state.
-- Full event catalogue (12 events, exact recipients and coalescing behavior per event): see
+- The unit of notification is the **user action**, not the record: one action sends at most one
+  notification per (recipient, event), bundled with the days it covers and sent immediately —
+  no window, no queue, no lag (ADR-0018). Where a burst would otherwise span several taps, the
+  UI makes it one tap (batch answer, closure date range).
+- Full event catalogue (12 events and their exact recipients): see
   the Notification events catalogue decision, linked from `CONTEXT.md`'s revision history /
   the map's Decisions-so-far.
 - Copy tone is plain, calm, and factual — never urgency- or guilt-toned, even for at-risk.

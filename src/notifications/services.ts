@@ -1,9 +1,9 @@
 /**
  * Wire the notification ports to their real adapters (issue #55) — the one
- * place `process.env` meets Gmail SMTP / `web-push` / the coalescing queue.
+ * place `process.env` meets Gmail SMTP / `web-push`.
  *
  * Every adapter degrades to a no-op when its credentials are absent, so a
- * caller always gets a working `notifier` / `flush` / `dispatchAll` — it just
+ * caller always gets a working `notifier` / `dispatchAll` — it just
  * sends nothing in an unconfigured environment (dev, CI, `next build`). A
  * deployment with the E2E test seam armed degrades the same way even when the
  * credentials *are* present (issue #139) — see the gate in the factory below.
@@ -25,22 +25,21 @@ import { isTestModeEnabled } from "@/testing/testMode";
 import { type DispatchDeps, dispatchAll as dispatchAllNotifications } from "./dispatch";
 import { getGmailConfig, getVapidConfig } from "./env";
 import { createGmailMailer } from "./gmailMailer";
-import { createNotifier, flushPendingNotifications } from "./notifier";
+import { createNotifier } from "./notifier";
 import { createWebPushSender } from "./webPushSender";
 
 export interface NotificationServices {
-  /** The `Notifier` port — coalesces settings events, dispatches the rest. */
+  /** The `Notifier` port — dispatches one notification, email + web push. */
   readonly notifier: Notifier;
-  /** Send every queued notification whose 5-minute window has elapsed. */
-  readonly flush: () => Promise<number>;
-  /** Dispatch a batch immediately (used for post-commit notifications). */
+  /**
+   * Dispatch **one action's** notifications, bundled per `(recipient, event)`
+   * (ADR-0018). The normal path for post-commit notifications; a caller holding
+   * more than one always uses this rather than `notifier.notify` in a loop.
+   */
   readonly dispatchAll: (notifications: readonly Notification[]) => Promise<void>;
 }
 
-type NotificationRepos = Pick<
-  Repositories,
-  "members" | "pushSubscriptions" | "pendingNotifications" | "pickupRequests"
->;
+type NotificationRepos = Pick<Repositories, "members" | "pushSubscriptions" | "pickupRequests">;
 
 /** Adapter overrides — only tests pass these; production reads them from env. */
 export interface NotificationServiceOverrides {
@@ -91,20 +90,14 @@ export function createNotificationServices(
     members: repos.members,
     pickupRequests: repos.pickupRequests,
   };
-  const clock = noopAdapters.systemClock;
-
-  const notifier = createNotifier({
-    ...dispatchDeps,
-    pendingNotifications: repos.pendingNotifications,
-    clock,
-  });
+  const notifier = createNotifier(dispatchDeps);
 
   // Every caller runs these **after** its transaction commits (SPEC.md: a slow
   // send must not hold a DB transaction open). A send failure must therefore
   // never propagate — the mutation already succeeded, and a thrown error would
   // surface to the user as a failed op they might retry into a double-write.
-  // So the whole boundary is log-and-swallow; per-row/per-item guards inside
-  // `flush` / `dispatchAll` keep one bad send from stranding a batch.
+  // So the whole boundary is log-and-swallow; the per-item guard inside
+  // `dispatchAll` keeps one bad send from stranding a batch.
   const swallow = async (label: string, run: () => Promise<unknown>): Promise<void> => {
     try {
       await run();
@@ -116,18 +109,6 @@ export function createNotificationServices(
   return {
     notifier: {
       notify: (notification) => swallow("notify", () => notifier.notify(notification)),
-    },
-    flush: async () => {
-      try {
-        return await flushPendingNotifications({
-          ...dispatchDeps,
-          pendingNotifications: repos.pendingNotifications,
-          clock,
-        });
-      } catch (error) {
-        console.error("notifications: flush failed", error);
-        return 0;
-      }
     },
     dispatchAll: (notifications) =>
       swallow("dispatchAll", () => dispatchAllNotifications(dispatchDeps, notifications)),

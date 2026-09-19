@@ -25,7 +25,9 @@
  *     withdraws by hand (event 4), the absence behind it is cancelled/shortened
  *     (event 5 — `absenceCancellation.ts`), or an `Assignment` appears for the
  *     day before the response (event 6).
- *   - Each day is answered individually — there is no batch action.
+ *   - Each day is answered individually. The Inbox's "Accept all" / "Decline
+ *     all" is exactly a loop over these services in one action (issue #131) —
+ *     no separate batch path, and so no separate rules.
  */
 
 import type {
@@ -136,6 +138,7 @@ function acceptedNotification(request: PickupRequest, recipientName: string): No
     event: PICKUP_REQUEST_ACCEPTED_EVENT,
     title: `${recipientName} is covering pickup`,
     body: `${recipientName} accepted your pickup request for ${request.date}.`,
+    subjectLabel: request.date,
   };
 }
 
@@ -145,6 +148,7 @@ function declinedNotification(request: PickupRequest, recipientName: string): No
     event: PICKUP_REQUEST_DECLINED_EVENT,
     title: `${recipientName} can't cover ${request.date}`,
     body: `${recipientName} declined your pickup request for ${request.date}. That day needs a direct claim now.`,
+    subjectLabel: request.date,
   };
 }
 
@@ -166,6 +170,7 @@ export function withdrawnNotification(
         event: PICKUP_REQUEST_WITHDRAWN_EVENT,
         title: `${requesterName} withdrew a pickup request`,
         body: `${requesterName} no longer needs you to cover pickup on ${request.date}.`,
+        subjectLabel: request.date,
       };
     case "absence-cancelled":
     case "absence-shortened":
@@ -174,6 +179,7 @@ export function withdrawnNotification(
         event: PICKUP_REQUEST_WITHDRAWN_EVENT,
         title: `${requesterName}'s absence changed`,
         body: `${requesterName}'s absence changed, so their pickup request for ${request.date} was withdrawn.`,
+        subjectLabel: request.date,
       };
     case "day-claimed":
       return {
@@ -181,6 +187,7 @@ export function withdrawnNotification(
         event: PICKUP_REQUEST_WITHDRAWN_EVENT,
         title: `Pickup on ${request.date} is covered`,
         body: `Pickup on ${request.date} is now covered, so your request to ${recipientName} was withdrawn.`,
+        subjectLabel: request.date,
       };
   }
 }

@@ -108,8 +108,7 @@ export interface AtRiskEscalationRepository {
    * Returns `true` iff **this call** inserted it — a `false` means another
    * (retried or overlapping) cron run already claimed the pair, and the caller
    * must **not** dispatch its notifications. `INSERT … ON CONFLICT DO NOTHING
-   * RETURNING`, so the check and the write are one statement — the ledger
-   * equivalent of `PendingNotificationRepository.claimDue` (ADR-0012).
+   * RETURNING`, so the check and the write are one statement.
    */
   claimNotified(householdId: string, date: CalendarDate, event: string, at: Date): Promise<boolean>;
 }
@@ -143,35 +142,6 @@ export interface PushSubscriptionRepository {
   listByMember(memberId: string): Promise<StoredPushSubscription[]>;
   save(subscription: StoredPushSubscription): Promise<void>;
   deleteByEndpoint(endpoint: string): Promise<void>;
-}
-
-/**
- * The 5-minute coalescing queue (issue #55). The two settings events
- * (pattern-changed, closure-added) land here instead of dispatching straight
- * away: `upsert` on the record's `coalesceKey` pushes `sendAfter` forward and
- * overwrites the payload with the latest state, so repeated edits collapse into
- * one notification. `listDue` / `delete` are the flush the cron and every
- * server action run.
- */
-export interface PendingNotification {
-  readonly id: string;
-  readonly coalesceKey: string;
-  readonly recipientId: string;
-  readonly event: string;
-  readonly title: string;
-  readonly body: string;
-  readonly sendAfter: Date;
-}
-
-export interface PendingNotificationRepository {
-  upsert(pending: PendingNotification): Promise<void>;
-  /**
-   * Atomically **remove and return** every row whose `sendAfter` is at or
-   * before `now` (a single `DELETE … RETURNING`). Claim-then-send: two
-   * concurrent flushes — a Server Action racing the daily cron — never both
-   * pick up the same row, so a coalesced notification is delivered once.
-   */
-  claimDue(now: Date): Promise<PendingNotification[]>;
 }
 
 /* ------------------------------------------------------------------ *
@@ -234,19 +204,22 @@ export interface Notification {
   readonly title: string;
   readonly body: string;
   /**
-   * Identity of the record this notification is about (`absence` / `pattern` /
-   * `closure`), set **only** for a coalescable event (issue #5). The `Notifier`
-   * uses it as the 5-minute-window key: two notifications with the same
-   * `coalesceKey` collapse into one; different keys get independent windows.
+   * What this notification is *about* — in practice the childcare date, e.g.
+   * `'2025-01-08'`. Ignored for a notification sent on its own; when one action
+   * raises several with the same `(recipient, event)`, `bundleNotifications`
+   * lists these in the bundled body so a digest keeps its days instead of
+   * degrading to a bare count (issue #131, ADR-0018).
    */
-  readonly coalesceKey?: string;
+  readonly subjectLabel?: string;
 }
 
 /**
  * The higher-level notification port: fans a domain event out to email + web
  * push together (one tier, no informational-only channel — SPEC.md). The
- * recipient matrix and 5-minute coalescing are the concern of the service
- * behind this port (issue #5), not of the callers.
+ * recipient matrix is the concern of the service behind this port (issue #5),
+ * not of the callers. A caller holding several notifications from one action
+ * sends them through `dispatchAll`, which bundles them per `(recipient, event)`
+ * (ADR-0018), rather than calling `notify` in a loop.
  */
 export interface Notifier {
   notify(notification: Notification): Promise<void>;

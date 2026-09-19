@@ -1,5 +1,12 @@
 # Coalesced notifications wait in a queue table drained opportunistically, not by a timer
 
+> **Superseded by [ADR-0018](./0018-the-unit-of-notification-is-the-user-action.md)**
+> (issue #131). Time-windowed coalescing is gone — the `pending_notifications`
+> table, the 5-minute window and the opportunistic flush were all removed, and
+> the unit of notification is now the user action, bundled at `dispatchAll`.
+> This ADR is kept for the reasoning it records about why a timer was
+> unavailable on the ADR-0004 runtime, which still holds.
+
 Implementing the notification catalogue (issue #55) meant delivering issue #5's
 5-minute per-record coalescing rule — "repeated edits to the same
 absence/pattern/closure record within a 5-minute window collapse into one
