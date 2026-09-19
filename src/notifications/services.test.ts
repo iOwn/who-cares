@@ -1,9 +1,9 @@
 /**
  * `createNotificationServices` (issue #55) — the app boundary. Its one job
- * beyond wiring is **resilience**: every caller runs `notify` / `flush` /
- * `dispatchAll` *after* its DB transaction has committed, so a send failure
- * must never propagate — it would surface to the user as a failed op they
- * might retry into a double-write. This pins that.
+ * beyond wiring is **resilience**: every caller runs `notify` / `dispatchAll`
+ * *after* its DB transaction has committed, so a send failure must never
+ * propagate — it would surface to the user as a failed op they might retry
+ * into a double-write. This pins that.
  *
  * It is also where outbound delivery is gated off on a deployment running the
  * E2E test seam (issue #139) — pinned at the bottom. `nodemailer` is mocked
@@ -20,11 +20,8 @@ const { createTransport, sendMail } = vi.hoisted(() => {
 vi.mock("nodemailer", () => ({ createTransport }));
 
 import {
-  CHILDCARE_PATTERN_CHANGED_EVENT,
   type Mailer,
   type MemberRepository,
-  type PendingNotification,
-  type PendingNotificationRepository,
   PICKUP_REQUEST_ACCEPTED_EVENT,
   type PickupRequestRepository,
   type PushSubscriptionRepository,
@@ -38,7 +35,7 @@ const throwingMailer: Mailer = {
   },
 };
 
-function repos(queue: PendingNotification[] = []) {
+function repos() {
   const members: MemberRepository = {
     async findById(id) {
       return id === MEMBER_1_ID ? makeMember({ id: MEMBER_1_ID, email: "a@b.c" }) : null;
@@ -58,16 +55,6 @@ function repos(queue: PendingNotification[] = []) {
     async save() {},
     async deleteByEndpoint() {},
   };
-  const pendingNotifications: PendingNotificationRepository = {
-    async upsert(p) {
-      queue.push(p);
-    },
-    async claimDue(now) {
-      const due = queue.filter((r) => r.sendAfter <= now);
-      for (const r of due) queue.splice(queue.indexOf(r), 1);
-      return due;
-    },
-  };
   // Only `countOpenForRecipient` is ever reached from here — it is what
   // `dispatchNotification` reads for the app-icon badge (issue #134).
   const pickupRequests: PickupRequestRepository = {
@@ -85,7 +72,7 @@ function repos(queue: PendingNotification[] = []) {
     },
     async save() {},
   };
-  return { members, pushSubscriptions, pendingNotifications, pickupRequests };
+  return { members, pushSubscriptions, pickupRequests };
 }
 
 beforeEach(() => {
@@ -121,22 +108,6 @@ describe("createNotificationServices — post-commit resilience", () => {
         { recipientId: MEMBER_1_ID, event: PICKUP_REQUEST_ACCEPTED_EVENT, title: "t", body: "b" },
       ]),
     ).resolves.toBeUndefined();
-  });
-
-  it("flush() swallows a mailer failure and returns 0", async () => {
-    const queue: PendingNotification[] = [
-      {
-        id: "p1",
-        coalesceKey: "k",
-        recipientId: MEMBER_1_ID,
-        event: CHILDCARE_PATTERN_CHANGED_EVENT,
-        title: "t",
-        body: "b",
-        sendAfter: new Date("2000-01-01T00:00:00.000Z"),
-      },
-    ];
-    const services = createNotificationServices(repos(queue), { mailer: throwingMailer });
-    await expect(services.flush()).resolves.toBe(0);
   });
 });
 

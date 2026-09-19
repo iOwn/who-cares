@@ -156,7 +156,7 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
 export async function truncateAll(db: Database): Promise<void> {
   await db.$client.exec(
     `TRUNCATE households, members, children, childcare_pattern_versions, closures,
-      absences, pickup_requests, assignments, push_subscriptions, pending_notifications,
-      at_risk_escalations RESTART IDENTITY CASCADE`,
+      absences, pickup_requests, assignments, push_subscriptions, at_risk_escalations
+      RESTART IDENTITY CASCADE`,
   );
 }

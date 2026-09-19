@@ -12,6 +12,7 @@ export * from "./services/bootstrapHousehold";
 export * from "./services/childcareDay";
 export * from "./services/dayState";
 export * from "./services/directClaim";
+export * from "./services/notificationBundling";
 export * from "./services/notificationCatalogue";
 export * from "./services/pickupRequestGeneration";
 export * from "./services/pickupRequestResolution";

@@ -258,28 +258,6 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 // the one household, so `listByMember`'s scan is free.
 
 /**
- * The 5-minute coalescing queue (issue #5, #55). Only the two settings events
- * (`childcare-pattern-changed`, `closure-added`) land here; everything else
- * dispatches immediately. `coalesce_key` identifies the record being edited
- * (`event:householdId` for the pattern, `event:householdId:date` for a
- * closure) and is unique, so an `upsert` on it pushes `send_after` forward and
- * replaces the payload — repeated edits within the window collapse into one
- * notification of the final state. Drained by `flushPendingNotifications`
- * (every server action + the daily cron).
- */
-export const pendingNotifications = pgTable("pending_notifications", {
-  id: text("id").primaryKey(),
-  coalesceKey: text("coalesce_key").notNull().unique("pending_notifications_coalesce_key_unique"),
-  recipientId: text("recipient_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  event: text("event").notNull(),
-  title: text("title").notNull(),
-  body: text("body").notNull(),
-  sendAfter: timestamp("send_after", { withTimezone: true }).notNull(),
-});
-
-/**
  * The "both parents were already told about this at-risk day" ledger (issue
  * #55, ADR-0004). Day state stays live-derived and unstored (ADR-0003); this
  * only records that the once-daily backstop notification went out, so a later

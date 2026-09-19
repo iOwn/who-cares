@@ -27,6 +27,21 @@
   padding: var(--space-16);
 }
 
+/*
+ * "Accept all" / "Decline all" (issue #131) — shown only when more than one
+ * request is waiting, so a single-request inbox keeps just the card's own
+ * buttons.
+ */
+.bulkActions {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.bulkActions > :first-child {
+  flex: 1;
+}
+
 /* Dock to the right as a panel with a divider from tablet width up. */
 @media (min-width: 768px) /* --bp-md */ {
   .panel {

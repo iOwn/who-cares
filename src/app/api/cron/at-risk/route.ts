@@ -8,8 +8,11 @@
  * day.
  *
  * A thin adapter over `runAtRiskEscalation` (ADR-0005): verify the caller,
- * loop the households, dispatch what the domain service returns, flush the
- * coalescing queue while we're here.
+ * loop the households, dispatch what the domain service returns.
+ *
+ * `dispatchAll` runs **once per household**, so a tick that finds ten newly
+ * at-risk days sends each parent one bundled mail listing them, not ten
+ * (issue #131, ADR-0018).
  */
 
 import { db } from "@/auth/config";
@@ -36,7 +39,6 @@ export async function GET(request: Request): Promise<Response> {
 
   let notified = 0;
   const failed: string[] = [];
-  let flushed = await services.flush();
 
   for (const household of households) {
     try {
@@ -52,15 +54,10 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  // A second flush: an escalation dispatch above is immediate, but a settings
-  // edit's queued row might have come due between the first flush and now.
-  flushed += await services.flush();
-
   return Response.json({
     ok: failed.length === 0,
     households: households.length,
     notified,
-    flushed,
     ...(failed.length > 0 ? { failed } : {}),
   });
 }

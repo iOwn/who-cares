@@ -10,6 +10,7 @@ import { shortDate } from "./formatCalendarDate";
 import styles from "./Inbox.module.css";
 import {
   acceptRequestAction,
+  answerAllRequestsAction,
   declineRequestAction,
   type RequestActionResult,
 } from "./requestActions";
@@ -29,9 +30,12 @@ import {
  * `Escape`, so keyboard users aren't stranded.
  *
  * Accept / Decline (#52) are wired here as the `RequestCard` `actions` slot.
- * Each day is answered individually — there is no batch action even when
- * several requests arrived from one absence (SPEC.md "Pickup requests"). A
- * successful answer revalidates `/`, so the answered request drops out of the
+ * Each day is still answered individually — the per-card buttons are the real
+ * interface, and there is no bulk *state change* (SPEC.md "Pickup requests").
+ * "Accept all" / "Decline all" (issue #131), shown only once two or more
+ * requests are waiting, is exactly a loop over those same answers in one
+ * action, which is what makes it one notification instead of five (ADR-0018).
+ * A successful answer revalidates `/`, so answered requests drop out of the
  * list on the next render.
  */
 
@@ -88,6 +92,33 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
     });
   };
 
+  /**
+   * Answer every request on screen in one action (issue #131). The ids come
+   * from the list the member is looking at, so a request the other parent
+   * resolved in the meantime is skipped server-side rather than failing the
+   * batch — the count comes back and is reported as a calm note.
+   */
+  const answerAll = (kind: "accept" | "decline") => {
+    setError(null);
+    setNote(null);
+    startTransition(async () => {
+      const result = await answerAllRequestsAction(
+        requests.map((request) => request.id),
+        kind,
+      );
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      if (result.skipped > 0) {
+        setNote(
+          `${result.answered} answered. ${result.skipped} had already been resolved, so they were left alone.`,
+        );
+      }
+      router.refresh();
+    });
+  };
+
   return (
     <aside ref={panelRef} className={styles.panel} aria-label="Pickup requests">
       <RouteHeader
@@ -116,36 +147,59 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
             description="Pickup requests from the other parent show up here."
           />
         ) : (
-          requests.map((request) => (
-            <RequestCard
-              key={request.id}
-              requesterName={nameOf(request.requesterId)}
-              dateLabel={shortDate(request.date)}
-              raisedAt={request.raisedAt}
-              now={now}
-              escalating={hasCrossedAtRiskThreshold(request.raisedAt, request.date, now)}
-              actions={
-                <>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    isDisabled={pending}
-                    onPress={() => answer(request.id, acceptRequestAction)}
-                  >
-                    {pending && pendingId === request.id ? "Saving…" : "Accept"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    isDisabled={pending}
-                    onPress={() => answer(request.id, declineRequestAction)}
-                  >
-                    Decline
-                  </Button>
-                </>
-              }
-            />
-          ))
+          <>
+            {requests.length > 1 ? (
+              <div className={styles.bulkActions}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => answerAll("accept")}
+                >
+                  Accept all {requests.length}
+                </Button>
+                <Button
+                  variant="ghost"
+                  tone="danger"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => answerAll("decline")}
+                >
+                  Decline all
+                </Button>
+              </div>
+            ) : null}
+            {requests.map((request) => (
+              <RequestCard
+                key={request.id}
+                requesterName={nameOf(request.requesterId)}
+                dateLabel={shortDate(request.date)}
+                raisedAt={request.raisedAt}
+                now={now}
+                escalating={hasCrossedAtRiskThreshold(request.raisedAt, request.date, now)}
+                actions={
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      isDisabled={pending}
+                      onPress={() => answer(request.id, acceptRequestAction)}
+                    >
+                      {pending && pendingId === request.id ? "Saving…" : "Accept"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      isDisabled={pending}
+                      onPress={() => answer(request.id, declineRequestAction)}
+                    >
+                      Decline
+                    </Button>
+                  </>
+                }
+              />
+            ))}
+          </>
         )}
       </div>
     </aside>

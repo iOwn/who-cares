@@ -4,13 +4,15 @@ import { type DateValue, parseDate } from "@internationalized/date";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import type { RangeValue } from "react-aria-components";
 import type { CalendarDate, ChildcarePattern, Closure, Weekday } from "@/domain";
-import { resolvePatternVersion } from "@/domain";
+import { eachDateInclusive, MAX_CLOSURE_RANGE_DAYS, resolvePatternVersion } from "@/domain";
 import {
   ActionBar,
   Button,
   Callout,
   DateField,
+  DateRangeField,
   SectionHeading,
   Surface,
   TextField,
@@ -24,6 +26,11 @@ import { removeClosureAction, saveClosureAction, savePatternAction } from "./chi
  * manage closures. A `'use client'` form over thin Server Actions
  * (`./childcareActions`); no domain logic here (ADR-0005). Rendered as a
  * section inside `SettingsScreen` (issue #48 owns the route shell + header).
+ *
+ * Adding closures takes a **date range** (issue #131), editing one takes a
+ * single date. A holiday week is then one action — still one `Closure` row per
+ * date, per CONTEXT.md, but one notification to the other parent instead of
+ * five (ADR-0018).
  */
 
 export interface ChildcareSettingsProps {
@@ -35,6 +42,21 @@ export interface ChildcareSettingsProps {
 
 function iso(value: DateValue | null): CalendarDate | null {
   return value ? value.toString() : null;
+}
+
+/**
+ * A `{ ok: false, error }` answer from a Server Action. Actions that only ever
+ * return `void` (the pattern + remove actions) fall through as successes.
+ */
+function isFailure(result: unknown): result is { ok: false; error: string } {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "ok" in result &&
+    result.ok === false &&
+    "error" in result &&
+    typeof result.error === "string"
+  );
 }
 
 function formatDate(date: CalendarDate): string {
@@ -57,16 +79,34 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
   const [weekdays, setWeekdays] = useState<Weekday[]>([...currentWeekdays]);
   const [effectiveFrom, setEffectiveFrom] = useState<DateValue | null>(() => parseDate(today));
 
-  // Closures.
+  // Closures. Adding takes a range; editing is pinned to the one row's date,
+  // so the edit form swaps the range picker for a single `DateField`.
+  const [closureRange, setClosureRange] = useState<RangeValue<DateValue> | null>(null);
   const [closureDate, setClosureDate] = useState<DateValue | null>(null);
   const [closureReason, setClosureReason] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const run = (work: () => Promise<void>) => {
+  const resetClosureForm = () => {
+    setClosureRange(null);
+    setClosureDate(null);
+    setClosureReason("");
+    setEditingId(null);
+  };
+
+  /**
+   * Run a settings action. An action that answers with a `{ ok: false }` result
+   * surfaces its message as-is (that is the only way a user-facing message
+   * survives a production build); a thrown error is a bug or an expired
+   * session, and Next has already replaced its message with a generic one, so
+   * it lands in the same callout.
+   */
+  const run = (work: () => Promise<unknown>, onSuccess?: () => void) => {
     setError(null);
     startTransition(async () => {
       try {
-        await work();
+        const result = await work();
+        if (isFailure(result)) return setError(result.error);
+        onSuccess?.();
         router.refresh();
       } catch (thrown) {
         setError(thrown instanceof Error ? thrown.message : "Something went wrong");
@@ -80,23 +120,40 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
     run(() => savePatternAction({ weekdays, effectiveFrom: from }));
   };
 
+  /**
+   * `saveClosureAction` answers with a result rather than throwing, because a
+   * thrown message doesn't survive a production build (see the action). The
+   * range checks are repeated here only so the common mistakes answer instantly
+   * — the server re-checks both, and its answer is the one that counts.
+   */
   const submitClosure = () => {
-    const date = iso(closureDate);
-    if (!date) return setError("Pick the closure date");
-    run(async () => {
-      await saveClosureAction({
-        ...(editingId ? { id: editingId } : {}),
-        date,
-        reason: closureReason,
-      });
-      setClosureDate(null);
-      setClosureReason("");
-      setEditingId(null);
-    });
+    if (editingId) {
+      const date = iso(closureDate);
+      if (!date) return setError("Pick the closure date");
+      return run(
+        () => saveClosureAction({ id: editingId, date, reason: closureReason }),
+        resetClosureForm,
+      );
+    }
+
+    const start = iso(closureRange?.start ?? null);
+    const end = iso(closureRange?.end ?? null);
+    if (!start || !end) return setError("Pick the closure dates");
+    if (end < start) return setError("The last closure date can't be before the first");
+    if (eachDateInclusive(start, end).length > MAX_CLOSURE_RANGE_DAYS) {
+      return setError(
+        `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
+      );
+    }
+    run(
+      () => saveClosureAction({ date: start, endDate: end, reason: closureReason }),
+      resetClosureForm,
+    );
   };
 
   const editClosure = (closure: Closure) => {
     setEditingId(closure.id);
+    setClosureRange(null);
     setClosureDate(parseDate(closure.date));
     setClosureReason(closure.reason ?? "");
     setError(null);
@@ -162,13 +219,24 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
         )}
 
         <Surface variant="sunken" className={styles.closureForm}>
-          <p className={styles.closureFormTitle}>{editingId ? "Edit closure" : "Add a closure"}</p>
-          <DateField
-            label="Date"
-            value={closureDate}
-            onChange={setClosureDate}
-            className={styles.field}
-          />
+          <p className={styles.closureFormTitle}>{editingId ? "Edit closure" : "Add closures"}</p>
+          {editingId ? (
+            <DateField
+              label="Date"
+              value={closureDate}
+              onChange={setClosureDate}
+              className={styles.field}
+            />
+          ) : (
+            <DateRangeField
+              label="Dates"
+              value={closureRange}
+              onChange={setClosureRange}
+              description="A single day or a whole stretch — pick the same day twice for one."
+              errorMessage="The last closure date can't be before the first."
+              className={styles.field}
+            />
+          )}
           <TextField
             label="Reason"
             isOptional
@@ -179,20 +247,12 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
           />
           <div className={styles.closureFormActions}>
             {editingId ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onPress={() => {
-                  setEditingId(null);
-                  setClosureDate(null);
-                  setClosureReason("");
-                }}
-              >
+              <Button variant="ghost" size="sm" onPress={resetClosureForm}>
                 Cancel
               </Button>
             ) : null}
             <Button variant="secondary" size="sm" isDisabled={pending} onPress={submitClosure}>
-              {editingId ? "Save closure" : "Add closure"}
+              {editingId ? "Save closure" : "Add closures"}
             </Button>
           </div>
         </Surface>

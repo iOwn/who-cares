@@ -22,7 +22,10 @@
  *   - `cancelAbsence()` / `shortenAbsence()` — repo-driven, the Server Action's
  *     thin adapter. They persist the absence change, withdraw the affected
  *     requests, and **return** the notifications for the caller to dispatch
- *     after commit.
+ *     after commit. One notification per affected day is the right *shape* —
+ *     `dispatchAll` bundles them per recipient so a two-week cancel is one mail,
+ *     not ten (issue #131, ADR-0018). Each carries its date as `subjectLabel`
+ *     so the bundle can list the days.
  */
 
 import type {
@@ -218,6 +221,7 @@ async function applyAbsenceChange(
         event: ASSIGNMENT_STANDS_EVENT,
         title: `You're still on pickup for ${a.date}`,
         body: `${nameOf(original.memberId)}'s absence changed, but the pickup you accepted for ${a.date} still stands.`,
+        subjectLabel: a.date,
       }),
     ),
   ];

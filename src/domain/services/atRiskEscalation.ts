@@ -118,6 +118,10 @@ export function planAtRiskEscalations(params: PlanAtRiskEscalationsParams): AtRi
         event,
         title,
         body,
+        // One notification per (day, member) is the right shape; `dispatchAll`
+        // bundles a tick's worth per member into one mail, listing these dates
+        // (issue #131, ADR-0018).
+        subjectLabel: facts.date,
       })),
     });
   }
@@ -172,7 +176,7 @@ export interface RunAtRiskEscalationResult {
  * ledger row and reports whether it won the race, and only escalations it
  * actually claimed are returned. So a retried or overlapping cron run — both
  * reading the same empty ledger and planning the same days — dispatches the
- * notifications exactly once between them, mirroring `claimDue` (ADR-0012).
+ * notifications exactly once between them.
  */
 export async function runAtRiskEscalation(
   deps: AtRiskEscalationDeps,

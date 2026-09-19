@@ -1,27 +1,28 @@
 /**
  * The full notification catalogue matrix (issue #5, `docs/testing.md` §4 point
- * 2) — one row per catalogue event asserting **(recipients, coalescable?)**.
+ * 2) — one row per catalogue event asserting **(recipients, bundled copy)**.
  *
  * The pickup-request lifecycle events (2–8) also have their recipient wiring
  * pinned in `src/domain/services/notificationRecipients.test.ts` against the
  * services that raise them; this file is the single place every event — 1
- * through 12 — is checked for its recipient *rule* and its coalescing flag.
+ * through 12 — is checked for its recipient *rule*.
  *
  *   - recipient rule: "single non-actor member" for every event except the two
  *     actor-less ones (both-absent, 48h-silence), which notify "both".
- *   - coalescable: only the two settings events.
+ *   - bundled copy: every event has its own, so `bundleNotifications` never
+ *     falls back to generic wording (issue #131, ADR-0018).
  */
 
 import { describe, expect, it } from "vitest";
 import type { DayStateFacts, Weekday } from "@/domain";
 import {
   ASSIGNMENT_STANDS_EVENT,
+  bundleNotifications,
   CHILDCARE_PATTERN_CHANGED_EVENT,
   CLOSURE_ADDED_EVENT,
   DAY_AT_RISK_BOTH_ABSENT_EVENT,
   DAY_AT_RISK_ESCALATED_EVENT,
   DIRECT_CLAIM_EVENT,
-  isCoalescableEvent,
   NOTIFICATION_EVENTS,
   PICKUP_REQUEST_ACCEPTED_EVENT,
   PICKUP_REQUEST_DECLINED_EVENT,
@@ -45,7 +46,6 @@ interface Row {
   readonly n: number;
   readonly event: string;
   readonly recipients: RecipientRule;
-  readonly coalescable: boolean;
 }
 
 /** Issue #5's numbered catalogue, verbatim. */
@@ -54,49 +54,64 @@ const CATALOGUE: readonly Row[] = [
     n: 1,
     event: PICKUP_REQUEST_RECEIVED_EVENT,
     recipients: "single-non-actor",
-    coalescable: false,
   },
   {
     n: 2,
     event: PICKUP_REQUEST_ACCEPTED_EVENT,
     recipients: "single-non-actor",
-    coalescable: false,
   },
   {
     n: 3,
     event: PICKUP_REQUEST_DECLINED_EVENT,
     recipients: "single-non-actor",
-    coalescable: false,
   },
   {
     n: 4,
     event: PICKUP_REQUEST_WITHDRAWN_EVENT,
     recipients: "single-non-actor",
-    coalescable: false,
   },
-  { n: 7, event: DIRECT_CLAIM_EVENT, recipients: "single-non-actor", coalescable: false },
-  { n: 8, event: ASSIGNMENT_STANDS_EVENT, recipients: "single-non-actor", coalescable: false },
-  { n: 9, event: DAY_AT_RISK_BOTH_ABSENT_EVENT, recipients: "both", coalescable: false },
-  { n: 10, event: DAY_AT_RISK_ESCALATED_EVENT, recipients: "both", coalescable: false },
+  { n: 7, event: DIRECT_CLAIM_EVENT, recipients: "single-non-actor" },
+  { n: 8, event: ASSIGNMENT_STANDS_EVENT, recipients: "single-non-actor" },
+  { n: 9, event: DAY_AT_RISK_BOTH_ABSENT_EVENT, recipients: "both" },
+  { n: 10, event: DAY_AT_RISK_ESCALATED_EVENT, recipients: "both" },
   {
     n: 11,
     event: CHILDCARE_PATTERN_CHANGED_EVENT,
     recipients: "single-non-actor",
-    coalescable: true,
   },
-  { n: 12, event: CLOSURE_ADDED_EVENT, recipients: "single-non-actor", coalescable: true },
+  { n: 12, event: CLOSURE_ADDED_EVENT, recipients: "single-non-actor" },
 ];
 
-describe("notification catalogue — coalescing flag", () => {
-  it.each(CATALOGUE)("event $n ($event) coalescable = $coalescable", ({ event, coalescable }) => {
-    expect(isCoalescableEvent(event)).toBe(coalescable);
-  });
+describe("notification catalogue — bundled copy (issue #131)", () => {
+  /** Two of the same event to one recipient — what one action can produce. */
+  const twoOf = (event: string) =>
+    ["2025-01-08", "2025-01-09"].map((date) => ({
+      recipientId: MEMBER_1_ID,
+      event,
+      title: `single title for ${date}`,
+      body: `single body for ${date}`,
+      subjectLabel: date,
+    }));
 
-  it("only the two settings events coalesce", () => {
-    expect(NOTIFICATION_EVENTS.filter(isCoalescableEvent).sort()).toEqual(
-      [CHILDCARE_PATTERN_CHANGED_EVENT, CLOSURE_ADDED_EVENT].sort(),
+  it("the table below covers every event key the catalogue exports", () => {
+    expect([...new Set(CATALOGUE.map((row) => row.event))].sort()).toEqual(
+      [...NOTIFICATION_EVENTS].sort(),
     );
   });
+
+  it.each(CATALOGUE)(
+    "event $n ($event) bundles into one notification with copy of its own",
+    ({ event }) => {
+      const bundled = bundleNotifications(twoOf(event));
+
+      expect(bundled).toHaveLength(1);
+      // Not the `FALLBACK_COPY` shape, and not a per-day title/body smuggled
+      // through — a bundle of two is always written for two.
+      expect(bundled[0].title).not.toBe("2 updates");
+      expect(bundled[0].title).not.toContain("single title");
+      expect(bundled[0].body).not.toContain("single body");
+    },
+  );
 });
 
 describe("notification catalogue — recipient rule", () => {

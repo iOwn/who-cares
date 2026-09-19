@@ -65,6 +65,7 @@ function directClaimNotification(
     event: DIRECT_CLAIM_EVENT,
     title: `${claimantName} took over pickup on ${assignment.date}`,
     body: `${claimantName} claimed pickup for ${assignment.date}, so you're no longer down for that day.`,
+    subjectLabel: assignment.date,
   };
 }
 

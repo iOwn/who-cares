@@ -1,11 +1,10 @@
 /**
- * `PushSubscriptionRepository` + `PendingNotificationRepository` +
- * `AtRiskEscalationRepository` against a real, migration-built schema
- * (ADR-0006, issue #55).
+ * `PushSubscriptionRepository` + `AtRiskEscalationRepository` against a real,
+ * migration-built schema (ADR-0006, issue #55).
  *
  * The seam under test is narrow: the queries round-trip their shapes, and the
- * three uniqueness guards hold — `push_subscriptions.endpoint`,
- * `pending_notifications.coalesce_key`, `at_risk_escalations (household, date)`.
+ * two uniqueness guards hold — `push_subscriptions.endpoint` and
+ * `at_risk_escalations (household, date, event)`.
  */
 
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -92,59 +91,6 @@ describe("PushSubscriptionRepository", () => {
     await repos.pushSubscriptions.save(sub());
     await repos.pushSubscriptions.deleteByEndpoint("https://push.example/abc");
     expect(await repos.pushSubscriptions.listByMember(MEMBER_1_ID)).toEqual([]);
-  });
-});
-
-describe("PendingNotificationRepository", () => {
-  const pending = (
-    over: Partial<Parameters<typeof repos.pendingNotifications.upsert>[0]> = {},
-  ) => ({
-    id: "pn-1",
-    coalesceKey: "childcare-pattern-changed:household-1",
-    recipientId: MEMBER_2_ID,
-    event: "childcare-pattern-changed",
-    title: "The childcare pattern changed",
-    body: "v1",
-    sendAfter: new Date("2025-01-06T09:05:00.000Z"),
-    ...over,
-  });
-
-  it("upserts on coalesce_key — a second edit replaces the payload and the window", async () => {
-    await repos.pendingNotifications.upsert(pending());
-    await repos.pendingNotifications.upsert(
-      pending({ id: "pn-2", body: "v2", sendAfter: new Date("2025-01-06T09:09:00.000Z") }),
-    );
-
-    const due = await repos.pendingNotifications.claimDue(new Date("2025-01-06T10:00:00.000Z"));
-    expect(due).toHaveLength(1);
-    expect(due[0].body).toBe("v2");
-    expect(due[0].sendAfter.toISOString()).toBe("2025-01-06T09:09:00.000Z");
-  });
-
-  it("claimDue respects the window, removes what it returns, and orders oldest-first", async () => {
-    await repos.pendingNotifications.upsert(
-      pending({ id: "a", coalesceKey: "k-a", sendAfter: new Date("2025-01-06T09:03:00.000Z") }),
-    );
-    await repos.pendingNotifications.upsert(
-      pending({ id: "b", coalesceKey: "k-b", sendAfter: new Date("2025-01-06T09:01:00.000Z") }),
-    );
-    await repos.pendingNotifications.upsert(
-      pending({ id: "c", coalesceKey: "k-c", sendAfter: new Date("2025-01-06T09:30:00.000Z") }),
-    );
-
-    const due = await repos.pendingNotifications.claimDue(new Date("2025-01-06T09:05:00.000Z"));
-    expect(due.map((row) => row.id)).toEqual(["b", "a"]);
-
-    const rest = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
-    expect(rest.map((row) => row.id)).toEqual(["c"]);
-  });
-
-  it("a second concurrent claim gets nothing — the row is removed as it is returned", async () => {
-    await repos.pendingNotifications.upsert(pending());
-    const first = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
-    const second = await repos.pendingNotifications.claimDue(new Date("2030-01-01T00:00:00.000Z"));
-    expect(first).toHaveLength(1);
-    expect(second).toEqual([]);
   });
 });
 

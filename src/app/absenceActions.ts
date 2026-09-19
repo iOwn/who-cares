@@ -17,9 +17,9 @@ import { notificationServicesFor } from "@/notifications";
  *
  * `recordAbsence` runs in one transaction so the `Absence` and its
  * `PickupRequest`s commit together; the digest it returns is dispatched
- * **after** commit so a slow send can't hold the transaction open. Dispatch
- * itself (email + web push + coalescing) is #55 — a no-op `Notifier` stands in
- * now, so only the implementation behind the port changes.
+ * **after** commit so a slow send can't hold the transaction open. The digest
+ * is already one notification for the whole action (SPEC.md, ADR-0018), so
+ * there is nothing for `dispatchAll` to bundle here.
  *
  * Returns a discriminated result rather than throwing: `AbsenceInputError`
  * messages are plain and safe to show; anything else surfaces as a generic
@@ -61,9 +61,9 @@ export async function recordAbsenceAction(input: {
     return { ok: false, error: "Something went wrong saving that. Please try again." };
   }
 
-  const services = notificationServicesFor(db);
-  await services.flush();
-  if (outcome.notification) await services.notifier.notify(outcome.notification);
+  if (outcome.notification) {
+    await notificationServicesFor(db).notifier.notify(outcome.notification);
+  }
 
   revalidatePath("/");
   return { ok: true, requestCount: outcome.requests.length };
@@ -119,9 +119,9 @@ export async function recordRecurringAbsencesAction(input: {
     return { ok: false, error: "Something went wrong saving that. Please try again." };
   }
 
-  const services = notificationServicesFor(db);
-  await services.flush();
-  if (outcome.notification) await services.notifier.notify(outcome.notification);
+  if (outcome.notification) {
+    await notificationServicesFor(db).notifier.notify(outcome.notification);
+  }
 
   revalidatePath("/");
   return {

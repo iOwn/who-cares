@@ -31,8 +31,9 @@ import { notificationServicesFor } from "@/notifications";
  * Each runs its service in one `db.transaction` so the request transition and
  * its side effect (an `Assignment`, a batch of withdrawals) commit together;
  * the notifications the service returns are dispatched **after** commit so a
- * slow send can't hold the transaction open. Real dispatch (email + web push +
- * coalescing) is #55 — a no-op `Notifier` stands in now.
+ * slow send can't hold the transaction open. `dispatchAll` bundles whatever
+ * one action produced into at most one notification per (recipient, event)
+ * (ADR-0018), so a two-week cancel or an "Accept all" is one mail.
  *
  * They return a discriminated result rather than throwing: `AbsenceInputError`
  * / `PickupRequestStateError` messages are plain and safe to show; anything
@@ -42,25 +43,19 @@ import { notificationServicesFor } from "@/notifications";
 
 export type RequestActionResult = { ok: true; note?: string } | { ok: false; error: string };
 
-const EXPIRED: RequestActionResult = {
-  ok: false,
-  error: "Your session has expired — please sign in again.",
-};
-const GENERIC: RequestActionResult = {
-  ok: false,
-  error: "Something went wrong. Please try again.",
-};
+const EXPIRED_MESSAGE = "Your session has expired — please sign in again.";
+const GENERIC_MESSAGE = "Something went wrong. Please try again.";
+
+const EXPIRED: RequestActionResult = { ok: false, error: EXPIRED_MESSAGE };
+const GENERIC: RequestActionResult = { ok: false, error: GENERIC_MESSAGE };
 
 /**
- * Dispatch post-commit notifications (email + web push) and, while we're here,
- * flush any coalescing-queue rows whose 5-minute window has elapsed (#55 —
- * opportunistic flush; the daily cron is the backstop). Runs against the base
+ * Dispatch one action's post-commit notifications (email + web push), bundled
+ * per (recipient, event) by `dispatchAll` (ADR-0018). Runs against the base
  * `db`, not a transaction — a slow send must never hold one open.
  */
 async function dispatch(notifications: readonly Notification[]): Promise<void> {
-  const services = notificationServicesFor(db);
-  await services.flush();
-  await services.dispatchAll(notifications);
+  await notificationServicesFor(db).dispatchAll(notifications);
 }
 
 function toResult(thrown: unknown, label: string): RequestActionResult {
@@ -73,6 +68,15 @@ function toResult(thrown: unknown, label: string): RequestActionResult {
 
 const SUPERSEDED_NOTE =
   "That day was already covered by someone else, so the request was withdrawn instead.";
+
+/**
+ * How many ids one "Accept all" / "Decline all" will look at. The Inbox can
+ * only ever show this member's `Open` requests, and a household would have to
+ * declare months of absence to approach it — but `requestIds` comes from the
+ * client, and each id costs ~3 queries inside one transaction, so the loop is
+ * bounded rather than trusting the caller.
+ */
+const MAX_BATCH_ANSWER = 100;
 
 /**
  * Shared shape for the accept / decline / withdraw trio: run the domain service
@@ -122,6 +126,87 @@ export async function declineRequestAction(requestId: string): Promise<RequestAc
 
 export async function withdrawRequestAction(requestId: string): Promise<RequestActionResult> {
   return runRequestResolution("withdrawRequestAction", requestId, withdrawRequest);
+}
+
+/** How many of the requests an "Answer all" was asked to handle actually moved. */
+export type AnswerAllResult =
+  | { ok: true; answered: number; skipped: number }
+  | { ok: false; error: string };
+
+/**
+ * Answer several pickup requests in **one** action (issue #131) — the Inbox's
+ * "Accept all" / "Decline all".
+ *
+ * This is not a new domain path: it is a loop over the very same
+ * `acceptRequest` / `declineRequest` services a single answer runs, so every
+ * rule (only `Open` transitions, only the addressee answers, a direct claim
+ * that landed first supersedes into a withdrawal) applies per day, unchanged.
+ * SPEC.md's "each day is answered individually" still holds — this is one tap
+ * standing in for N identical taps, not a bulk state change.
+ *
+ * What it buys is the notification: the whole loop is one action, so the
+ * notifications it collects go through a single `dispatchAll` and bundle into
+ * one mail + one push instead of five (ADR-0018).
+ *
+ * A **stale id is skipped, not fatal**: the inbox the member tapped can be a
+ * few seconds behind the other parent's claim, so a request that has since left
+ * `Open` (or was never theirs to answer) is counted in `skipped` and the rest
+ * still go through. Anything that is *not* a `PickupRequestStateError` is a
+ * real failure and rolls the whole transaction back.
+ */
+export async function answerAllRequestsAction(
+  requestIds: readonly string[],
+  answer: "accept" | "decline",
+): Promise<AnswerAllResult> {
+  const session = await getCurrentSession();
+  if (!session) return { ok: false, error: EXPIRED_MESSAGE };
+  if (requestIds.length === 0) return { ok: true, answered: 0, skipped: 0 };
+  if (requestIds.length > MAX_BATCH_ANSWER) {
+    console.error(`answerAllRequestsAction refused ${requestIds.length} ids`);
+    return { ok: false, error: GENERIC_MESSAGE };
+  }
+
+  const service = answer === "accept" ? acceptRequest : declineRequest;
+
+  let outcome: { notifications: Notification[]; skipped: number };
+  try {
+    outcome = await db.transaction(async (tx) => {
+      const deps: PickupRequestResolutionDeps = {
+        ...createRepositories(tx),
+        clock: noopAdapters.systemClock,
+        ids: noopAdapters.systemIdGenerator,
+      };
+      const notifications: Notification[] = [];
+      let skipped = 0;
+      // Sequential, not `Promise.all`: these share one transaction, and accept
+      // writes an `Assignment` whose one-per-date uniqueness the next iteration
+      // must already see.
+      for (const requestId of requestIds) {
+        try {
+          const result = await service(deps, { requestId, actingMemberId: session.member.id });
+          notifications.push(result.notification);
+        } catch (thrown) {
+          if (thrown instanceof PickupRequestStateError) {
+            skipped += 1;
+            continue;
+          }
+          throw thrown;
+        }
+      }
+      return { notifications, skipped };
+    });
+  } catch (thrown) {
+    console.error("answerAllRequestsAction failed", thrown);
+    return { ok: false, error: GENERIC_MESSAGE };
+  }
+
+  await dispatch(outcome.notifications);
+  revalidatePath("/");
+  return {
+    ok: true,
+    answered: outcome.notifications.length,
+    skipped: outcome.skipped,
+  };
 }
 
 /**

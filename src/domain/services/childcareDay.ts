@@ -33,6 +33,14 @@ import type {
 const WEEKDAYS_BY_UTC_DAY: readonly Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 /**
+ * The longest stretch of closures one action may add (issue #131). A `Closure`
+ * is still one row per date (CONTEXT.md); this only caps how many of them the
+ * settings form's date range may write in a single submission, so a
+ * fat-fingered year can't create 365 rows. A nursery's summer shutdown fits.
+ */
+export const MAX_CLOSURE_RANGE_DAYS = 31;
+
+/**
  * The weekday a `'YYYY-MM-DD'` date falls on. Built on a `Date` pinned to
  * UTC-midnight — the same technique as `src/testing/factories.ts`'s `addDays` —
  * so it never drifts across a timezone.

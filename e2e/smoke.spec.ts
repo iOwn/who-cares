@@ -102,7 +102,10 @@ test.describe("smoke", () => {
 
     const requests = pageB.getByRole("complementary", { name: "Pickup requests" });
     await expect(requests.getByText(/Alex is out/)).toBeVisible();
-    await requests.getByRole("button", { name: "Accept" }).first().click();
+    // `exact` so this can never pick up the "Accept all N" bulk button
+    // (issue #131) — the smoke seeds one request, so it isn't rendered, but the
+    // selector shouldn't depend on that.
+    await requests.getByRole("button", { name: "Accept", exact: true }).first().click();
 
     // --- Both parents now see the day Resolved ------------------------
     await expect(

@@ -1,27 +1,32 @@
 # Notifications
 
 How WhoCares turns a domain event into an email + a web push (issue #55, issue
-#5 catalogue, SPEC.md "Notifications", ADR-0004, ADR-0012, ADR-0014).
+#5 catalogue, SPEC.md "Notifications", ADR-0004, ADR-0014, ADR-0018).
 
 ## The pipeline
 
 ```
-domain service ──returns──▶ Notification[] ──▶ Notifier.notify()
+one user action
+      │
+      ▼
+domain service ──returns──▶ Notification[] ──▶ dispatchAll()
                                                   │
-                             coalescable? ────────┤
-                              no  │               │  yes
-                                  ▼               ▼
-                       dispatchNotification   pending_notifications
-                       (email + web push)     (upsert, send_after = now+5min)
-                                  ▲               │
-                                  └── flushPendingNotifications ◀── every Server Action
-                                                                    + daily Vercel Cron
+                                       bundleNotifications()  group by (recipient, event):
+                                                  │           2+ collapse into one,
+                                                  ▼           a lone one passes through
+                                       dispatchNotification
+                                        (email + web push)
 ```
 
 - **Domain services never send.** `recordAbsence`, the request-resolution
   services, `runAtRiskEscalation` and the settings actions each return
   `Notification` objects; the caller dispatches them **after** its transaction
   commits, so a slow send can't hold a DB transaction open (ADR-0005).
+- **The unit is the action, not the record** (ADR-0018). Each action hands
+  `dispatchAll` its whole batch exactly once, and `bundleNotifications`
+  (`src/domain/services/notificationBundling.ts`) collapses that batch to at
+  most one notification per `(recipient, event)`. Nothing is queued and nothing
+  waits: a notification goes out with the action that caused it.
 - **One tier.** Every event fires email **and** web push together (SPEC.md).
   Email is the guaranteed channel; web push is best-effort and a failed push is
   logged and swallowed.
@@ -32,18 +37,22 @@ domain service ──returns──▶ Notification[] ──▶ Notifier.notify()
 
 ## Event catalogue
 
-| # | Event key | Recipient | Coalescable | Raised by |
-| --- | --- | --- | --- | --- |
-| 1 | `pickup-request-received` | other parent | no | `recordAbsence` / recurring generator (one bundled digest per action) |
-| 2 | `pickup-request-accepted` | requester | no | `acceptRequest` |
-| 3 | `pickup-request-declined` | requester | no | `declineRequest` |
-| 4–6 | `pickup-request-withdrawn` | the parent who still had it (4, 5) / requester (6) | no | `withdrawRequest`, `absenceCancellation`, `claimDay`, `acceptRequest` (superseded) |
-| 7 | `direct-claim` | bumped parent | no | `claimDay` |
-| 8 | `assignment-stands` | assignee | no | `absenceCancellation` |
-| 9 | `day-at-risk-both-absent` | **both** | no | `runAtRiskEscalation` (daily cron) |
-| 10 | `day-at-risk-escalated` | **both** | no | `runAtRiskEscalation` (daily cron) |
-| 11 | `childcare-pattern-changed` | other parent | **yes** | `savePatternAction` |
-| 12 | `closure-added` | other parent | **yes** | `saveClosureAction` (add only) |
+| # | Event key | Recipient | Raised by |
+| --- | --- | --- | --- |
+| 1 | `pickup-request-received` | other parent | `recordAbsence` / recurring generator (one bundled digest per action) |
+| 2 | `pickup-request-accepted` | requester | `acceptRequest` |
+| 3 | `pickup-request-declined` | requester | `declineRequest` |
+| 4–6 | `pickup-request-withdrawn` | the parent who still had it (4, 5) / requester (6) | `withdrawRequest`, `absenceCancellation`, `claimDay`, `acceptRequest` (superseded) |
+| 7 | `direct-claim` | bumped parent | `claimDay` |
+| 8 | `assignment-stands` | assignee | `absenceCancellation` |
+| 9 | `day-at-risk-both-absent` | **both** | `runAtRiskEscalation` (daily cron) |
+| 10 | `day-at-risk-escalated` | **both** | `runAtRiskEscalation` (daily cron) |
+| 11 | `childcare-pattern-changed` | other parent | `savePatternAction` |
+| 12 | `closure-added` | other parent | `saveClosureAction` (add only) |
+
+Every event also carries **bundled copy** of its own in
+`notificationBundling.ts`, so a bundle is never written in generic wording;
+`catalogue.test.ts` fails if a new event is added without it.
 
 Recipient rule: the single non-actor member, always — never self-notify — except
 the two actor-less events (9, 10) which notify both. Tone: plain, calm, factual;
@@ -66,19 +75,43 @@ row with `AtRiskEscalationRepository.claimNotified` — `INSERT … ON CONFLICT 
 NOTHING RETURNING` — and only keeps the notifications for `(date, event)` pairs
 it actually inserted. A retried or overlapping cron run reading the same empty
 ledger plans the same days but claims none, so the at-risk email + push go out
-once. Same guarantee `claimDue` gives the coalescing queue below.
+once.
 
-## Coalescing
+The handler calls `dispatchAll` **once per household**, so a tick that finds ten
+newly at-risk days sends each parent one mail listing them, not ten (ADR-0018).
 
-See **ADR-0012**. Only events 11 + 12. Each edit `upsert`s one
-`pending_notifications` row keyed by the record (`event:householdId` for the
-pattern, `event:householdId:date` for a closure), window `now + 5min`. Repeated
-edits to the same record collapse into one notification of the final state
-(and its recipient is whoever the *last* editor's counterpart is).
-`flushPendingNotifications` — run by every mutating Server Action and the daily
-cron — claims due rows with a single `DELETE … RETURNING` (so two concurrent
-flushes can't double-send) and dispatches them; a row whose send then throws is
-dropped and logged, not retried.
+## Bundling
+
+See **ADR-0018**, which supersedes ADR-0012's 5-minute coalescing queue outright
+— there is no `pending_notifications` table, no window and no flush.
+
+`bundleNotifications(notifications)` is pure: it groups by `(recipientId,
+event)` in first-seen order, passes a group of one through untouched, and
+collapses a group of two or more into one notification with count-aware copy.
+Each notification's optional `subjectLabel` (the childcare date) is what the
+bundled body lists — up to `MAX_LISTED_SUBJECTS`, then "and N more".
+
+`dispatchAll` is its only caller, so the bundling boundary is the **call**, and
+every caller respects it by passing one action's worth:
+
+| Caller | One call covers |
+| --- | --- |
+| `cancelAbsenceAction` / `shortenAbsenceAction` | every withdrawal + "still stands" that change produced |
+| `claimDayAction` | the bumped parent + the withdrawn request's requester |
+| `answerAllRequestsAction` | every day the "Accept all" / "Decline all" answered |
+| `saveClosureAction` | every date in the closure range that was newly closed (the range commits as one transaction; the dispatch follows it) |
+| `/api/cron/at-risk` | one household's newly at-risk days |
+
+Two separate taps stay two notifications — nothing merges across actions.
+Saving the pattern twice in five minutes is two mails, deliberately: two saves
+are two facts.
+
+Where a burst would otherwise span several taps, the UI makes it one tap: the
+Inbox's "Accept all" / "Decline all" (shown once two or more requests are
+waiting) and the settings form's closure **date range**. Neither is a new domain
+path — the batch answer loops the same `acceptRequest` / `declineRequest`
+services, skipping ids that have gone stale, and a range still writes one
+`Closure` row per date (CONTEXT.md).
 
 ## Deploy setup
 
@@ -169,7 +202,7 @@ tally. Two halves keep it right:
   `PushMessage.badge`; `sw.js` mirrors it onto the icon in the `push` handler.
   Every event carries it, not just the request ones, so a withdrawal push clears
   the badge that withdrawal resolved. The count is read at **dispatch** time, so
-  a notification coalesced for five minutes still ships a current number.
+  a bundled batch ships the number that is true as each push goes out.
 - **While the app is open** — `useAppBadge` in `AppShell` re-asserts the server's
   count on change and on resume (via `useOnResume`, alongside ADR-0016's
   refresh), so the badge and the bell can never disagree.

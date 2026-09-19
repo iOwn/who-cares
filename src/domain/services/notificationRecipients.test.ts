@@ -5,9 +5,10 @@
  * "single non-actor member" rule from the catalogue.
  *
  * Scope: the accept / decline / withdraw / cancel / shorten / direct-claim
- * events only. The actor-less events (both-absent, 48h-silence) and the
- * 5-minute coalescing window are #55's (they need the real `Notifier`, not
- * these services).
+ * events only. The actor-less events (both-absent, 48h-silence) live with the
+ * at-risk backstop, and per-action bundling (ADR-0018) is pinned in
+ * `notificationBundling.test.ts` + `src/notifications/notifier.test.ts` — it
+ * happens at dispatch, below these services.
  */
 
 import { beforeEach, describe, expect, it } from "vitest";

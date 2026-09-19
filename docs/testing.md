@@ -37,11 +37,14 @@ See **[ADR-0005](./adr/0005-domain-logic-is-framework-free-and-that-line-is-the-
   restriction, not the path.
 - **The boundary is mechanical**: importable → Vitest; needs a server or a browser →
   Playwright. Server actions, route handlers, and the Vercel Cron handler are thin adapters
-  over a tested domain service and are not unit-tested — with one deliberate exception:
-  `src/app/settings/childcareActions.test.ts` (issue #92) `vi.mock`s the wiring to assert one
-  cross-cutting contract (every mutating action drains the coalescing queue first) that no
-  domain test and no E2E smoke (ADR-0008 never asserts dispatch) can cover. This is not
-  licence to unit-test action *bodies* — the domain behaviour still belongs in a pure helper.
+  over a tested domain service and are not unit-tested — with two deliberate exceptions,
+  both of which `vi.mock` the wiring to assert a cross-cutting contract that no domain test
+  and no E2E smoke (ADR-0008 never asserts dispatch) can cover:
+  `src/app/settings/childcareActions.test.ts` (a closure date range is one action and
+  therefore one bundled notification) and `src/app/requestActions.test.ts` (the "Accept all"
+  loop is one `dispatchAll`, and a stale id is skipped rather than fatal) — both issue #131,
+  ADR-0018. This is not licence to unit-test action *bodies* — the domain behaviour still
+  belongs in a pure helper.
 - **No RSC-in-Vitest shim.** A test that seems to need to render an RSC belongs in Playwright.
 - **Dependency injection first** — mailer, push sender, clock, repository are ports; tests
   inject fakes. `vi.mock` is a fallback only where a seam genuinely cannot take injection.
@@ -160,16 +163,16 @@ real interaction / a11y contract (ADR-0009).**
    thresholds isolated in their own cases; the "assignee later records their own absence"
    re-flag explicitly covered; `now()` supplied per case via the injected clock.
 2. **Notification recipient matrix ([issue #5](https://github.com/iOwn/who-cares/issues/5))
-   — full matrix, table-driven.** ~15 rows, one per event, asserting `(recipients,
-   coalescable?)`. Single non-actor member except the two actor-less events (both-absent,
-   48h-silence) which notify both. Plus coalescing-window cases: two edits to the same record
-   inside 5 min → one notification; different records → independent windows; an edit after
-   the window → a second notification. Split across three files (#55):
+   — full matrix, table-driven.** ~15 rows, one per event, asserting `(recipients, bundled
+   copy)`. Single non-actor member except the two actor-less events (both-absent,
+   48h-silence) which notify both. Plus the **per-action bundling** cases (issue #131,
+   ADR-0018): several same-event notifications from one action → one notification; a lone
+   one → untouched; two separate actions → two notifications. Split across four files:
    `src/domain/services/notificationRecipients.test.ts` (events 2–8 recipient wiring against
    the services that raise them), `src/notifications/catalogue.test.ts` (all 12 events'
-   coalescing flag + the actor-less events' "both" rule), and
-   `src/notifications/notifier.test.ts` (the 5-minute-window behaviour against the real
-   `Notifier`).
+   bundled copy + the actor-less events' "both" rule),
+   `src/domain/services/notificationBundling.test.ts` (the pure grouping + copy rules), and
+   `src/notifications/notifier.test.ts` (that `dispatchAll` actually applies them).
 3. **Effective-dated pattern derivation (ADR-0002) — targeted, ~5–8 cases.** Fold into the
    same "is childcare day" helper case 1 needs. Pin: a date resolves against the version in
    effect *then*; adding a newer version leaves past derivation unchanged; boundary date ==
