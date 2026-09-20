@@ -61,6 +61,13 @@ export interface CalendarProps {
    * `initialToday`, so the first paint matches server HTML exactly.
    */
   readonly initialNow: string;
+  /**
+   * The viewer's "hide weekend days" preference (#130). Only the Grid honours
+   * it — the List already shows notable days only. A weekend column that holds
+   * a real childcare day or a closure that month stays put regardless; see
+   * `buildCalendarMonth`.
+   */
+  readonly hideWeekends: boolean;
 }
 
 type Tab = "grid" | "list";
@@ -81,6 +88,7 @@ export function Calendar({
   members,
   initialToday,
   initialNow,
+  hideWeekends,
 }: CalendarProps) {
   // The clock is server-seeded then corrected on mount + re-sampled on focus /
   // visibility (`useWallClock`) so a long-lived PWA tab doesn't sit on a stale
@@ -120,15 +128,26 @@ export function Calendar({
         members,
         today,
         now,
+        hideWeekends,
       }),
-    [year, month, pattern, closures, assignments, pickupRequests, absences, members, today, now],
+    [
+      year,
+      month,
+      pattern,
+      closures,
+      assignments,
+      pickupRequests,
+      absences,
+      members,
+      today,
+      now,
+      hideWeekends,
+    ],
   );
 
   const selectedDay = useMemo(
     () =>
-      selectedDate == null
-        ? null
-        : (view.weeks.flat().find((day) => day.date === selectedDate) ?? null),
+      selectedDate == null ? null : (view.days.find((day) => day.date === selectedDate) ?? null),
     [selectedDate, view],
   );
 

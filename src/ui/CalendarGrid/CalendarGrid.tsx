@@ -1,22 +1,23 @@
 "use client";
 
-import { forwardRef, type HTMLAttributes } from "react";
+import { type CSSProperties, forwardRef, type HTMLAttributes } from "react";
 import type { CalendarDate } from "@/domain";
 import type { CalendarMonthView } from "../calendarMonth";
-import { WEEKDAY_HEADERS } from "../calendarMonth";
 import { cx } from "../cx";
 import { DayCell } from "../DayCell";
 import styles from "./CalendarGrid.module.css";
 
 /**
- * `CalendarGrid` — the 7-column month grid (docs/design-system-inventory.md,
- * P1). A weekday header row (Monday-first) + 5–6 week rows of `DayCell`s, with
- * the adjacent-month leading/trailing days rendered as flat blanks.
+ * `CalendarGrid` — the month grid (docs/design-system-inventory.md, P1). A
+ * weekday header row (Monday-first) + 5–6 week rows of `DayCell`s, with the
+ * adjacent-month leading/trailing days rendered as flat blanks.
  *
  * It takes a ready-built `CalendarMonthView` (`buildCalendarMonth`,
  * `src/ui/calendarMonth`) — the layout maths and the pattern/closure derivation
- * both live there, not here. `onDayPress` makes the in-month cells pressable;
- * omit it for a read-only grid.
+ * both live there, not here, down to *how many* columns there are: seven
+ * normally, five or six once the viewer hides weekend days (#130). The grid
+ * simply renders `month.weekdayHeaders.length` of them. `onDayPress` makes the
+ * in-month cells pressable; omit it for a read-only grid.
  *
  * A `<section>` labelled by the month so screen-reader users can find the grid;
  * `'use client'` — it forwards `onDayPress` onto the composed `DayCell`s.
@@ -38,16 +39,18 @@ export const CalendarGrid = forwardRef<HTMLElement, CalendarGridProps>(function 
       ref={ref}
       aria-label={`${month.label} calendar`}
       className={cx(styles.base, className)}
-      style={style}
+      // The column count drives both the header row and every week row, so it
+      // rides down as a custom property on the shared root rather than being
+      // set on each grid separately.
+      style={{ "--calendar-columns": month.weekdayHeaders.length, ...style } as CSSProperties}
     >
       <div className={styles.headerRow} aria-hidden>
-        {WEEKDAY_HEADERS.map((label, i) => (
+        {month.weekdayHeaders.map((header) => (
           <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: fixed 7-item static header
-            key={i}
-            className={cx(styles.headerCell, i >= 5 && styles.headerWeekend)}
+            key={header.weekdayIndex}
+            className={cx(styles.headerCell, header.isWeekend && styles.headerWeekend)}
           >
-            {label}
+            {header.label}
           </span>
         ))}
       </div>

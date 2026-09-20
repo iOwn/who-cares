@@ -183,8 +183,10 @@ pattern set). Props: `icon, title, description?, action?`.
 
 ## P1 — feature-composed (documented lighter, built with their features)
 
-- **CalendarGrid** — the 7-col month grid. Composes `DayCell` ×35–42 + weekday header row; owns
-  the 6-week layout and leading/trailing blanks. Calendar feature.
+- **CalendarGrid** — the month grid. Composes `DayCell` ×35–42 + weekday header row; owns
+  the 6-week layout and leading/trailing blanks. 7 columns, or 5–6 once the viewer hides weekend
+  days (#130) — the count comes in with the view (`month.weekdayHeaders.length`), never decided
+  here. Calendar feature.
 - **DayCell** — one grid day. Composes `StateDot` + state-icon badge + a "who" label. Display
   enum `resolved | pending | at-risk | closed | quiet | off`. `today` (heavy border +
   `--shadow-md`) is orthogonal to state. "who" label: assignee name / "asked {name}" / "both

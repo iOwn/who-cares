@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   absence,
+  HOUSEHOLD_ID,
   MEMBER_1_ID,
   MEMBER_2_ID,
   makeAssignment,
@@ -301,5 +302,146 @@ describe("buildCalendarMonth", () => {
       today: "2025-01-15",
     });
     expect(view.notableDays.map((day) => day.date)).toEqual(["2025-01-08", "2025-01-20"]);
+  });
+});
+
+describe("buildCalendarMonth — hideWeekends (#130)", () => {
+  const september = {
+    year: 2025,
+    month: 9,
+    closures: [],
+    today: "2025-09-15",
+  } as const;
+
+  it("keeps all seven columns by default", () => {
+    const view = buildCalendarMonth({ ...september, pattern: monToFri });
+
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S",
+    ]);
+    expect(view.weeks.every((week) => week.length === 7)).toBe(true);
+  });
+
+  it("drops both weekend columns when they hold nothing", () => {
+    const view = buildCalendarMonth({ ...september, pattern: monToFri, hideWeekends: true });
+
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual(["M", "T", "W", "T", "F"]);
+    expect(view.weekdayHeaders.map((header) => header.weekdayIndex)).toEqual([0, 1, 2, 3, 4]);
+    expect(view.weeks.every((week) => week.length === 5)).toBe(true);
+    // Every remaining cell is a weekday (or an adjacent-month blank on one).
+    const weekdayOf = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay();
+    expect(
+      view.weeks.flat().every((day) => weekdayOf(day.date) >= 1 && weekdayOf(day.date) <= 5),
+    ).toBe(true);
+  });
+
+  it("keeps a weekend column the pattern actually uses that month", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: pattern(["mon", "tue", "wed", "thu", "fri", "sat"], "2025-01-06"),
+      hideWeekends: true,
+    });
+
+    // Saturday is real childcare — hiding it would bury a pickup day.
+    expect(view.weekdayHeaders.map((header) => header.weekdayIndex)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(view.weeks.every((week) => week.length === 6)).toBe(true);
+  });
+
+  it("spells out a surviving weekend header, which has lost its positional cue", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: pattern(["mon", "tue", "wed", "thu", "fri", "sun"], "2025-01-06"),
+      hideWeekends: true,
+    });
+
+    // Without this, a Sunday-childcare household reads "M T W T F S" and takes
+    // the last column for a Saturday.
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "Su",
+    ]);
+  });
+
+  it("leaves the headers single-letter while all seven columns are shown", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: pattern(["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "2025-01-06"),
+      hideWeekends: true,
+    });
+
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S",
+    ]);
+  });
+
+  it("keeps a weekend column carrying a closure", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: monToFri,
+      // 2025-09-07 is a Sunday.
+      closures: [makeClosure({ date: "2025-09-07", reason: "Building works" })],
+      hideWeekends: true,
+    });
+
+    expect(view.weekdayHeaders.map((header) => header.weekdayIndex)).toEqual([0, 1, 2, 3, 4, 6]);
+  });
+
+  it("decides per month, so an effective-dated pattern change is followed", () => {
+    // Saturday childcare until October, weekdays only from then on (ADR-0002).
+    const changing = {
+      id: HOUSEHOLD_ID,
+      householdId: HOUSEHOLD_ID,
+      versions: [
+        { weekdays: ["mon", "tue", "wed", "thu", "fri", "sat"], effectiveFrom: "2025-01-06" },
+        { weekdays: ["mon", "tue", "wed", "thu", "fri"], effectiveFrom: "2025-10-01" },
+      ],
+    } as const;
+
+    const before = buildCalendarMonth({
+      year: 2025,
+      month: 9,
+      pattern: changing,
+      closures: [],
+      today: "2025-09-15",
+      hideWeekends: true,
+    });
+    const after = buildCalendarMonth({
+      year: 2025,
+      month: 10,
+      pattern: changing,
+      closures: [],
+      today: "2025-09-15",
+      hideWeekends: true,
+    });
+
+    expect(before.weekdayHeaders).toHaveLength(6);
+    expect(after.weekdayHeaders).toHaveLength(5);
+  });
+
+  it("leaves days and notableDays whole — only the grid columns are filtered", () => {
+    const shown = buildCalendarMonth({ ...september, pattern: monToFri });
+    const hidden = buildCalendarMonth({ ...september, pattern: monToFri, hideWeekends: true });
+
+    expect(hidden.days).toEqual(shown.days);
+    expect(hidden.notableDays).toEqual(shown.notableDays);
+    // A hidden day is still findable by date — the day-detail lookup goes
+    // through `days`, not the filtered rows. 2025-09-06 is a Saturday.
+    expect(hidden.days.find((day) => day.date === "2025-09-06")).toBeDefined();
   });
 });

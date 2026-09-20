@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
 import { AppShell } from "./AppShell";
+import { HIDE_WEEKENDS_COOKIE, parseHideWeekends } from "./calendarPreferences";
 import { SignInScreen } from "./SignInScreen";
 
 export default async function Home() {
@@ -10,6 +12,11 @@ export default async function Home() {
   if (!current) {
     return <SignInScreen />;
   }
+
+  // Read on the server so the grid's column count is right in the very first
+  // HTML — the whole reason the preference is a cookie (#130).
+  const cookieStore = await cookies();
+  const hideWeekends = parseHideWeekends(cookieStore.get(HIDE_WEEKENDS_COOKIE)?.value);
 
   const repos = createRepositories(db);
   const [pattern, closures, members, absences, assignments, pickupRequests] = await Promise.all([
@@ -37,6 +44,7 @@ export default async function Home() {
       pickupRequests={pickupRequests}
       initialToday={serverNow.toISOString().slice(0, 10)}
       initialNow={serverNow.toISOString()}
+      hideWeekends={hideWeekends}
     />
   );
 }
