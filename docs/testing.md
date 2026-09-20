@@ -395,9 +395,15 @@ four **parallel** jobs:
   from `claude setup-token`), not an `ANTHROPIC_API_KEY` — so a run draws on the
   subscription's usage instead of adding per-token billing. Actions minutes are free while
   the repo is public.
-- `claude_args` allows only this repo's own checks (`pnpm lint` / `test` / `test:node` /
-  `tsc --noEmit`, plus a frozen install). No `pnpm build` — it needs a `.env` that only
-  `ci.yml` supplies.
+- Pairs `actions/checkout` with the same `.github/actions/setup` composite every `ci.yml` job
+  uses — the runner image has Node but no pnpm, so without it nothing below can run.
+- `claude_args` allows only this repo's own checks (`pnpm lint`, `pnpm test:node`,
+  `tsc --noEmit`, plus a frozen install). Not `pnpm build` (needs a `.env` that only `ci.yml`
+  supplies) and not `pnpm test` (that's both Vitest projects, and the `browser` one needs the
+  Playwright Chromium only `ci.yml`'s `test` job installs). The full suite stays CI's job.
+- The write-access gate covers who *triggers* a run, not what Claude *reads* during one: a
+  mention on a fork's PR feeds attacker-authored content to a job holding `contents: write`.
+  Branch protection and the narrow allowlist are the backstops.
 - Not a required status check, and unrelated to the four below.
 
 ### CI ↔ Vercel

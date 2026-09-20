@@ -8,6 +8,12 @@
 # empty), which is what stops a drive-by commenter on this public repo from
 # getting a runner that holds `contents: write`.
 #
+# That gate covers who *types* `@claude`, not what Claude then *reads*. Mention
+# it on a fork's PR and a job holding a live token is reading attacker-authored
+# diffs and comments — so treat a mention on untrusted content the way you'd
+# treat running that branch's code. Branch protection on `main` and the narrow
+# Bash allowlist below are the backstops.
+#
 # Billing: runs authenticate as the `CLAUDE_CODE_OAUTH_TOKEN` secret — a Claude
 # subscription token (`claude setup-token`), not a metered API key — so a run
 # draws on the subscription's usage rather than adding a per-token bill. Actions
@@ -23,7 +29,10 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    # `opened` only. `assigned` is inert while `assignee_trigger` is unset, and
+    # specs live as issues here — every (re)assignment of one whose body happens
+    # to say `@claude` would boot a runner for nothing.
+    types: [opened]
   pull_request_review:
     types: [submitted]
 
@@ -50,21 +59,26 @@ jobs:
       actions: read # read this PR's CI results
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          # Shallow on purpose — Claude deepens the clone itself if it needs history.
-          fetch-depth: 1
+      - uses: actions/checkout@v7
+
+      # Same pairing every `ci.yml` job uses. The runner image ships Node but no
+      # pnpm, so without this the allowlist below is dead on arrival — every
+      # entry, `pnpm install` included, fails at `pnpm: command not found` — and
+      # so is the biome `PostToolUse` hook in `.claude/settings.json`, which
+      # needs `node_modules`.
+      - uses: ./.github/actions/setup
 
       - name: Run Claude Code
-        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           # This repo's own checks, so a change proposed here can be verified the
           # same way CLAUDE.md asks a local agent to verify one. Everything else
-          # stays denied by default — note there is no `pnpm build`, which needs
-          # a `.env` (`ci.yml` copies `.env.ci`), and no write-side git commands.
+          # stays denied by default. Two deliberate omissions:
+          #   - `pnpm build` needs a `.env` that only `ci.yml` supplies (`.env.ci`);
+          #   - `pnpm test` is BOTH Vitest projects, and the `browser` one wants a
+          #     Playwright Chromium that only `ci.yml`'s `test` job installs — so
+          #     the node project is what's offered here. The full suite is CI's job.
           claude_args: |
-            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm lint),Bash(pnpm test),Bash(pnpm test:node),Bash(pnpm exec tsc --noEmit)"
+            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm lint),Bash(pnpm test:node),Bash(pnpm exec tsc --noEmit)"
