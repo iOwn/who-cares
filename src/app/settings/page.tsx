@@ -20,6 +20,9 @@ import type { DeviceView } from "./SignedInDevices";
  * serialisable snapshot to the client `SettingsScreen`. Mutations happen
  * client-side (`authClient` + `router.refresh()`) or via the childcare Server
  * Actions.
+ *
+ * "This device" is the token `getCurrentSession` already resolved — no second
+ * `auth.api.getSession` round-trip (issue #144).
  */
 export default async function SettingsPage() {
   const current = await getCurrentSession();
@@ -27,15 +30,12 @@ export default async function SettingsPage() {
 
   const [requestHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
   const repos = createRepositories(db);
-  const [sessions, active, pattern, closures, pushSubscriptions] = await Promise.all([
+  const [sessions, pattern, closures, pushSubscriptions] = await Promise.all([
     auth.api.listSessions({ headers: requestHeaders }),
-    auth.api.getSession({ headers: requestHeaders }),
     repos.childcarePattern.findByHousehold(current.household.id),
     repos.closures.listByHousehold(current.household.id),
     repos.pushSubscriptions.listByMember(current.member.id),
   ]);
-
-  const currentToken = active?.session.token ?? null;
 
   const pushBrowsers: PushBrowserView[] = pushSubscriptions
     .map((sub) => ({
@@ -50,7 +50,7 @@ export default async function SettingsPage() {
       token: session.token,
       userAgent: session.userAgent ?? null,
       lastActiveAt: (session.updatedAt ?? session.createdAt).toISOString(),
-      isCurrent: session.token === currentToken,
+      isCurrent: session.token === current.sessionToken,
     }))
     .sort((a, b) => {
       if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;

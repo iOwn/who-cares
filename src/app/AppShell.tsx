@@ -16,6 +16,8 @@ import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
 import { InstallPrompt } from "./InstallPrompt";
+import { usePrefetchRoute } from "./prefetchRoute";
+import { markSettingsOpenedFromApp, sessionStorageOrNull } from "./settings/backNavigation";
 import { useAppBadge } from "./useAppBadge";
 import { useWallClock } from "./useWallClock";
 
@@ -75,13 +77,23 @@ export function AppShell({
   // is, and it re-renders with fresh requests after every `router.refresh()`.
   useAppBadge(myOpenRequests.length);
 
+  // Settings is the only route reachable from here; keep its loading shell
+  // warm so the gear responds on the tap, not on the server's first byte
+  // (issue #144). The marker lets Settings' back arrow `router.back()` to this
+  // cached page instead of re-rendering the calendar.
+  usePrefetchRoute("/settings");
+  function openSettings() {
+    markSettingsOpenedFromApp(sessionStorageOrNull());
+    router.push("/settings");
+  }
+
   return (
     <>
       <AppHeader
         childName={childName}
         requestCount={myOpenRequests.length}
         onOpenRequests={() => setInboxOpen(true)}
-        onOpenSettings={() => router.push("/settings")}
+        onOpenSettings={openSettings}
       />
       <main aria-label="Calendar">
         <InstallPrompt className={styles.installNudge} />
