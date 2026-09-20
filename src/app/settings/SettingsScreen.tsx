@@ -8,6 +8,7 @@ import { PasskeyCard } from "./PasskeyCard";
 import { type PushBrowserView, PushCard } from "./PushCard";
 import styles from "./SettingsScreen.module.css";
 import { type DeviceView, SignedInDevices } from "./SignedInDevices";
+import { WeekendDaysCard } from "./WeekendDaysCard";
 
 export interface SettingsScreenProps {
   readonly childName: string;
@@ -19,6 +20,8 @@ export interface SettingsScreenProps {
   readonly closures: readonly Closure[];
   /** `'YYYY-MM-DD'` (the server's today) — default "effective from" date. */
   readonly today: CalendarDate;
+  /** This browser's "hide weekend days" preference (issue #130). */
+  readonly hideWeekends: boolean;
 }
 
 /**
@@ -34,6 +37,7 @@ export function SettingsScreen({
   pattern,
   closures,
   today,
+  hideWeekends,
 }: SettingsScreenProps) {
   const router = useRouter();
   const title = childName ? `${childName}’s childcare` : "Settings";
@@ -56,6 +60,11 @@ export function SettingsScreen({
         <section className={styles.section} aria-labelledby="settings-push-heading">
           <SectionHeading id="settings-push-heading">Notifications</SectionHeading>
           <PushCard browsers={pushBrowsers} />
+        </section>
+
+        <section className={styles.section} aria-labelledby="settings-calendar-heading">
+          <SectionHeading id="settings-calendar-heading">Calendar</SectionHeading>
+          <WeekendDaysCard hideWeekends={hideWeekends} />
         </section>
 
         <ChildcareSettings pattern={pattern} closures={closures} today={today} />

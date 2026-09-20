@@ -1,5 +1,6 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { HIDE_WEEKENDS_COOKIE, parseHideWeekends } from "@/app/calendarPreferences";
 import { auth, getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
@@ -24,7 +25,7 @@ export default async function SettingsPage() {
   const current = await getCurrentSession();
   if (!current) redirect("/");
 
-  const requestHeaders = await headers();
+  const [requestHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
   const repos = createRepositories(db);
   const [sessions, active, pattern, closures, pushSubscriptions] = await Promise.all([
     auth.api.listSessions({ headers: requestHeaders }),
@@ -64,6 +65,7 @@ export default async function SettingsPage() {
       pattern={pattern}
       closures={closures}
       today={new Date().toISOString().slice(0, 10)}
+      hideWeekends={parseHideWeekends(cookieStore.get(HIDE_WEEKENDS_COOKIE)?.value)}
     />
   );
 }

@@ -31,6 +31,23 @@ import { type DayDisplayState, dayDisplayState } from "./dayDisplayState";
 /** Monday-first weekday headers for the grid. */
 export const WEEKDAY_HEADERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
+/**
+ * The Monday-first column indexes of Saturday and Sunday — the two the
+ * "hide weekend days" preference (#130) can drop.
+ */
+const WEEKEND_COLUMNS = [5, 6] as const;
+
+export interface CalendarWeekdayHeader {
+  /** `"M"` … `"S"`. */
+  readonly label: string;
+  /**
+   * The column's weekday, Monday = 0 … Sunday = 6. Carried explicitly because
+   * a hidden weekend column makes the array index stop matching the weekday.
+   */
+  readonly weekdayIndex: number;
+  readonly isWeekend: boolean;
+}
+
 export interface CalendarDayView {
   /** `'YYYY-MM-DD'`. */
   readonly date: CalendarDate;
@@ -70,8 +87,23 @@ export interface CalendarMonthView {
   readonly month: number;
   /** e.g. `"September 2026"`. */
   readonly label: string;
-  /** 5–6 rows of exactly 7 days, Monday-first, with leading/trailing blanks. */
+  /**
+   * The visible columns' headers, Monday-first — 7 of them normally, 5 or 6
+   * when `hideWeekends` drops a weekend column (#130). Its length IS the
+   * grid's column count; `weeks` rows are filtered to match.
+   */
+  readonly weekdayHeaders: readonly CalendarWeekdayHeader[];
+  /**
+   * 5–6 rows, Monday-first, with leading/trailing blanks — one day per visible
+   * column, so `weekdayHeaders.length` days per row, not always 7.
+   */
   readonly weeks: readonly (readonly CalendarDayView[])[];
+  /**
+   * Every cell of the full 7-column month, unfiltered — the lookup surface for
+   * "the day with this date", which must not depend on whether the day's
+   * column happens to be on screen.
+   */
+  readonly days: readonly CalendarDayView[];
   /** The in-month days that are worth surfacing in the List view (not `quiet` / `off`). */
   readonly notableDays: readonly CalendarDayView[];
 }
@@ -279,6 +311,34 @@ export interface BuildCalendarMonthParams {
    * `new Date()` — pass it explicitly from tests and anywhere determinism matters.
    */
   readonly now?: Date;
+  /**
+   * The viewer's "hide weekend days" preference (#130). A weekend column is
+   * only actually dropped when it holds nothing for THIS month — see
+   * `hiddenWeekendColumns`.
+   */
+  readonly hideWeekends?: boolean;
+}
+
+/**
+ * Which weekend columns this month can safely lose (#130).
+ *
+ * A household's pattern is a free set of weekdays (ADR-0002) and a `Closure`
+ * can land on any date, so a Saturday column may well carry a real childcare
+ * day — hiding it would bury exactly the at-risk pickup the app exists to
+ * surface. A column is therefore dropped only when every in-month day in it is
+ * `off`: the same "nothing to see here" the List tab's `notableDays` uses,
+ * decided per month rather than once, since an effective-dated pattern change
+ * makes the answer differ month to month.
+ */
+function hiddenWeekendColumns(days: readonly CalendarDayView[]): ReadonlySet<number> {
+  const hidden = new Set<number>();
+  for (const column of WEEKEND_COLUMNS) {
+    const carriesNothing = days.every(
+      (day, cell) => cell % 7 !== column || !day.inMonth || day.displayState === "off",
+    );
+    if (carriesNothing) hidden.add(column);
+  }
+  return hidden;
 }
 
 /** Build the full month grid + notable-day list for `(year, month)`. */
@@ -293,6 +353,7 @@ export function buildCalendarMonth({
   absences = [],
   members = [],
   now = new Date(),
+  hideWeekends = false,
 }: BuildCalendarMonthParams): CalendarMonthView {
   const firstOfMonth = isoOf(year, month, 1);
   const leading = leadingBlankCount(year, month);
@@ -357,14 +418,25 @@ export function buildCalendarMonth({
     });
   }
 
+  const hidden = hideWeekends ? hiddenWeekendColumns(days) : new Set<number>();
+  const isVisible = (column: number) => !hidden.has(column);
+
   const weeks: CalendarDayView[][] = [];
-  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7).filter((_, column) => isVisible(column)));
+  }
 
   return {
     year,
     month,
     label: monthLabelOf(year, month),
+    weekdayHeaders: WEEKDAY_HEADERS.map((label, weekdayIndex) => ({
+      label,
+      weekdayIndex,
+      isWeekend: (WEEKEND_COLUMNS as readonly number[]).includes(weekdayIndex),
+    })).filter((header) => isVisible(header.weekdayIndex)),
     weeks,
+    days,
     notableDays: days.filter((day) => day.inMonth && !NOT_NOTABLE.has(day.displayState)),
   };
 }

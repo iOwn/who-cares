@@ -32,6 +32,8 @@ export interface AppShellProps {
   readonly initialToday: CalendarDate;
   /** The real current instant as the server saw it (ISO). */
   readonly initialNow: string;
+  /** The viewer’s “hide weekend days” preference (#130), read from their cookie. */
+  readonly hideWeekends: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ export function AppShell({
   pickupRequests,
   initialToday,
   initialNow,
+  hideWeekends,
 }: AppShellProps) {
   const router = useRouter();
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -92,6 +95,7 @@ export function AppShell({
           pickupRequests={pickupRequests}
           initialToday={initialToday}
           initialNow={initialNow}
+          hideWeekends={hideWeekends}
         />
       </main>
       {inboxOpen ? (

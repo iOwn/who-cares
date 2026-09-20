@@ -1,5 +1,9 @@
 /*
- * CalendarGrid — the 7-column month grid. Semantic tokens only; no motion.
+ * CalendarGrid — the month grid. Semantic tokens only; no motion.
+ *
+ * `--calendar-columns` is set on the root by the component from
+ * `month.weekdayHeaders.length`: 7 normally, 5 or 6 once the viewer hides
+ * weekend days (#130). The fallback keeps a bare grid honest in isolation.
  */
 
 .base {
@@ -9,7 +13,7 @@
 .headerRow,
 .week {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--calendar-columns, 7), minmax(0, 1fr));
   gap: var(--space-6);
 }
 

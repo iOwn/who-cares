@@ -31,6 +31,7 @@ export {
   buildCalendarMonth,
   type CalendarDayView,
   type CalendarMonthView,
+  type CalendarWeekdayHeader,
   monthLabelOf,
   monthOf,
   shiftMonth,

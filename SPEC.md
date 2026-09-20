@@ -112,6 +112,11 @@ open as modals over the grid.
 - **Grid/List tab**: each month can be viewed as the traditional **Grid**, or as a **List**
   showing only notable days (resolved / pending / at-risk / actual closures) with quiet days
   and weekends hidden. Both tabs share the same paging controls.
+- **Hiding weekend days**: a Settings toggle drops Saturday and Sunday from the **Grid**, so
+  the weekdays get the full width. Per browser (a cookie), not per household — one parent's
+  narrower calendar is not the other's. A weekend column that carries a real childcare day
+  (the pattern covers it that month) or a closure stays put regardless: the setting is only
+  allowed to hide dead space.
 
 Explored as interactive prototypes (not merged; reference for exact behavior, not for code):
 `prototypes/core-screens.prototype.html` (branch `prototype/core-screens`, variants A/B/C) and
@@ -193,6 +198,9 @@ specified below.
   FAB anchoring) is unbounded and symmetric in both directions, per the Screens section above.
 - History is retained and browsable via the same paging mechanism as future dates — it's not
   a separate mode.
+- As a parent, I can hide weekend days from the Grid so the weekdays get the full width. The
+  choice is mine and this browser's, it never changes the other parent's calendar, and it
+  never hides a weekend that has childcare or a closure that month.
 
 ## Non-goals (out of scope for v1)
 
