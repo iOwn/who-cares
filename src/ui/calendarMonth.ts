@@ -29,13 +29,21 @@ import {
 import { type DayDisplayState, dayDisplayState } from "./dayDisplayState";
 
 /** Monday-first weekday headers for the grid. */
-export const WEEKDAY_HEADERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+const WEEKDAY_HEADERS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
 /**
  * The Monday-first column indexes of Saturday and Sunday — the two the
  * "hide weekend days" preference (#130) can drop.
  */
 const WEEKEND_COLUMNS = [5, 6] as const;
+
+/**
+ * Two-letter labels for the weekend columns, used only once a weekend column
+ * has been hidden. With all seven columns the position tells you which `S` is
+ * which; a lone `M T W T F S` does not, and a Sunday-childcare household would
+ * otherwise read its Sunday column as a Saturday.
+ */
+const WEEKEND_HEADER_LABELS: Readonly<Record<number, string>> = { 5: "Sa", 6: "Su" };
 
 export interface CalendarWeekdayHeader {
   /** `"M"` … `"S"`. */
@@ -430,11 +438,16 @@ export function buildCalendarMonth({
     year,
     month,
     label: monthLabelOf(year, month),
-    weekdayHeaders: WEEKDAY_HEADERS.map((label, weekdayIndex) => ({
-      label,
-      weekdayIndex,
-      isWeekend: (WEEKEND_COLUMNS as readonly number[]).includes(weekdayIndex),
-    })).filter((header) => isVisible(header.weekdayIndex)),
+    weekdayHeaders: WEEKDAY_HEADERS.map((label, weekdayIndex) => {
+      const isWeekend = (WEEKEND_COLUMNS as readonly number[]).includes(weekdayIndex);
+      return {
+        // A surviving weekend column loses the positional cue that told the
+        // two `S`s apart, so it spells itself out instead.
+        label: isWeekend && hidden.size > 0 ? WEEKEND_HEADER_LABELS[weekdayIndex] : label,
+        weekdayIndex,
+        isWeekend,
+      };
+    }).filter((header) => isVisible(header.weekdayIndex)),
     weeks,
     days,
     notableDays: days.filter((day) => day.inMonth && !NOT_NOTABLE.has(day.displayState)),

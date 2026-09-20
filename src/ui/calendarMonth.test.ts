@@ -353,6 +353,43 @@ describe("buildCalendarMonth — hideWeekends (#130)", () => {
     expect(view.weeks.every((week) => week.length === 6)).toBe(true);
   });
 
+  it("spells out a surviving weekend header, which has lost its positional cue", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: pattern(["mon", "tue", "wed", "thu", "fri", "sun"], "2025-01-06"),
+      hideWeekends: true,
+    });
+
+    // Without this, a Sunday-childcare household reads "M T W T F S" and takes
+    // the last column for a Saturday.
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "Su",
+    ]);
+  });
+
+  it("leaves the headers single-letter while all seven columns are shown", () => {
+    const view = buildCalendarMonth({
+      ...september,
+      pattern: pattern(["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "2025-01-06"),
+      hideWeekends: true,
+    });
+
+    expect(view.weekdayHeaders.map((header) => header.label)).toEqual([
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S",
+    ]);
+  });
+
   it("keeps a weekend column carrying a closure", () => {
     const view = buildCalendarMonth({
       ...september,

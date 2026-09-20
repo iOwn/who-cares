@@ -35,7 +35,6 @@ export {
   monthLabelOf,
   monthOf,
   shiftMonth,
-  WEEKDAY_HEADERS,
 } from "./calendarMonth";
 export { cx } from "./cx";
 export { DateField, type DateFieldProps } from "./DateField";

@@ -31,6 +31,8 @@ export async function setHideWeekendsAction(hideWeekends: boolean): Promise<void
     path: "/",
     sameSite: "lax",
     httpOnly: true,
+    // Local dev is plain http, where a `secure` cookie is silently dropped.
+    secure: process.env.NODE_ENV === "production",
   });
   revalidatePath("/");
   revalidatePath("/settings");

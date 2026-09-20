@@ -67,7 +67,7 @@ export interface CalendarProps {
    * a real childcare day or a closure that month stays put regardless; see
    * `buildCalendarMonth`.
    */
-  readonly hideWeekends?: boolean;
+  readonly hideWeekends: boolean;
 }
 
 type Tab = "grid" | "list";
@@ -88,7 +88,7 @@ export function Calendar({
   members,
   initialToday,
   initialNow,
-  hideWeekends = false,
+  hideWeekends,
 }: CalendarProps) {
   // The clock is server-seeded then corrected on mount + re-sampled on focus /
   // visibility (`useWallClock`) so a long-lived PWA tab doesn't sit on a stale
