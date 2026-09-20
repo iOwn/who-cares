@@ -245,6 +245,9 @@ Grid cell + list row keep a **generic** line; only `DayDetail` surfaces the free
 2. **No skeleton / full-page loading / dedicated error components in P0** — deferred to first
    feature need. P0 *does* include `Spinner` + `EmptyState` (the calendar and inbox both have a
    genuine first-paint empty/loading state in v1); error UI reuses `Callout tone="danger"`.
+   _First feature need arrived with issue #144_: the two route `loading.tsx` boundaries render
+   a skeleton (`src/app/RouteSkeleton.tsx`) as an app-local recipe on the sunken-surface
+   token, not a `src/ui` primitive. Promote it to one when a third screen needs it.
 
 ## Provenance
 
