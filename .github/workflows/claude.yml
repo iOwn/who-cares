@@ -1,0 +1,70 @@
+# Claude Code on GitHub — Claude answers when it is mentioned.
+#
+# Trigger: `@claude` in an issue title/body, an issue comment, a PR review, or a
+# PR review comment. Nothing else starts a run, so an idle repo costs nothing.
+#
+# Who may trigger it: accounts with **write** access only. The action's
+# `allowed_non_write_users` input is deliberately left unset (its default is
+# empty), which is what stops a drive-by commenter on this public repo from
+# getting a runner that holds `contents: write`.
+#
+# Billing: runs authenticate as the `CLAUDE_CODE_OAUTH_TOKEN` secret — a Claude
+# subscription token (`claude setup-token`), not a metered API key — so a run
+# draws on the subscription's usage rather than adding a per-token bill. Actions
+# minutes are free because this repo is public.
+#
+# NOT a CI gate. The four required checks live in `ci.yml`; see docs/testing.md
+# "CI pipeline shape".
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+# No `concurrency` on purpose: two mentions are two separate requests, and
+# cancelling an in-flight one would abandon work half-done rather than save
+# anything worth saving.
+
+jobs:
+  claude:
+    # A cheap pre-filter so an ordinary comment never boots a runner. The action
+    # re-checks both the trigger phrase and the author's permissions itself —
+    # this condition is an optimisation, not the security boundary.
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push a branch when asked to make a change
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # read this PR's CI results
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          # Shallow on purpose — Claude deepens the clone itself if it needs history.
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # This repo's own checks, so a change proposed here can be verified the
+          # same way CLAUDE.md asks a local agent to verify one. Everything else
+          # stays denied by default — note there is no `pnpm build`, which needs
+          # a `.env` (`ci.yml` copies `.env.ci`), and no write-side git commands.
+          claude_args: |
+            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm lint),Bash(pnpm test),Bash(pnpm test:node),Bash(pnpm exec tsc --noEmit)"
