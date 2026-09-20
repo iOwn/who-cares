@@ -19,7 +19,7 @@ The decisions behind all of it are on the wayfinder map
 | Lint + format + import-sort | **Biome** (`@biomejs/biome`) | one tool, one `biome.json` |
 | Git hooks | **lefthook** | one binary, one `lefthook.yml` |
 | Agent lint loop | Claude Code `PostToolUse` hook | `biome check --write` on edited files |
-| CI | GitHub Actions | `ci.yml` (4 jobs) + `e2e.yml` (preview smoke) |
+| CI | GitHub Actions | `ci.yml` (4 jobs) + `e2e.yml` (preview smoke); `claude.yml` is a mention-triggered assistant, not a gate |
 | Dependency updates | Dependabot | grouped weekly, majors separate |
 | Commit convention | Conventional Commits | documented in `docs/contributing.md`, **not enforced** |
 
@@ -383,6 +383,29 @@ four **parallel** jobs:
   `e2e.yml` **cannot be exercised from its own PR** — a follow-up validation run against a
   real preview deploy is needed once it lands on `main`.
 
+### `claude.yml` — separate workflow, not a gate
+
+- Triggered by `@claude` in an issue title/body, an issue comment, a PR review, or a PR
+  review comment. Runs [`anthropics/claude-code-action@v1`](https://github.com/anthropics/claude-code-action).
+- **Only accounts with write access can trigger it.** The action's `allowed_non_write_users`
+  input is left unset (default: empty), which is the boundary that matters on a public repo —
+  the workflow's `if:` condition is only a cheap pre-filter so an ordinary comment doesn't
+  boot a runner.
+- Authenticates with the `CLAUDE_CODE_OAUTH_TOKEN` repo secret (a Claude subscription token
+  from `claude setup-token`), not an `ANTHROPIC_API_KEY` — so a run draws on the
+  subscription's usage instead of adding per-token billing. Actions minutes are free while
+  the repo is public.
+- Pairs `actions/checkout` with the same `.github/actions/setup` composite every `ci.yml` job
+  uses — the runner image has Node but no pnpm, so without it nothing below can run.
+- `claude_args` allows only this repo's own checks (`pnpm lint`, `pnpm test:node`,
+  `tsc --noEmit`, plus a frozen install). Not `pnpm build` (needs a `.env` that only `ci.yml`
+  supplies) and not `pnpm test` (that's both Vitest projects, and the `browser` one needs the
+  Playwright Chromium only `ci.yml`'s `test` job installs). The full suite stays CI's job.
+- The write-access gate covers who *triggers* a run, not what Claude *reads* during one: a
+  mention on a fork's PR feeds attacker-authored content to a job holding `contents: write`.
+  Branch protection and the narrow allowlist are the backstops.
+- Not a required status check, and unrelated to the four below.
+
 ### CI ↔ Vercel
 
 **Independent.** Vercel auto-deploys the preview immediately on push (the E2E job needs it up
@@ -418,6 +441,7 @@ None of this is committed in the planning effort. When the build starts:
 - `.claude/settings.json` — the `PostToolUse` (biome) and `PreToolUse` (`--no-verify` deny)
   hook entries. `.claude/hooks/*.mjs` — the scripts they run, with
   `deny-git-hook-bypass.test.mjs` covering the deny logic.
-- `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`, `.github/dependabot.yml`.
+- `.github/workflows/ci.yml`, `.github/workflows/e2e.yml`, `.github/workflows/claude.yml`,
+  `.github/dependabot.yml`.
 - `.env.ci` — committed fake build-time env.
 - `.nvmrc` — `22`.

@@ -1,0 +1,84 @@
+# Claude Code on GitHub — Claude answers when it is mentioned.
+#
+# Trigger: `@claude` in an issue title/body, an issue comment, a PR review, or a
+# PR review comment. Nothing else starts a run, so an idle repo costs nothing.
+#
+# Who may trigger it: accounts with **write** access only. The action's
+# `allowed_non_write_users` input is deliberately left unset (its default is
+# empty), which is what stops a drive-by commenter on this public repo from
+# getting a runner that holds `contents: write`.
+#
+# That gate covers who *types* `@claude`, not what Claude then *reads*. Mention
+# it on a fork's PR and a job holding a live token is reading attacker-authored
+# diffs and comments — so treat a mention on untrusted content the way you'd
+# treat running that branch's code. Branch protection on `main` and the narrow
+# Bash allowlist below are the backstops.
+#
+# Billing: runs authenticate as the `CLAUDE_CODE_OAUTH_TOKEN` secret — a Claude
+# subscription token (`claude setup-token`), not a metered API key — so a run
+# draws on the subscription's usage rather than adding a per-token bill. Actions
+# minutes are free because this repo is public.
+#
+# NOT a CI gate. The four required checks live in `ci.yml`; see docs/testing.md
+# "CI pipeline shape".
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    # `opened` only. `assigned` is inert while `assignee_trigger` is unset, and
+    # specs live as issues here — every (re)assignment of one whose body happens
+    # to say `@claude` would boot a runner for nothing.
+    types: [opened]
+  pull_request_review:
+    types: [submitted]
+
+# No `concurrency` on purpose: two mentions are two separate requests, and
+# cancelling an in-flight one would abandon work half-done rather than save
+# anything worth saving.
+
+jobs:
+  claude:
+    # A cheap pre-filter so an ordinary comment never boots a runner. The action
+    # re-checks both the trigger phrase and the author's permissions itself —
+    # this condition is an optimisation, not the security boundary.
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push a branch when asked to make a change
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # read this PR's CI results
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same pairing every `ci.yml` job uses. The runner image ships Node but no
+      # pnpm, so without this the allowlist below is dead on arrival — every
+      # entry, `pnpm install` included, fails at `pnpm: command not found` — and
+      # so is the biome `PostToolUse` hook in `.claude/settings.json`, which
+      # needs `node_modules`.
+      - uses: ./.github/actions/setup
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # This repo's own checks, so a change proposed here can be verified the
+          # same way CLAUDE.md asks a local agent to verify one. Everything else
+          # stays denied by default. Two deliberate omissions:
+          #   - `pnpm build` needs a `.env` that only `ci.yml` supplies (`.env.ci`);
+          #   - `pnpm test` is BOTH Vitest projects, and the `browser` one wants a
+          #     Playwright Chromium that only `ci.yml`'s `test` job installs — so
+          #     the node project is what's offered here. The full suite is CI's job.
+          claude_args: |
+            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm lint),Bash(pnpm test:node),Bash(pnpm exec tsc --noEmit)"
