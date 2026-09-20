@@ -23,7 +23,7 @@ export function CalendarSkeleton() {
   return (
     <div role="status" aria-busy="true">
       <VisuallyHidden>Loading calendar</VisuallyHidden>
-      <header className={styles.header}>
+      <header className={styles.header} aria-hidden>
         <div className={styles.headerText}>
           <p className={styles.wordmark}>WhoCares</p>
           <Block className={styles.textSm} />
@@ -57,7 +57,7 @@ export function SettingsSkeleton() {
   return (
     <div role="status" aria-busy="true" className={styles.settingsBase}>
       <VisuallyHidden>Loading settings</VisuallyHidden>
-      <header className={styles.header}>
+      <header className={styles.header} aria-hidden>
         <Block className={styles.icon} />
         <div className={styles.headerText}>
           <Block className={styles.text} />

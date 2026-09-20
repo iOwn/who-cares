@@ -6,9 +6,12 @@
  * anything changes on screen. A `router.back()` instead restores the page
  * from Next's client cache — pages are reused on back/forward navigation, and
  * any Settings mutation (`revalidatePath`, `router.refresh()`, `cookies.set`)
- * purges that cache, so what comes back is never stale. But `router.back()`
- * is only right when `/` really is the previous history entry: a deep link or
- * a reload landing on `/settings` must push instead.
+ * purges that cache, so this member's own edits are never stale. The other
+ * member's changes made during the visit are not picked up until the next
+ * resume or pull-to-refresh (ADR-0016) — the same staleness the calendar has
+ * while it simply sits open. But `router.back()` is only right when `/` really
+ * is the previous history entry: a deep link or a reload landing on
+ * `/settings` must push instead.
  *
  * The app shell records the hand-off in `sessionStorage` right before it
  * navigates; the Settings screen consumes the marker on mount. Storage in,
