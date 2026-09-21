@@ -362,6 +362,12 @@ catalogue in `build/` (gitignored). Config lives in `.ladle/`.
 - `next/font` injects `--font-nunito` / `--font-baloo` on `<html>` (the `variable` class pair in
   `src/app/layout.tsx`); `tokens.css` composes the full stacks from them. Both families are
   self-hosted at build time — the browser never requests Google.
+- `--font-body` is applied once, on `body` in `src/app/globals.css` (mirrored in
+  `.ladle/workbench.css`), and inherited from there. `tokens.css` only *defines* the stacks, so
+  without that rule bare feature-level text fell through to the UA default (issue #150). A
+  component declares `font-family` only to switch to `--font-display`; primitives that also
+  restate `--font-body` on their root do so as a self-contained contract, not out of need.
+  A parity test (`src/app/fonts.test.ts`) guards both the rule and the mirror.
 - Both are variable fonts, but the weights are pinned as an explicit array anyway, so only the
   seven faces above ship. Adding a weight means editing `layout.tsx` **and**
   `.ladle/config.mjs`'s font URL, or the workbench silently synthesises it. A parity test
