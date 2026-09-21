@@ -56,7 +56,7 @@ export function CalendarSkeleton() {
  * route header and the You / Household switch belong to `settings/layout.tsx`
  * (issue #143), which stays mounted across the tabs, so they never need a
  * stand-in. The one `settings/loading.tsx` covers both pages, hence the card
- * count is a compromise between the personal tab's four sections and the
+ * count is a compromise between the personal tab's five sections and the
  * household tab's two.
  */
 const SETTINGS_SECTIONS = ["first", "second", "third"];
