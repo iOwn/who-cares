@@ -192,7 +192,12 @@ export const auth = betterAuth({
        * `POST /api/auth/email-otp/send-verification-otp`, which `SignInScreen`
        * never calls — the code normally rides along in `sendMagicLink` above.
        * The plugin mounts that endpoint regardless, so it gets the same
-       * allowlist drop and a code-only mail.
+       * allowlist drop and a code-only mail. Note the plugin stores the new
+       * code *before* calling this, and verification consumes the newest row,
+       * so any unauthenticated POST here supersedes a code already in a
+       * parent's inbox — the same exposure the public magic-link send has
+       * (it re-mints the code too), bounded by the plugin's 3-per-minute
+       * rate limit.
        */
       async sendVerificationOTP({ email, otp }): Promise<void> {
         if (!isAllowlistedEmail(email, getAllowlistedEmails())) return;
