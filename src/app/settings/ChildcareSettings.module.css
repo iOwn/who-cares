@@ -1,4 +1,4 @@
-/* Rendered as a section inside `SettingsScreen`'s `.body` (issue #48 owns the
+/* Rendered inside the settings layout's `.body` column (issue #143 owns the
  * route shell), so no padding of its own — the body supplies the inset. */
 .root {
   display: flex;

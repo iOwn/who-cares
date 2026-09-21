@@ -1,5 +1,5 @@
 /*
- * Settings screen (issue #48). Feature-level layout, semantic tokens only.
+ * Settings screens (issues #48, #143). Feature-level layout, semantic tokens only.
  * No interaction state or motion of its own — the composed primitives
  * (`Button`, `IconButton`, `Dialog`) each own their press / focus-ring / motion
  * contract.
@@ -23,6 +23,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-12);
+}
+
+/* --- the You / Household switch (issue #143) --- */
+.tabs {
+  align-self: center;
+}
+
+/* The household tab's one-line "this is shared" lead. */
+.lead {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
 }
 
 /* --- passkey card --- */

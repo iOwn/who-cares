@@ -9,7 +9,8 @@ import styles from "./RouteSkeleton.module.css";
  * this, nothing changed on screen until the server had rendered the whole
  * page. Both are plain Server Components: only decorative blocks, one
  * `role="status"` for assistive tech. Shapes track the real screens so the
- * swap to content does not jump.
+ * swap to content does not jump. The calendar one stands in for a whole
+ * screen; the settings one only for the body under a layout that stays put.
  */
 
 const CALENDAR_CELLS = Array.from({ length: 35 }, (_, i) => i);
@@ -50,27 +51,26 @@ export function CalendarSkeleton() {
   );
 }
 
-const SETTINGS_SECTIONS = ["passkey", "devices", "push", "calendar", "childcare"];
+/**
+ * Both Settings tabs (`/settings`, `/settings/household`) — body only. The
+ * route header and the You / Household switch belong to `settings/layout.tsx`
+ * (issue #143), which stays mounted across the tabs, so they never need a
+ * stand-in. The one `settings/loading.tsx` covers both pages, hence the card
+ * count is a compromise between the personal tab's four sections and the
+ * household tab's two.
+ */
+const SETTINGS_SECTIONS = ["first", "second", "third"];
 
-/** `/settings` — the route header's frame plus one card per section. */
 export function SettingsSkeleton() {
   return (
-    <div role="status" aria-busy="true" className={styles.settingsBase}>
+    <div role="status" aria-busy="true" className={styles.settings}>
       <VisuallyHidden>Loading settings</VisuallyHidden>
-      <header className={styles.header} aria-hidden>
-        <Block className={styles.icon} />
-        <div className={styles.headerText}>
-          <Block className={styles.text} />
-        </div>
-      </header>
-      <main className={styles.settings} aria-hidden>
-        {SETTINGS_SECTIONS.map((key) => (
-          <section key={key} className={styles.section}>
-            <Block className={styles.heading} />
-            <Block className={cx(styles.card, styles.settingsCard)} />
-          </section>
-        ))}
-      </main>
+      {SETTINGS_SECTIONS.map((key) => (
+        <section key={key} className={styles.section} aria-hidden>
+          <Block className={styles.heading} />
+          <Block className={cx(styles.card, styles.settingsCard)} />
+        </section>
+      ))}
     </div>
   );
 }

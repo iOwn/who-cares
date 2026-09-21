@@ -5,21 +5,25 @@ import { auth, getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
-import type { PushBrowserView } from "./PushCard";
-import { SettingsScreen } from "./SettingsScreen";
-import type { DeviceView } from "./SignedInDevices";
+import { SectionHeading } from "@/ui";
+import { PasskeyCard } from "./PasskeyCard";
+import { type PushBrowserView, PushCard } from "./PushCard";
+import styles from "./SettingsScreen.module.css";
+import { type DeviceView, SignedInDevices } from "./SignedInDevices";
+import { WeekendDaysCard } from "./WeekendDaysCard";
 
 /**
- * Settings route. Composes the two auth-hygiene sections (issue #48 — enroll a
- * passkey, manage signed-in devices) with the childcare-pattern / closures
- * sections (issue #49) into one `SettingsScreen`.
+ * `/settings` — the **personal** tab (issue #143): what belongs to the
+ * signed-in member (passkey, sessions, push browsers — issues #48, #90) or to
+ * this browser (the weekend-days preference, #130). Nothing here is visible to
+ * the other parent. The shared childcare settings live one tab over, at
+ * `./household/page.tsx`.
  *
- * A Server Component: it reads the session, the device list (`auth.api.*` with
- * the forwarded request headers, per Better Auth's session-management docs) and
- * the childcare pattern + closures on the server, then hands a plain
- * serialisable snapshot to the client `SettingsScreen`. Mutations happen
- * client-side (`authClient` + `router.refresh()`) or via the childcare Server
- * Actions.
+ * A Server Component: it reads the session, the device list (`auth.api.*`
+ * with the forwarded request headers, per Better Auth's session-management
+ * docs) and the push subscriptions, then hands plain serialisable snapshots
+ * to the client cards. It fetches only this tab's data — the household tab
+ * pays for its own.
  *
  * "This device" is the token `getCurrentSession` already resolved — no second
  * `auth.api.getSession` round-trip (issue #144).
@@ -30,10 +34,8 @@ export default async function SettingsPage() {
 
   const [requestHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
   const repos = createRepositories(db);
-  const [sessions, pattern, closures, pushSubscriptions] = await Promise.all([
+  const [sessions, pushSubscriptions] = await Promise.all([
     auth.api.listSessions({ headers: requestHeaders }),
-    repos.childcarePattern.findByHousehold(current.household.id),
-    repos.closures.listByHousehold(current.household.id),
     repos.pushSubscriptions.listByMember(current.member.id),
   ]);
 
@@ -57,15 +59,29 @@ export default async function SettingsPage() {
       return b.lastActiveAt.localeCompare(a.lastActiveAt);
     });
 
+  const hideWeekends = parseHideWeekends(cookieStore.get(HIDE_WEEKENDS_COOKIE)?.value);
+
   return (
-    <SettingsScreen
-      childName={current.child?.name ?? ""}
-      devices={devices}
-      pushBrowsers={pushBrowsers}
-      pattern={pattern}
-      closures={closures}
-      today={new Date().toISOString().slice(0, 10)}
-      hideWeekends={parseHideWeekends(cookieStore.get(HIDE_WEEKENDS_COOKIE)?.value)}
-    />
+    <>
+      <section className={styles.section} aria-labelledby="settings-passkey-heading">
+        <SectionHeading id="settings-passkey-heading">Sign in faster</SectionHeading>
+        <PasskeyCard />
+      </section>
+
+      <section className={styles.section} aria-labelledby="settings-devices-heading">
+        <SectionHeading id="settings-devices-heading">Signed-in devices</SectionHeading>
+        <SignedInDevices devices={devices} />
+      </section>
+
+      <section className={styles.section} aria-labelledby="settings-push-heading">
+        <SectionHeading id="settings-push-heading">Notifications</SectionHeading>
+        <PushCard browsers={pushBrowsers} />
+      </section>
+
+      <section className={styles.section} aria-labelledby="settings-calendar-heading">
+        <SectionHeading id="settings-calendar-heading">Calendar</SectionHeading>
+        <WeekendDaysCard hideWeekends={hideWeekends} />
+      </section>
+    </>
   );
 }
