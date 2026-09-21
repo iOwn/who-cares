@@ -6,6 +6,7 @@ import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
 import { SectionHeading } from "@/ui";
+import { NameCard } from "./NameCard";
 import { PasskeyCard } from "./PasskeyCard";
 import { type PushBrowserView, PushCard } from "./PushCard";
 import styles from "./SettingsScreen.module.css";
@@ -14,10 +15,10 @@ import { WeekendDaysCard } from "./WeekendDaysCard";
 
 /**
  * `/settings` — the **personal** tab (issue #143): what belongs to the
- * signed-in member (passkey, sessions, push browsers — issues #48, #90) or to
- * this browser (the weekend-days preference, #130). Nothing here is visible to
- * the other parent. The shared childcare settings live one tab over, at
- * `./household/page.tsx`.
+ * signed-in member (their name — #153; passkey, sessions, push browsers —
+ * issues #48, #90) or to this browser (the weekend-days preference, #130).
+ * Nothing here is visible to the other parent. The shared childcare settings
+ * live one tab over, at `./household/page.tsx`.
  *
  * A Server Component: it reads the session, the device list (`auth.api.*`
  * with the forwarded request headers, per Better Auth's session-management
@@ -63,6 +64,11 @@ export default async function SettingsPage() {
 
   return (
     <>
+      <section className={styles.section} aria-labelledby="settings-name-heading">
+        <SectionHeading id="settings-name-heading">Your name</SectionHeading>
+        <NameCard name={current.member.name} />
+      </section>
+
       <section className={styles.section} aria-labelledby="settings-passkey-heading">
         <SectionHeading id="settings-passkey-heading">Sign in faster</SectionHeading>
         <PasskeyCard />
