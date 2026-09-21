@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getAllowlistedEmails, requireEnv, requireGmailConfig } from "./env";
+import { getAllowlistedEmails, getAuthBaseURL, requireEnv, requireGmailConfig } from "./env";
 
 /**
  * `requireEnv` reads `process.env` directly, so every test below snapshots
@@ -154,5 +154,66 @@ describe("requireEnv", () => {
     process.env.SOME_SET_VAR_FOR_TEST = "value";
     expect(requireEnv("SOME_SET_VAR_FOR_TEST")).toBe("value");
     delete process.env.SOME_SET_VAR_FOR_TEST;
+  });
+});
+
+describe("getAuthBaseURL", () => {
+  const PROD = "https://whocares.example";
+
+  it("is the static BETTER_AUTH_URL outside a Vercel preview", () => {
+    expect(getAuthBaseURL({ BETTER_AUTH_URL: PROD })).toBe(PROD);
+    expect(getAuthBaseURL({ BETTER_AUTH_URL: PROD, VERCEL_ENV: "production" })).toBe(PROD);
+    expect(getAuthBaseURL({ BETTER_AUTH_URL: PROD, VERCEL_ENV: "development" })).toBe(PROD);
+  });
+
+  it("stays static on production even when Vercel's host vars are present", () => {
+    expect(
+      getAuthBaseURL({
+        BETTER_AUTH_URL: PROD,
+        VERCEL_ENV: "production",
+        VERCEL_URL: "who-cares-abc123.vercel.app",
+        VERCEL_BRANCH_URL: "who-cares-git-main.vercel.app",
+      }),
+    ).toBe(PROD);
+  });
+
+  it("resolves per request on a preview: exactly the deployment's own hosts, prod as fallback", () => {
+    expect(
+      getAuthBaseURL({
+        BETTER_AUTH_URL: PROD,
+        VERCEL_ENV: "preview",
+        VERCEL_URL: "who-cares-abc123.vercel.app",
+        VERCEL_BRANCH_URL: "who-cares-git-feat-x.vercel.app",
+      }),
+    ).toEqual({
+      allowedHosts: ["who-cares-abc123.vercel.app", "who-cares-git-feat-x.vercel.app"],
+      protocol: "https",
+      fallback: PROD,
+    });
+  });
+
+  it("drops a missing or blank host var rather than allowing an empty pattern", () => {
+    expect(
+      getAuthBaseURL({
+        BETTER_AUTH_URL: PROD,
+        VERCEL_ENV: "preview",
+        VERCEL_URL: " who-cares-abc123.vercel.app ",
+        VERCEL_BRANCH_URL: "",
+      }),
+    ).toEqual({
+      allowedHosts: ["who-cares-abc123.vercel.app"],
+      protocol: "https",
+      fallback: PROD,
+    });
+  });
+
+  it("falls back to the static URL on a preview with no host vars at all", () => {
+    expect(getAuthBaseURL({ BETTER_AUTH_URL: PROD, VERCEL_ENV: "preview" })).toBe(PROD);
+  });
+
+  it("still requires BETTER_AUTH_URL on a preview — it is the fallback", () => {
+    expect(() =>
+      getAuthBaseURL({ VERCEL_ENV: "preview", VERCEL_URL: "who-cares-abc123.vercel.app" }),
+    ).toThrow("Missing required environment variable: BETTER_AUTH_URL");
   });
 });

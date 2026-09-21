@@ -5,15 +5,61 @@
  * misconfiguration that should fail immediately, not fall back silently.
  */
 
+import type { BetterAuthOptions } from "better-auth";
 import type { AllowlistedEmails } from "@/domain";
 import type { GmailMailerConfig } from "@/notifications/gmailMailer";
 
+type EnvLike = Record<string, string | undefined>;
+
 export function requireEnv(name: string): string {
-  const value = process.env[name];
+  return requireEnvFrom(process.env, name);
+}
+
+function requireEnvFrom(env: EnvLike, name: string): string {
+  const value = env[name];
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+/** What `betterAuth({ baseURL })` accepts: a static origin, or the per-request host config. */
+export type AuthBaseURL = NonNullable<BetterAuthOptions["baseURL"]>;
+
+/**
+ * The Better Auth `baseURL` for this deployment (issue #152).
+ *
+ * Better Auth builds every magic link — and derives `trustedOrigins` — from
+ * `baseURL`. On production that is the one `BETTER_AUTH_URL`. A Vercel
+ * **preview** deploy has no fixed host: each deployment gets its own
+ * `who-cares-<hash>-….vercel.app` plus a per-branch alias, while
+ * `BETTER_AUTH_URL` (scoped to both environments) still holds the production
+ * origin. With the static string a preview mailed a link pointing at
+ * production, whose database never stored the token — every preview sign-in
+ * ended in `INVALID_TOKEN`.
+ *
+ * On preview this therefore returns Better Auth's dynamic config instead: the
+ * request's `Host` is matched against the deployment's own two hostnames,
+ * which Vercel exposes as the system vars `VERCEL_URL` / `VERCEL_BRANCH_URL`,
+ * so the link (and the session cookie, and the origin check) land on the host
+ * the user actually opened. Exact hosts, not `*.vercel.app` — a wildcard
+ * would trust every other Vercel app's origin. `BETTER_AUTH_URL` stays as the
+ * `fallback` for a request from any other host (a custom alias), which then
+ * behaves exactly as before.
+ *
+ * Anywhere else (production, local, CI build) the static string is returned
+ * unchanged, so this changes nothing for the live deploy.
+ */
+export function getAuthBaseURL(env: EnvLike = process.env): AuthBaseURL {
+  const fallback = requireEnvFrom(env, "BETTER_AUTH_URL");
+  if (env.VERCEL_ENV !== "preview") return fallback;
+
+  const allowedHosts = [env.VERCEL_URL, env.VERCEL_BRANCH_URL]
+    .map((host) => host?.trim())
+    .filter((host): host is string => Boolean(host));
+  if (allowedHosts.length === 0) return fallback;
+
+  return { allowedHosts, protocol: "https", fallback };
 }
 
 /**

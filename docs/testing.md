@@ -239,6 +239,42 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
   env var, and `e2e/vercel-bypass.ts` turns it into the `x-vercel-protection-bypass` /
   `x-vercel-set-bypass-cookie` headers Playwright sends. Unset, it's a no-op — needed only
   while the Preview environment has that protection enabled.
+- **Preview sign-in by hand** (issue #152): a preview has no fixed host, so `src/auth/config.ts`
+  hands Better Auth a per-request `baseURL` on `VERCEL_ENV=preview` (`getAuthBaseURL` in
+  `src/auth/env.ts` — the deployment's own `VERCEL_URL` / `VERCEL_BRANCH_URL` as
+  `allowedHosts`, `BETTER_AUTH_URL` as the fallback). The magic link a preview mails therefore
+  points back at that preview, not at production. Passkeys are **not** covered —
+  `PASSKEY_RP_ID` / `PASSKEY_ORIGIN` are still the production values, so enrol/sign-in with a
+  passkey only works on production; on a preview, use the magic link.
+
+### Driving a protected preview by hand (or as an agent)
+
+Vercel Authentication answers every request with a 302 to vercel.com SSO (pages) or
+`401 {"error":{"message":"Protected deployment"}}` (APIs) until the caller is either a
+vercel.com session in the browser or carries the bypass secret. A human just signs in to
+vercel.com; anything scripted uses the same secret `e2e.yml` does. Keep it in `.env.local`
+as `VERCEL_AUTOMATION_BYPASS_SECRET` (gitignored; Project → Settings → Deployment
+Protection → Protection Bypass for Automation shows the value).
+
+```sh
+PREVIEW=https://who-cares-git-<branch>-florians-projects-3fc478e2.vercel.app   # or the per-deploy URL
+BYPASS="x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET"
+
+# 1. (optional) reset to the fixed smoke household — destructive, preview DB only
+curl -sS -X POST -H "$BYPASS" "$PREVIEW/api/test/seed"
+
+# 2. mint a session for parent A (or "b"); keep the cookies
+curl -sS -X POST -H "$BYPASS" -H "content-type: application/json" \
+  -c cookies.txt --data '{"member":"a"}' "$PREVIEW/api/test/login"
+
+# 3. every later request carries both the bypass header and the session cookie
+curl -sS -H "$BYPASS" -b cookies.txt "$PREVIEW/settings"
+```
+
+Adding `-H "x-vercel-set-bypass-cookie: true"` to the first call makes Vercel also set a
+bypass cookie, so a browser-driven session (Playwright, a Chrome tool) only needs the header
+once. `/api/test/{seed,login}` are 404 anywhere `E2E_TEST_MODE` isn't set, so this recipe is
+preview-only by construction.
 
 ### Running `pnpm e2e` locally
 
