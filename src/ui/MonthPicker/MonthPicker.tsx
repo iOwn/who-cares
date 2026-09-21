@@ -2,7 +2,6 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "../Button";
 import { mq } from "../breakpoints";
 import { cx } from "../cx";
 import { Dialog } from "../Dialog";
@@ -65,14 +64,7 @@ export function MonthPicker({ month, year, onSelect }: MonthPickerProps) {
     <Dialog presentation={desktop ? "center" : "sheet"} aria-label="Jump to month">
       {({ close }) => (
         <>
-          <Dialog.Header
-            title="Jump to month"
-            trailing={
-              <Button variant="ghost" size="sm" onPress={close}>
-                Done
-              </Button>
-            }
-          />
+          <Dialog.Header title="Jump to month" closeButton />
           <div className={styles.body}>
             <div className={styles.yearRow}>
               <IconButton

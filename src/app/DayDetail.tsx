@@ -1,11 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "@/domain";
 import type { CalendarDayView } from "@/ui";
-import { Button, Callout, Dialog, IconButton, isStatusDisplayState, StatePill } from "@/ui";
+import { Button, Callout, Dialog, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
 import { longDate, shortDate } from "./formatCalendarDate";
 import { cancelAbsenceAction, claimDayAction, withdrawRequestAction } from "./requestActions";
@@ -143,103 +142,90 @@ export function DayDetail({
         onOpenChange(open);
       }}
     >
-      {({ close }) =>
-        day == null ? (
-          <span />
-        ) : (
-          <div className={styles.body}>
-            <Dialog.Header
-              title={longDate(day.date)}
-              trailing={
-                <IconButton variant="ghost" size="sm" aria-label="Close" onPress={close}>
-                  <X size={18} aria-hidden />
-                </IconButton>
-              }
-            />
-            <div className={styles.state}>
-              {isStatusDisplayState(day.displayState) ? (
-                <StatePill state={day.displayState} />
-              ) : (
-                <span className={styles.neutralPill}>
-                  <span className={styles.neutralDot} aria-hidden />
-                  {NEUTRAL_LABEL[day.displayState]}
-                </span>
-              )}
-            </div>
-            <p className={styles.narrative}>{day.narrative}</p>
-            {day.displayState === "closed" && day.closureReason ? (
-              <p className={styles.reason}>Reason given: {day.closureReason}</p>
-            ) : null}
-
-            {error ? (
-              <Callout tone="danger" role="alert">
-                {error}
-              </Callout>
-            ) : null}
-
-            {myAbsence ? (
-              <p className={styles.reason}>
-                Cancelling clears your whole absence
-                {myAbsence.startDate === myAbsence.endDate
-                  ? ` on ${shortDate(myAbsence.startDate)}`
-                  : ` (${shortDate(myAbsence.startDate)} – ${shortDate(myAbsence.endDate)})`}
-                . Any pickup already accepted for those days still stands.
-              </p>
-            ) : null}
-
-            {claimTakesOverFrom ? (
-              <p className={styles.reason}>
-                Claiming this day takes over from {claimTakesOverFrom}. They&rsquo;ll be notified
-                &mdash; there&rsquo;s no confirmation step.
-              </p>
-            ) : null}
-
-            {showActions ? (
-              <div className={styles.actions}>
-                {myOpenRequest ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    isDisabled={pending}
-                    onPress={() => run(() => withdrawRequestAction(myOpenRequest.id))}
-                  >
-                    Withdraw request
-                  </Button>
-                ) : null}
-                {myAbsence ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    isDisabled={pending}
-                    onPress={() => run(() => cancelAbsenceAction(myAbsence.id))}
-                  >
-                    Cancel my absence
-                  </Button>
-                ) : null}
-                {canDeclare ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onPress={() => onDeclareAbsence?.(day.date)}
-                  >
-                    I&rsquo;m out this day
-                  </Button>
-                ) : null}
-                {canClaim ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    isDisabled={pending}
-                    onPress={() => run(() => claimDayAction(day.date))}
-                  >
-                    Claim this day
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
+      {day == null ? (
+        <span />
+      ) : (
+        <div className={styles.body}>
+          <Dialog.Header title={longDate(day.date)} closeButton />
+          <div className={styles.state}>
+            {isStatusDisplayState(day.displayState) ? (
+              <StatePill state={day.displayState} />
+            ) : (
+              <span className={styles.neutralPill}>
+                <span className={styles.neutralDot} aria-hidden />
+                {NEUTRAL_LABEL[day.displayState]}
+              </span>
+            )}
           </div>
-        )
-      }
+          <p className={styles.narrative}>{day.narrative}</p>
+          {day.displayState === "closed" && day.closureReason ? (
+            <p className={styles.reason}>Reason given: {day.closureReason}</p>
+          ) : null}
+
+          {error ? (
+            <Callout tone="danger" role="alert">
+              {error}
+            </Callout>
+          ) : null}
+
+          {myAbsence ? (
+            <p className={styles.reason}>
+              Cancelling clears your whole absence
+              {myAbsence.startDate === myAbsence.endDate
+                ? ` on ${shortDate(myAbsence.startDate)}`
+                : ` (${shortDate(myAbsence.startDate)} – ${shortDate(myAbsence.endDate)})`}
+              . Any pickup already accepted for those days still stands.
+            </p>
+          ) : null}
+
+          {claimTakesOverFrom ? (
+            <p className={styles.reason}>
+              Claiming this day takes over from {claimTakesOverFrom}. They&rsquo;ll be notified
+              &mdash; there&rsquo;s no confirmation step.
+            </p>
+          ) : null}
+
+          {showActions ? (
+            <div className={styles.actions}>
+              {myOpenRequest ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => run(() => withdrawRequestAction(myOpenRequest.id))}
+                >
+                  Withdraw request
+                </Button>
+              ) : null}
+              {myAbsence ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => run(() => cancelAbsenceAction(myAbsence.id))}
+                >
+                  Cancel my absence
+                </Button>
+              ) : null}
+              {canDeclare ? (
+                <Button variant="secondary" size="sm" onPress={() => onDeclareAbsence?.(day.date)}>
+                  I&rsquo;m out this day
+                </Button>
+              ) : null}
+              {canClaim ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => run(() => claimDayAction(day.date))}
+                >
+                  Claim this day
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
     </Dialog>
   );
 }

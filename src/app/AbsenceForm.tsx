@@ -205,115 +205,106 @@ export function AbsenceForm({
 
   return (
     <Dialog presentation="sheet" isOpen={isOpen} onOpenChange={onOpenChange}>
-      {({ close }) => (
-        <div className={styles.body}>
-          <Dialog.Header
-            title="I'm out"
-            leading={
-              <Button variant="ghost" size="sm" onPress={close}>
-                Cancel
-              </Button>
-            }
-          />
+      <div className={styles.body}>
+        <Dialog.Header title="I'm out" closeButton />
 
-          <SegmentedControl
-            aria-label="Absence type"
-            value={mode}
-            onChange={(value) => {
-              setMode(value as Mode);
-              setError(null);
-            }}
-            className={styles.field}
-          >
-            <SegmentedControl.Item value="oneoff">One-off</SegmentedControl.Item>
-            <SegmentedControl.Item value="recurring">Recurring</SegmentedControl.Item>
-          </SegmentedControl>
+        <SegmentedControl
+          aria-label="Absence type"
+          value={mode}
+          onChange={(value) => {
+            setMode(value as Mode);
+            setError(null);
+          }}
+          className={styles.field}
+        >
+          <SegmentedControl.Item value="oneoff">One-off</SegmentedControl.Item>
+          <SegmentedControl.Item value="recurring">Recurring</SegmentedControl.Item>
+        </SegmentedControl>
 
-          {error ? (
-            <Callout tone="danger" role="alert">
-              {error}
-            </Callout>
-          ) : null}
+        {error ? (
+          <Callout tone="danger" role="alert">
+            {error}
+          </Callout>
+        ) : null}
 
-          {mode === "recurring" ? (
-            <WeekdayPicker
-              aria-label="Weekdays I'm out"
-              value={weekdays}
-              onChange={setWeekdays}
-              className={styles.field}
-            />
-          ) : null}
-
-          <DateRangeField
-            label={mode === "recurring" ? "Between these dates" : "Dates I'm away"}
-            value={range}
-            onChange={setRange}
-            minValue={minValue}
-            maxValue={maxValue}
-            description={
-              mode === "recurring"
-                ? "One absence per matching weekday. Up to four weeks out."
-                : "Whole days only. Up to four weeks out."
-            }
-            errorMessage={
-              startDate != null && endDate != null && endDate < startDate
-                ? "The end date can't be before the start date."
-                : undefined
-            }
+        {mode === "recurring" ? (
+          <WeekdayPicker
+            aria-label="Weekdays I'm out"
+            value={weekdays}
+            onChange={setWeekdays}
             className={styles.field}
           />
+        ) : null}
 
-          <TextField
-            label="Label"
-            isOptional
-            value={label}
-            onChange={setLabel}
-            placeholder="e.g. Work trip"
-            className={styles.field}
-          />
+        <DateRangeField
+          label={mode === "recurring" ? "Between these dates" : "Dates I'm away"}
+          value={range}
+          onChange={setRange}
+          minValue={minValue}
+          maxValue={maxValue}
+          description={
+            mode === "recurring"
+              ? "One absence per matching weekday. Up to four weeks out."
+              : "Whole days only. Up to four weeks out."
+          }
+          errorMessage={
+            startDate != null && endDate != null && endDate < startDate
+              ? "The end date can't be before the start date."
+              : undefined
+          }
+          className={styles.field}
+        />
 
-          <TextArea
-            label="Note"
-            isOptional
-            value={note}
-            onChange={setNote}
-            placeholder="Anything the other parent should know"
-            className={styles.field}
-          />
+        <TextField
+          label="Label"
+          isOptional
+          value={label}
+          onChange={setLabel}
+          placeholder="e.g. Work trip"
+          className={styles.field}
+        />
 
-          {mode === "recurring" ? (
-            recurring && weekdays.length > 0 ? (
-              <RecurringPreview
-                toCreate={recurring.toCreate}
-                alreadyCovered={recurring.alreadyCovered}
-                capped={recurring.capped}
-                className={styles.impact}
-              />
-            ) : (
-              <Callout tone="info" dot className={styles.impact}>
-                Pick weekdays and a date range.
-              </Callout>
-            )
-          ) : impact ? (
-            <AbsenceImpact
-              childcareDays={impact.childcareDays}
-              requests={impact.requests}
-              otherParentName={otherName}
+        <TextArea
+          label="Note"
+          isOptional
+          value={note}
+          onChange={setNote}
+          placeholder="Anything the other parent should know"
+          className={styles.field}
+        />
+
+        {mode === "recurring" ? (
+          recurring && weekdays.length > 0 ? (
+            <RecurringPreview
+              toCreate={recurring.toCreate}
+              alreadyCovered={recurring.alreadyCovered}
+              capped={recurring.capped}
               className={styles.impact}
             />
           ) : (
             <Callout tone="info" dot className={styles.impact}>
-              Pick a start and end date.
+              Pick weekdays and a date range.
             </Callout>
-          )}
+          )
+        ) : impact ? (
+          <AbsenceImpact
+            childcareDays={impact.childcareDays}
+            requests={impact.requests}
+            otherParentName={otherName}
+            className={styles.impact}
+          />
+        ) : (
+          <Callout tone="info" dot className={styles.impact}>
+            Pick a start and end date.
+          </Callout>
+        )}
 
-          <ActionBar>
-            <Button variant="primary" fullWidth isDisabled={!canSubmit} onPress={submit}>
-              {pending ? "Saving…" : "Save absence"}
-            </Button>
-          </ActionBar>
-        </div>
-      )}
+        <ActionBar>
+          <Button variant="primary" fullWidth isDisabled={!canSubmit} onPress={submit}>
+            {pending ? "Saving…" : "Save absence"}
+          </Button>
+        </ActionBar>
+      </div>
     </Dialog>
   );
 }

@@ -95,10 +95,14 @@ dismissable in v1. P1 `AbsenceImpact` / `RecurringPreview` are thin wrappers ove
 Modal overlay + bottom sheet. DayDetail (sheet), ImOut/Recurring (fullscreen), month-jump
 (sheet/center). RAC `Modal` + `Dialog`. Prop
 `presentation: "sheet" | "center" | "fullscreen"` — mobile as designed, desktop sheet/fullscreen
-→ `center`. `Dialog.Header`: `leading` (dismiss — "Cancel" text or ✕) / `title` / `trailing`;
-grabber handle only for `sheet`. States: open/closed, focus trap, Escape, scrim
-(`--color-scrim`), focus restore. **The Inbox side-panel is NOT a Dialog** — it's feature
-layout (fullscreen route on mobile, panel region on desktop).
+→ `center`. `Dialog.Header`: `leading` (reserved, empty by default) / `title` / `closeButton`
+(the one dismiss control, #132: a ghost `size="sm"` icon-only ✕ named "Close", on the
+right, wired to the overlay's `close()` — never a text "Cancel" / "Done"); `trailing` only
+for a header without a close button, and mutually exclusive with `closeButton`. Primary
+actions live in the body / `ActionBar`, not in the header. Grabber handle only for
+`sheet`. States: open/closed, focus trap, Escape, scrim (`--color-scrim`), focus restore.
+**The Inbox side-panel is NOT a Dialog** — it's feature layout (fullscreen route on mobile,
+panel region on desktop); it renders the same ✕ by hand.
 
 `Dialog.Header`'s slot contract (#137): the leading/trailing slots each reserve a
 minimum equal to a small icon button (`IconButton size="sm"`'s width), on both sides
