@@ -14,10 +14,10 @@
  * `/settings` must push instead.
  *
  * The app shell records the hand-off in `sessionStorage` right before it
- * navigates; the Settings screen consumes the marker on mount. Storage in,
+ * navigates; the Settings shell consumes the marker on mount. Storage in,
  * decision out — no `window`, no React — so it unit-tests in the `node`
  * Vitest project (`backNavigation.test.ts`) while the router wiring in
- * `AppShell.tsx` / `SettingsScreen.tsx` stays un-unit-tested (ADR-0005),
+ * `AppShell.tsx` / `SettingsShell.tsx` stays un-unit-tested (ADR-0005),
  * mirroring `refreshPolicy.ts` / `RefreshOnResume.tsx`.
  */
 
@@ -47,7 +47,8 @@ export function markSettingsOpenedFromApp(storage: MarkerStorage | null): void {
 /**
  * Whether Settings was opened from the app shell — and clear the marker, so a
  * later reload or deep link onto `/settings` in the same tab does not inherit
- * it. Call once, on the Settings screen's mount.
+ * it. Call once, on the Settings shell's mount (`SettingsShell.tsx`, which
+ * outlives the You / Household tab switch — issue #143).
  */
 export function consumeSettingsOpenedFromApp(storage: MarkerStorage | null): boolean {
   try {

@@ -24,8 +24,9 @@ import { removeClosureAction, saveClosureAction, savePatternAction } from "./chi
 /**
  * The childcare-settings feature (#49) — set the effective-dated pattern and
  * manage closures. A `'use client'` form over thin Server Actions
- * (`./childcareActions`); no domain logic here (ADR-0005). Rendered as a
- * section inside `SettingsScreen` (issue #48 owns the route shell + header).
+ * (`./childcareActions`); no domain logic here (ADR-0005). Rendered as
+ * the body of the household tab, `./household/page.tsx` (issue #143 owns the
+ * route shell + header).
  *
  * Adding closures takes a **date range** (issue #131), editing one takes a
  * single date. A holiday week is then one action — still one `Closure` row per
