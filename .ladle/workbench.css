@@ -36,3 +36,11 @@
 *::after {
   box-sizing: border-box;
 }
+
+/* Mirrors the base text face in src/app/globals.css (issue #150) — that file
+ * is the source of truth. Same reasoning as the reset above: without it, bare
+ * text in a story would render in the UA default only in the app, never in
+ * the catalogue. */
+body {
+  font-family: var(--font-body);
+}

@@ -22,6 +22,29 @@ const ladleConfig = readFileSync(
   "utf8",
 );
 
+const globalsCss = readFileSync(fileURLToPath(new URL("./globals.css", import.meta.url)), "utf8");
+
+const workbenchCss = readFileSync(
+  fileURLToPath(new URL("../../.ladle/workbench.css", import.meta.url)),
+  "utf8",
+);
+
+/**
+ * Collect the `font-family` values declared inside `body { ... }` blocks
+ * (including `html, body { ... }`), with comments stripped so a commented-out
+ * declaration doesn't pass.
+ */
+function bodyFontFamilies(css: string): string[] {
+  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const families: string[] = [];
+  for (const block of stripped.matchAll(/(^|[},\s])body\s*\{([^}]*)\}/g)) {
+    for (const decl of block[2].matchAll(/font-family\s*:\s*([^;]+);/g)) {
+      families.push(decl[1].trim());
+    }
+  }
+  return families;
+}
+
 /**
  * Parse all `next/font/google` font families from layout.tsx.
  * Returns `{ <FamilyName>: { weights: [...], subset: "..." } }`.
@@ -156,5 +179,21 @@ describe("fonts layout.tsx ↔ .ladle googleFontsHref parity", () => {
       // Both are pre-sorted, so direct comparison is order-insensitive
       expect(ladleWeights).toEqual(layoutWeights);
     }
+  });
+});
+
+/**
+ * Drift guard for the base text face (issue #150). tokens.css only *defines*
+ * `--font-body`; globals.css has to apply it on `body`, or any text not
+ * wrapped in a primitive that opts in falls through to the UA default. The
+ * workbench must mirror it so stories can't hide the regression.
+ */
+describe("base body font: globals.css ↔ .ladle/workbench.css parity", () => {
+  it("globals.css applies --font-body on body", () => {
+    expect(bodyFontFamilies(globalsCss)).toEqual(["var(--font-body)"]);
+  });
+
+  it(".ladle/workbench.css mirrors it", () => {
+    expect(bodyFontFamilies(workbenchCss)).toEqual(bodyFontFamilies(globalsCss));
   });
 });

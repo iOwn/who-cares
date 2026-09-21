@@ -21,3 +21,12 @@ body {
    * rubber-band glow behind the indicator. */
   overscroll-behavior-y: none;
 }
+
+body {
+  /* The base text face, applied once and inherited. tokens.css only *defines*
+   * --font-body; without this, any text not wrapped in a primitive that opts
+   * in (bare <p>s in feature markup — the Settings cards, issue #150) fell
+   * through to the UA default. Components declare `font-family` only to
+   * switch to --font-display. .ladle/workbench.css mirrors this. */
+  font-family: var(--font-body);
+}
