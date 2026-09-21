@@ -13,6 +13,7 @@
  *      `aria-label` when there is no header)
  */
 
+import { useState } from "react";
 import { expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -126,6 +127,27 @@ for (const presentation of ["center", "sheet"] as const) {
     await expect.element(trigger).toHaveFocus();
   });
 }
+
+// The real call sites (AbsenceForm, DayDetail) own the open state via
+// `isOpen` / `onOpenChange` rather than a `DialogTrigger`; `closeButton` must
+// reach that controlled state too, i.e. request a close through `onOpenChange`.
+test("controlled: Dialog.Header closeButton requests a close through onOpenChange", async () => {
+  function Controlled() {
+    const [isOpen, setOpen] = useState(true);
+    return (
+      <Dialog presentation="sheet" isOpen={isOpen} onOpenChange={setOpen}>
+        <Dialog.Header title="Trip details" closeButton />
+        <p>Where are you going?</p>
+      </Dialog>
+    );
+  }
+  const screen = await render(<Controlled />);
+  await expect.element(screen.getByRole("dialog")).toBeVisible();
+
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+  await expect.element(screen.getByRole("dialog")).not.toBeInTheDocument();
+});
 
 test("closing via the render-prop close() also restores focus to the trigger", async () => {
   const screen = await render(<Fixture presentation="sheet" />);

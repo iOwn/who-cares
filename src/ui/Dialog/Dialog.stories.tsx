@@ -11,8 +11,7 @@ export default {
  * Decorator hint: `Tab` into the trigger and open it, then `Tab` around inside
  * — focus is trapped, `Escape` closes, and focus returns to the trigger. The
  * mandatory focus ring (docs/design-system.md §3) shows on every control.
- */
-/**
+ *
  * Every header dismisses the same way (#132): `closeButton` renders the ghost,
  * icon-only ✕ on the right. Primary actions live in the body, never next to it.
  */
