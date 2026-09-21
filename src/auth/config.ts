@@ -32,6 +32,7 @@ import { bootstrapHousehold, isAllowlistedEmail, noopAdapters } from "@/domain";
 import { createGmailMailer } from "@/notifications/gmailMailer";
 import {
   getAllowlistedEmails,
+  getAuthBaseURL,
   getPasskeyRelyingParty,
   requireEnv,
   requireGmailConfig,
@@ -56,7 +57,9 @@ const SESSION_LIFETIME_SECONDS = 60 * 60 * 24 * 45;
 const SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24;
 
 export const auth = betterAuth({
-  baseURL: requireEnv("BETTER_AUTH_URL"),
+  // A static origin everywhere except a Vercel preview, where it is resolved
+  // per request from the deployment's own hosts (issue #152) — see `getAuthBaseURL`.
+  baseURL: getAuthBaseURL(),
   secret: requireEnv("BETTER_AUTH_SECRET"),
   database: drizzleAdapter(db, { provider: "pg", schema }),
 
