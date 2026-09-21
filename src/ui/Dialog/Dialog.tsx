@@ -1,17 +1,20 @@
 "use client";
 
 import { cva } from "class-variance-authority";
+import { X } from "lucide-react";
 import { createContext, forwardRef, type ReactNode, useCallback, useContext } from "react";
 import {
   Heading,
   ModalOverlay,
   type ModalOverlayProps,
+  OverlayTriggerStateContext,
   Dialog as RACDialog,
   type DialogProps as RACDialogProps,
   DialogTrigger as RACDialogTrigger,
   Modal as RACModal,
 } from "react-aria-components";
 import { cx } from "../cx";
+import { IconButton } from "../IconButton";
 import styles from "./Dialog.module.css";
 
 /**
@@ -35,12 +38,8 @@ import styles from "./Dialog.module.css";
  *   <DialogTrigger>
  *     <Button>Open</Button>
  *     <Dialog presentation="sheet">
- *       {({ close }) => (
- *         <>
- *           <Dialog.Header title="…" trailing={<Button onPress={close}>Done</Button>} />
- *           …
- *         </>
- *       )}
+ *       <Dialog.Header title="…" closeButton />
+ *       …
  *     </Dialog>
  *   </DialogTrigger>
  */
@@ -157,27 +156,59 @@ const DialogRoot = forwardRef<HTMLElement, DialogProps>(function Dialog(
   );
 });
 
-export interface DialogHeaderProps {
+interface DialogHeaderBaseProps {
   /** The dialog's visible title. Rendered as the RAC title slot, so it also
    * becomes the dialog's accessible name (`aria-labelledby`). */
   title: ReactNode;
-  /** Leading affordance — typically a "Cancel" `Button` or a close `IconButton`. */
+  /** Leading affordance. Reserved (e.g. a back arrow in a multi-step flow) and
+   * empty on every current dialog — the dismiss control lives on the right. */
   leading?: ReactNode;
-  /** Trailing affordance — typically a confirm / "Done" `Button`. */
-  trailing?: ReactNode;
   className?: string;
   style?: React.CSSProperties;
 }
 
 /**
- * `Dialog.Header` — `leading` / `title` / `trailing` row. The bottom-sheet
- * grabber handle renders automatically for `presentation="sheet"` only.
+ * The trailing slot is THE dismiss position (#132), so `closeButton` and
+ * `trailing` are mutually exclusive: a confirm action next to the ✕ is the
+ * layout that ticket removed. Primary actions live in the body / `ActionBar`.
+ */
+export type DialogHeaderProps = DialogHeaderBaseProps &
+  (
+    | {
+        /** Render the app-wide dismiss control — a ghost, `size="sm"`, icon-only ✕
+         * named "Close" — in the trailing slot, wired to the overlay's `close()`. */
+        closeButton: true;
+        trailing?: never;
+      }
+    | {
+        closeButton?: never;
+        /** Trailing affordance for a header WITHOUT a close button. */
+        trailing?: ReactNode;
+      }
+  );
+
+/**
+ * `Dialog.Header` — `leading` / `title` / `closeButton`-or-`trailing` row. The
+ * bottom-sheet grabber handle renders automatically for `presentation="sheet"`
+ * only.
+ *
+ * `closeButton` closes through RAC's `OverlayTriggerStateContext` — the state
+ * `ModalOverlay` provides and the Dialog's own `close` render prop reads — so
+ * callers need neither the function-form children nor their own `IconButton`.
  */
 const DialogHeader = forwardRef<HTMLElement, DialogHeaderProps>(function DialogHeader(
-  { title, leading, trailing, className, style },
+  { title, leading, trailing, closeButton, className, style },
   ref,
 ) {
   const presentation = useContext(DialogPresentationContext);
+  const overlayState = useContext(OverlayTriggerStateContext);
+  const trailingContent = closeButton ? (
+    <IconButton variant="ghost" size="sm" aria-label="Close" onPress={() => overlayState?.close()}>
+      <X size={18} aria-hidden />
+    </IconButton>
+  ) : (
+    trailing
+  );
   return (
     <header ref={ref} className={cx(styles.header, className)} style={style}>
       {presentation === "sheet" ? <span className={styles.grabber} aria-hidden="true" /> : null}
@@ -186,7 +217,7 @@ const DialogHeader = forwardRef<HTMLElement, DialogHeaderProps>(function DialogH
         <Heading slot="title" className={styles.title}>
           {title}
         </Heading>
-        <span className={cx(styles.headerSlot, styles.headerSlotEnd)}>{trailing}</span>
+        <span className={cx(styles.headerSlot, styles.headerSlotEnd)}>{trailingContent}</span>
       </div>
     </header>
   );
