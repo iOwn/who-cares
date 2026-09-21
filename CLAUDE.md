@@ -8,6 +8,12 @@ issue or report it to the user — do **not** pass `--no-verify` / `-n` to `git 
 enforces this, but the rule stands regardless.
 
 ## Developing
+### 0. Refining
+
+An issue is implemented from its refined body, never from a one-line ask. `/refine #N`
+(`.claude/skills/refine/`) does the investigation, rewrites the issue and sets its labels;
+`ready-for-agent` on an issue means that step is done.
+
 ### 1. Implementing
 
 When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR.
