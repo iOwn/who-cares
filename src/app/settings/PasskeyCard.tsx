@@ -25,7 +25,7 @@ type State =
  *
  * Every failure path is handled without an uncaught throw: no WebAuthn support,
  * an authenticator that already holds a passkey for this account, a cancelled
- * OS prompt, or anything else — magic link always remains available, so the
+ * OS prompt, or anything else — the sign-in email always remains available, so the
  * copy stays calm and never blocks.
  */
 export function PasskeyCard() {
@@ -73,8 +73,8 @@ export function PasskeyCard() {
   if (state.kind === "unsupported") {
     return (
       <Callout tone="neutral" icon={KeyRound}>
-        This browser can’t store a passkey. You’ll keep signing in with a magic link — that always
-        works.
+        This browser can’t store a passkey. You’ll keep signing in with the emailed link or code —
+        that always works.
       </Callout>
     );
   }
@@ -99,8 +99,8 @@ export function PasskeyCard() {
       <div className={styles.cardText}>
         <p className={styles.cardTitle}>Use a passkey on this device</p>
         <p className={styles.cardBody}>
-          Sign in with your fingerprint, face, or screen lock instead of waiting for a magic-link
-          email. Magic link still works as a backup and for new devices.
+          Sign in with your fingerprint, face, or screen lock instead of waiting for a sign-in
+          email. The emailed link or code still works as a backup and for new devices.
         </p>
       </div>
 
@@ -111,7 +111,8 @@ export function PasskeyCard() {
       )}
       {state.kind === "error" && (
         <Callout tone="danger" role="alert">
-          Something went wrong setting up a passkey. You can still sign in with a magic link.
+          Something went wrong setting up a passkey. You can still sign in with the emailed link or
+          code.
         </Callout>
       )}
 

@@ -217,7 +217,9 @@ See **[ADR-0008](./adr/0008-e2e-is-one-smoke-path-against-the-vercel-preview-dep
 - **Test seam** (`src/app/api/test/`, gate in `src/testing/testMode.ts`): `POST /api/test/seed` (`TRUNCATE` every table + re-insert
   `buildE2eHouseholdGraph(getAllowlistedEmails())` — idempotent, truncate-then-insert each call)
   and `POST /api/test/login` `{ member: "a" | "b" }` (plants a magic-link verification token then
-  runs `auth.api.magicLinkVerify`, relaying its `Set-Cookie` to the caller). Both call
+  runs `auth.api.magicLinkVerify`, relaying its `Set-Cookie` to the caller — still the link path
+  after issue #157 added the 6-digit code to the same email; the code verify is plugin code and
+  stays outside the smoke path). Both call
   `assertTestModeEnabled()` first and return a bare **404** unless `E2E_TEST_MODE` is one of
   `1` / `true` / `on` / `yes`. `e2e/global-setup.ts` calls seed once, then login for each parent,
   saving a `storageState` per parent under `e2e/.auth/` (gitignored).

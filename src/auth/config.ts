@@ -1,6 +1,7 @@
 /**
- * The Better Auth instance (issue #47): self-hosted, magic-link only, backed
- * by Neon via the Drizzle adapter. `src/app/api/auth/[...all]/route.ts` is
+ * The Better Auth instance (issue #47): self-hosted, one sign-in email
+ * carrying a magic link and a 6-digit code (issue #157), backed by Neon via
+ * the Drizzle adapter. `src/app/api/auth/[...all]/route.ts` is
  * the only thing that mounts it.
  *
  * Unlike `src/db` / `src/domain`, this module is deliberately Next-coupled —
@@ -14,7 +15,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink } from "better-auth/plugins";
+import { emailOTP, magicLink } from "better-auth/plugins";
 // Deep imports, not the `@/db` barrel: the barrel re-exports `./migrate`,
 // whose `new URL("./migrations", import.meta.url)` Turbopack tries to
 // resolve as a bundled asset the moment anything pulls the barrel into the
@@ -37,6 +38,7 @@ import {
   requireEnv,
   requireGmailConfig,
 } from "./env";
+import { signInMail } from "./signInMail";
 
 const passkeyRp = getPasskeyRelyingParty();
 
@@ -145,23 +147,61 @@ export const auth = betterAuth({
   },
 
   plugins: [
+    /**
+     * The sign-in email (issue #157, ADR-0019): one mail carrying two
+     * credentials. The magic link signs in whichever browser opens it; the
+     * 6-digit code is for an installed Home Screen app, which is its own
+     * browsing context and can never receive the link (Mail hands it to
+     * Safari). `emailOTP` below mints and stores the code — same
+     * `verifications` table as the link, no schema of its own — and its
+     * `signInEmailOTP` creates the user on first use through the same
+     * `internalAdapter.createUser`, so `validateUserInfo` and the
+     * `user.create.after` bootstrap above fire identically for both paths.
+     */
     magicLink({
-      async sendMagicLink({ email, url }) {
+      async sendMagicLink({ email, url }): Promise<void> {
         if (!isAllowlistedEmail(email, getAllowlistedEmails())) {
           // Silently drop rather than error: don't confirm-by-error which
           // emails are registered (SPEC.md "Identity" — no invite flow).
           return;
         }
+        // `auth` inside its own initializer: legal — this runs per request,
+        // long after the `const` is assigned. A server-only endpoint that
+        // mints + stores the code without sending, so link and code share one
+        // email. (The explicit `Promise<void>` above keeps TS from inferring
+        // this callback's type through `auth`.)
+        const otp = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
         // No try/catch: a send failure must throw and propagate up through
         // Better Auth's endpoint handler to the client's `signIn.magicLink()`
         // call, surfacing in `SignInScreen`'s error state (issue #100,
         // ADR-0015) — unlike notifications, auth has no acceptable
         // swallow-and-log path for a failed send.
-        await gmailMailer.send({
-          to: email,
-          subject: "Sign in to WhoCares",
-          body: `Tap to sign in to WhoCares:\n\n${url}\n\nThis link expires in 5 minutes.`,
-        });
+        await gmailMailer.send({ to: email, ...signInMail({ url, otp }) });
+      },
+    }),
+    emailOTP({
+      otpLength: 6,
+      // Matches the magic link's default 5 minutes — the email says "both".
+      expiresIn: 60 * 5,
+      allowedAttempts: 3,
+      // The magic-link token stays `storeToken: "plain"`; hashing a 6-digit
+      // code is free, so no reason to keep it in clear.
+      storeOTP: "hashed",
+      /**
+       * Only reachable through the plugin's public
+       * `POST /api/auth/email-otp/send-verification-otp`, which `SignInScreen`
+       * never calls — the code normally rides along in `sendMagicLink` above.
+       * The plugin mounts that endpoint regardless, so it gets the same
+       * allowlist drop and a code-only mail. Note the plugin stores the new
+       * code *before* calling this, and verification consumes the newest row,
+       * so any unauthenticated POST here supersedes a code already in a
+       * parent's inbox — the same exposure the public magic-link send has
+       * (it re-mints the code too), bounded by the plugin's 3-per-minute
+       * rate limit.
+       */
+      async sendVerificationOTP({ email, otp }): Promise<void> {
+        if (!isAllowlistedEmail(email, getAllowlistedEmails())) return;
+        await gmailMailer.send({ to: email, ...signInMail({ otp }) });
       },
     }),
     /**
@@ -169,8 +209,8 @@ export const auth = betterAuth({
      * SimpleWebAuthn. Progressive enrollment ONLY: `addPasskey` keeps its
      * default `registration.requireSession: true`, so a passkey can only be
      * created from an already-signed-in session on a trusted device. No
-     * `resolveUser` / passkey-first onboarding — magic link stays the sole
-     * bootstrap path and account recovery is magic-link-only (SPEC.md "Auth").
+     * `resolveUser` / passkey-first onboarding — the sign-in email stays the
+     * sole bootstrap path and account recovery is email-only (SPEC.md "Auth").
      * Must come before `nextCookies()`.
      */
     passkey({

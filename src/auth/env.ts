@@ -118,12 +118,12 @@ export function getPasskeyRelyingParty(): PasskeyRelyingParty {
 }
 
 /**
- * Gmail SMTP config for magic-link sign-in mail (ADR-0015). Unlike
+ * Gmail SMTP config for the sign-in mail (ADR-0015). Unlike
  * `src/notifications/env.ts`'s `getGmailConfig` — which returns `null` and
  * lets `./services.ts` degrade to a no-op mailer — a missing credential here
  * goes through `requireEnv` and is fatal, same as every other auth config
- * value in this file. Magic link is the sole sign-in bootstrap path
- * (SPEC.md "Auth"); a deploy that can't send it is broken, not degraded.
+ * value in this file. The sign-in email (link + code, issue #157) is the
+ * sole bootstrap path (SPEC.md "Auth"); a deploy that can't send it is broken, not degraded.
  *
  * `GMAIL_USER` is trimmed and `GMAIL_APP_PASSWORD` has every whitespace
  * character stripped, not just trimmed at the ends — both match

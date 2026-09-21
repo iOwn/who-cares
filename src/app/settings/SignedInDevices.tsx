@@ -134,7 +134,7 @@ export function SignedInDevices({ devices }: Props) {
             <p className={styles.dialogText}>
               {pending?.isCurrent
                 ? "You’ll be signed out here and sent back to the sign-in screen. Your other devices stay signed in."
-                : `${describeUserAgent(pending?.userAgent)} will be signed out right away and will need a new magic link or passkey to get back in.`}
+                : `${describeUserAgent(pending?.userAgent)} will be signed out right away and will need a new sign-in email or passkey to get back in.`}
             </p>
             {failed && (
               <Callout tone="danger" role="alert">
