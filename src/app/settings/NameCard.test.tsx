@@ -12,6 +12,7 @@
 import { expect, test, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
+import { MAX_MEMBER_NAME_LENGTH } from "@/domain";
 
 const renameMemberAction = vi.fn(
   async (input: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> => ({
@@ -72,4 +73,16 @@ test("a rejected name shows the action's message as the field error, cleared on 
 
   await userEvent.fill(field, "Bailey B");
   await expect.element(screen.getByText("Enter a name.")).not.toBeInTheDocument();
+});
+
+test("an over-long name is rejected on the client without calling the action", async () => {
+  renameMemberAction.mockClear();
+  const screen = await render(<NameCard name="Alex" />);
+  const field = screen.getByLabelText("Name");
+
+  await userEvent.fill(field, "a".repeat(MAX_MEMBER_NAME_LENGTH + 1));
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  await expect.element(field).toHaveAttribute("aria-invalid", "true");
+  expect(renameMemberAction).not.toHaveBeenCalled();
 });

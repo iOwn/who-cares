@@ -86,3 +86,12 @@ describe("renameMemberAction", () => {
     expect(repos.members.save).not.toHaveBeenCalled();
   });
 });
+
+describe("renameMemberAction — hand-crafted payloads", () => {
+  it("treats a non-string input as an empty name rather than throwing", async () => {
+    const result = await renameMemberAction(42 as unknown as string);
+
+    expect(result).toMatchObject({ ok: false });
+    expect(repos.members.save).not.toHaveBeenCalled();
+  });
+});

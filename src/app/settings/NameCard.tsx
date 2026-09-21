@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { MAX_MEMBER_NAME_LENGTH, normaliseMemberName } from "@/domain";
+import { normaliseMemberName, validateMemberName } from "@/domain";
 import { announce, Button, Surface, TextField } from "@/ui";
 import { renameMemberAction } from "./memberActions";
 import styles from "./SettingsScreen.module.css";
@@ -23,9 +23,9 @@ interface Props {
  * an accidental tap can't send a no-op round-trip.
  *
  * Validation is the action's (`validateMemberName`, ADR-0005); the `{ ok:
- * false }` result lands in the field's `errorMessage`. The client only
- * pre-computes "is there anything to save" — the server's answer is the one
- * that counts.
+ * false }` result lands in the field's `errorMessage`. The client runs the
+ * same rule first only so an over-long name answers instantly — the server
+ * re-checks, and its answer is the one that counts.
  */
 export function NameCard({ name }: Props) {
   const router = useRouter();
@@ -39,6 +39,10 @@ export function NameCard({ name }: Props) {
 
   const submit = () => {
     if (!canSave) return;
+    // Same rule the action applies — answers the common mistakes (too long)
+    // without a round-trip. The server re-checks; its answer is the one that counts.
+    const local = validateMemberName(draft);
+    if (!local.ok) return setError(local.error);
     setError(null);
     startTransition(async () => {
       try {
@@ -79,7 +83,6 @@ export function NameCard({ name }: Props) {
             setDraft(value);
             if (error) setError(null);
           }}
-          maxLength={MAX_MEMBER_NAME_LENGTH * 2}
           autoComplete="nickname"
           isInvalid={error !== null}
           errorMessage={error ?? undefined}

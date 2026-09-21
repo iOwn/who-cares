@@ -16,9 +16,9 @@ import { WeekendDaysCard } from "./WeekendDaysCard";
 /**
  * `/settings` — the **personal** tab (issue #143): what belongs to the
  * signed-in member (their name — #153; passkey, sessions, push browsers —
- * issues #48, #90) or to this browser (the weekend-days preference, #130). Nothing here is visible to
- * the other parent. The shared childcare settings live one tab over, at
- * `./household/page.tsx`.
+ * issues #48, #90) or to this browser (the weekend-days preference, #130).
+ * Nothing here is visible to the other parent. The shared childcare settings
+ * live one tab over, at `./household/page.tsx`.
  *
  * A Server Component: it reads the session, the device list (`auth.api.*`
  * with the forwarded request headers, per Better Auth's session-management

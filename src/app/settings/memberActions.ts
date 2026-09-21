@@ -38,7 +38,8 @@ export async function renameMemberAction(input: string): Promise<RenameMemberRes
   const session = await getCurrentSession();
   if (!session) throw new Error("Not signed in");
 
-  const validated = validateMemberName(input);
+  // A hand-crafted call can send anything; a non-string is not a name.
+  const validated = validateMemberName(typeof input === "string" ? input : "");
   if (!validated.ok) return validated;
 
   const repos = createRepositories(db);
