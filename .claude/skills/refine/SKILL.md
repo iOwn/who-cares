@@ -1,6 +1,6 @@
 ---
 name: refine
-description: Refine a GitHub issue into an implementable spec — investigate the codebase, rewrite the issue body (What / Expected / Shape / Acceptance criteria), sharpen the title, set labels. Use when the user says "refine #N", "groom #N", "spec out #N", or asks to make a ticket ready for an agent.
+description: 'Refine a GitHub issue into an implementable spec — investigate the codebase, rewrite the issue body (What / Expected / Shape / Acceptance criteria), sharpen the title, set labels. Use when the user says "refine #N", "groom #N", "spec out #N", or asks to make a ticket ready for an agent.'
 ---
 
 # Refine an issue
@@ -21,10 +21,18 @@ gh issue view <n> --json title,body,labels,assignees,comments
 gh api repos/{owner}/{repo}/issues/<n> --jq '.issue_dependencies_summary'
 ```
 
-Classify it: **bug** (something works wrong), **enhancement** (something new or
-changed), **decision** (the ticket asks which way to go — a `wayfinder:grilling`
-shape, not a spec), or **operator** (only a human with dashboard access can do
-it). A `wayfinder:*` ticket keeps its wayfinder label and body shape — refine its
+Classify it — the class picks the body shape in step 4 and the labels in step 5:
+
+- **bug** — something works wrong.
+- **enhancement** — something new or changed.
+- **decision** — the ticket asks which way to go. Refining it means writing the
+  options with their trade-offs and a recommendation (the #142 shape), not a
+  spec; it becomes an enhancement or bug ticket once the user has picked.
+- **operator** — only a human with dashboard access can do it (Vercel env,
+  Neon, branch protection). Refine it into a numbered checklist with the exact
+  screens and values (the #95 shape).
+
+A `wayfinder:*` ticket keeps its wayfinder label and body shape — refine its
 content, not its type.
 
 ## 2. Investigate until anchored
@@ -65,10 +73,10 @@ implementer's call, stated in the PR") rather than leaving it silent.
 
 ## 4. Write the body
 
-Write to a scratchpad file and publish with `--body-file` (heredoc quoting on
-Windows is unreliable). Keep the reporter's original text at the top as a
-`> **Original ask**` blockquote — it is the requirement; the rest is your reading
-of it.
+Write the body to a scratchpad file and publish with `--body-file`, so it can be
+re-read and re-published after a veto without reconstructing it. Keep the
+reporter's original text at the top as a `> **Original ask**` blockquote — it is
+the requirement; the rest is your reading of it.
 
 Enhancement shape:
 
@@ -88,6 +96,11 @@ Enhancement shape:
 Bug shape: `## Symptom` / `## Root cause` (file + line of the defect, stacked
 causes numbered) / `## Fix` / `## Acceptance criteria` / `## Blocked by`.
 
+Decision shape: `## Measured` (or `## What`) / `## Why this needs a decision` /
+`## Options` (each with consequences) / `## Recommendation`. Operator shape: one
+`## N.` section per step with the dashboard path and the value to enter, and a
+checkbox to tick.
+
 Acceptance criteria are **checkable and exhaustive**: one per behaviour in
 *Expected*, one per must-stay-unchanged item, one naming the test file that
 covers the change, and the standing last line — `pnpm test`, lint, typecheck and
@@ -98,14 +111,15 @@ the E2E smoke (`e2e.yml`) stay green. "Works correctly" is not a criterion;
 
 - **Title** states the change, not the complaint: *"Dialog.Header: one dismiss
   affordance — trailing icon-only ✕"* over *"Cancel button on modal"*.
-- **One type label**: `bug` or `enhancement` (add `accessibility` /
-  `documentation` when that is the substance). `help wanted` marks an operator
-  ticket. Wayfinder tickets keep `wayfinder:<type>` instead.
-- **`ready-for-agent`** when the spec needs no further human decision *and*
-  `issue_dependencies_summary.blocked_by` is 0. If a blocker exists, add the
-  native dependency (issue-tracker.md "Blocking"), list it under *Blocked by*,
-  and leave `ready-for-agent` off — the label is a promise that an agent can
-  start now.
+- **Type label** by class: bug → `bug`; enhancement → `enhancement`; operator →
+  `help wanted`; decision → `question`; wayfinder tickets keep their
+  `wayfinder:<type>`. Exactly one of these. `accessibility` and `documentation`
+  are topic labels that sit alongside the type when that is the substance.
+- **`ready-for-agent`** only on a bug or enhancement whose spec needs no further
+  human decision *and* whose `issue_dependencies_summary.blocked_by` is 0. If a
+  blocker exists, add the native dependency (issue-tracker.md "Blocking"), list
+  it under *Blocked by*, and leave `ready-for-agent` off — the label is a promise
+  that an agent can start now. Decision and operator tickets never carry it.
 
 ```bash
 gh issue edit <n> --title "…" --body-file <scratch>/issue-<n>.md --add-label enhancement,ready-for-agent
