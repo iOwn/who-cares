@@ -41,16 +41,18 @@ All-serverless, $0/mo:
 
 - **App**: Next.js (App Router), deployed on **Vercel Hobby**.
 - **Database**: **Neon** Postgres (scale-to-zero free tier).
-- **Auth**: self-hosted **Better Auth** — `magic-link` plugin (email via Gmail SMTP) as the
-  permanent bootstrap + recovery path, `passkey` plugin (wraps SimpleWebAuthn) as an additive
+- **Auth**: self-hosted **Better Auth** — one sign-in email (via Gmail SMTP) carrying both a
+  `magic-link` and a 6-digit `email-otp` code as the permanent bootstrap + recovery path (the
+  code is what an installed Home Screen app uses, since a link tapped in Mail can only sign in
+  the browser that opens it — ADR-0019), `passkey` plugin (wraps SimpleWebAuthn) as an additive
   fast re-entry path via progressive enrollment, shipped in v1. DB-backed opaque session
   token in a `__Host-` cookie (`HttpOnly; Secure; SameSite=Lax`), 30–60 day sliding lifetime,
   no idle timeout, signed-in-devices list with per-device revoke.
 - **Identity**: no invite flow. The two parents' emails are a **deploy-time-configured
   allowlist** (env var / config) — anyone signing in with an allowlisted email joins via
-  magic link, which also bootstraps that member's `Member` record (and, on the first
-  sign-in overall, the `Household` + `Child`) automatically. No in-app setup screen, no
-  password, no self-service reset — account recovery is magic-link-only.
+  the sign-in email (link or code), which also bootstraps that member's `Member` record (and,
+  on the first sign-in overall, the `Household` + `Child`) automatically. No in-app setup screen, no
+  password, no self-service reset — account recovery is email-only.
 - **Email**: **Gmail SMTP** (personal account + App Password, ADR-0014/ADR-0015).
 - **Push**: standard `web-push` + one VAPID keypair + one service worker. Store each
   `PushSubscription` server-side, drop on 404/410. iOS delivery requires the PWA to be
@@ -130,7 +132,8 @@ specified below.
 ## Feature list / user stories
 
 **Household, auth & members**
-- As a parent, I sign in via a magic link sent to my (allowlisted) email; no signup form.
+- As a parent, I sign in via an email sent to my (allowlisted) address — tapping its link in a
+  browser, or typing its 6-digit code into the installed app; no signup form.
 - As a signed-in parent, I can enroll a passkey for faster re-entry on a trusted device.
 - As a parent, I can see and revoke my other signed-in devices.
 

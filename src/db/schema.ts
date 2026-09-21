@@ -354,7 +354,8 @@ export const childrenRelations = relations(children, ({ one }) => ({
 }));
 
 /* ------------------------------------------------------------------ *
- * Better Auth (issue #47) — self-hosted, magic-link sign-in.
+ * Better Auth (issue #47) — self-hosted, email sign-in (magic link + 6-digit
+ * code in one mail, issue #157; both live in `verifications`).
  *
  * Deliberately a separate identity space from `members`, not the same table:
  * Better Auth's `user` model requires columns (`emailVerified`, its own
@@ -431,8 +432,8 @@ export const verification = pgTable("verifications", {
  *
  * Progressive enrollment only: a row is written from an already-signed-in
  * session on a trusted device, and lets that parent re-enter with the device's
- * platform authenticator instead of a fresh magic link. Magic link stays the
- * sole bootstrap + recovery path (SPEC.md "Auth"); deleting a row here just
+ * platform authenticator instead of a fresh sign-in email. The email stays
+ * the sole bootstrap + recovery path (SPEC.md "Auth"); deleting a row here just
  * drops the fast path.
  *
  * Column shapes mirror the plugin's expected model exactly
