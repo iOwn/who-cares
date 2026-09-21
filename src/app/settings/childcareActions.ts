@@ -47,8 +47,10 @@ async function context() {
   };
 }
 
+// The childcare sections live on `/settings/household` (issue #143); the
+// `"layout"` type covers every route under the settings segment.
 function revalidateAll() {
-  revalidatePath("/settings");
+  revalidatePath("/settings", "layout");
   revalidatePath("/");
 }
 
