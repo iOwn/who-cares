@@ -1,7 +1,8 @@
 /* Element-level rules for the whole app. Tokens live in src/ui/tokens.css and
  * shared mixins in src/ui/mixins.css; this file only carries what has to sit on
- * `html` / `body` themselves — the one deliberate exception is the box-sizing
- * reset below, which has to be universal to do its job. Next ships no reset
+ * `html` / `body` themselves (the ground, the body margin reset, the base text
+ * face, overscroll) — the one deliberate exception is the box-sizing reset
+ * below, which has to be universal to do its job. Next ships no reset
  * and ADR-0010 rules out Tailwind (so no preflight either), and every
  * primitive is authored as `width: 100%` plus padding plus a border; under the
  * default `content-box` each one overflows its container by exactly that
@@ -22,7 +23,23 @@ body {
   overscroll-behavior-y: none;
 }
 
+html {
+  /* The ground (docs/design-system.md "Direction: Toybox": warm off-white
+   * --sand-50). tokens.css only *defines* --color-bg; painting it on the root
+   * element propagates it to the canvas, so overscroll, the rubber-band region
+   * and the display corners show sand — not the UA's white — and the calendar
+   * route, which paints no ground of its own, sits on it too (issue #163). The
+   * same value feeds the status-bar tint: src/app/themeColor.ts. */
+  background: var(--color-bg);
+}
+
 body {
+  /* The UA default is `margin: 8px`, and nothing else resets it: Next ships
+   * no reset and ADR-0010 rules out Tailwind's preflight (same reasoning as
+   * the box-sizing rule above). Left in place it is a strip of bare canvas on
+   * all four sides of every route, which the `top: 0` sticky headers cover and
+   * uncover as the page scrolls (issue #163). */
+  margin: 0;
   /* The base text face, applied once and inherited. tokens.css only *defines*
    * --font-body; without this, any text not wrapped in a primitive that opts
    * in (bare <p>s in feature markup — the Settings cards, issue #150) fell

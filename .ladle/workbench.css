@@ -44,3 +44,15 @@
 body {
   font-family: var(--font-body);
 }
+
+/* Mirrors the ground and the body margin reset in src/app/globals.css (issue
+ * #163) — that file is the source of truth. Stories then sit on the same
+ * --sand-50 canvas the app does instead of Ladle's white, so a white
+ * `--color-surface` card reads against its real ground in the catalogue. */
+html {
+  background: var(--color-bg);
+}
+
+body {
+  margin: 0;
+}

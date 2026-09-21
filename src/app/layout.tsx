@@ -7,6 +7,7 @@ import "./globals.css";
 import { PullToRefresh } from "./PullToRefresh";
 import { RefreshOnResume } from "./RefreshOnResume";
 import { ServiceWorkerRegistrar } from "./ServiceWorkerRegistrar";
+import { THEME_COLOR } from "./themeColor";
 
 /**
  * The two families, with the weights pinned in docs/design-system.md "Fonts".
@@ -49,8 +50,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  // Matches the PWA manifest's `theme_color` — the installed-app status bar tint.
-  themeColor: "#3d7dd8",
+  // The installed-app status bar tint — the header's ground, shared with the
+  // manifest (see themeColor.ts).
+  themeColor: THEME_COLOR,
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

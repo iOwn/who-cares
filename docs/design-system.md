@@ -250,8 +250,14 @@ Confirmed + mechanically pinned in
    `'use client'` of its own** — the directive rides on each component file. Server Components
    that hit a boundary complaint deep-import `@/ui/<Component>`. `tokens.css` imported once in
    the root layout, followed by `mixins.css` and `src/app/globals.css` — the latter carries only
-   what has to sit on `html` / `body` themselves (`overscroll-behavior-y`, ADR-0016) plus the
-   universal `box-sizing: border-box` reset (see item 12).
+   what has to sit on `html` / `body` themselves: the ground (`html { background: var(--color-bg) }`
+   — painted on the root so the canvas, overscroll and display corners are `--sand-50`, not UA
+   white), the UA `body` margin reset (`margin: 0`; Next ships no reset and there is no preflight),
+   the base text face, `overscroll-behavior-y` (ADR-0016), plus the universal
+   `box-sizing: border-box` reset (see item 12). The same `--sand-50` value is the platform-facing
+   `theme-color` / manifest `theme_color` + `background_color`, via `src/app/themeColor.ts`
+   (guarded by `src/app/themeColor.test.ts`), so the installed app's status bar is the header's
+   ground (issue #163).
 8. **Prop-naming lexicon** (keeps 22 primitives consistent):
 
    | prop | meaning | values |

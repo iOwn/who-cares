@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { THEME_COLOR } from "./themeColor";
 
 /**
  * The PWA web app manifest (issue #90, SPEC.md "Push").
@@ -23,8 +24,10 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#fbfaf7",
-    theme_color: "#3d7dd8",
+    // Splash ground and status-bar tint are one value — the header's ground
+    // (themeColor.ts, issue #163).
+    background_color: THEME_COLOR,
+    theme_color: THEME_COLOR,
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
