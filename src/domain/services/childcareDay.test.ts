@@ -181,3 +181,29 @@ describe("childcareDayInputs — the presentation seam", () => {
     });
   });
 });
+
+describe("closures that keep the care (issue #166, ADR-0021)", () => {
+  const monToFri: ChildcarePattern = pattern(["mon", "tue", "wed", "thu", "fri"], "2025-01-06");
+
+  it("a needsCover closure leaves the day a childcare day; a plain one still removes it", () => {
+    const needsCover = [makeClosure({ date: "2025-01-08", needsCover: true })];
+    const plain = [makeClosure({ date: "2025-01-08" })];
+    expect(isChildcareDay(monToFri, needsCover, "2025-01-08")).toBe(true);
+    expect(isChildcareDay(monToFri, plain, "2025-01-08")).toBe(false);
+  });
+
+  it("a public-holiday closure never needs cover", () => {
+    const holiday = [makeClosure({ date: "2025-01-08", kind: "public-holiday" })];
+    expect(isChildcareDay(monToFri, holiday, "2025-01-08")).toBe(false);
+  });
+
+  it("childcareDayInputs.hasClosure means 'removes the day', so a needsCover closure is not one", () => {
+    expect(
+      childcareDayInputs(
+        monToFri,
+        [makeClosure({ date: "2025-01-08", needsCover: true })],
+        "2025-01-08",
+      ),
+    ).toEqual({ isPatternWeekday: true, hasClosure: false });
+  });
+});

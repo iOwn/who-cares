@@ -142,6 +142,11 @@ specified below.
   collecting), effective from a chosen date, without altering how past dates are derived.
 - As a parent, I can add a closure (single date, optional free-text reason) that removes a
   childcare day the pattern would otherwise include.
+- As a parent, I can mark a closure as one where **care is still needed** (a staff-training day,
+  the summer break): the day stays a childcare day, still needs someone, and can go at-risk — it
+  is only labelled "facility closed — care at home". I can enter a whole year of closures in one
+  go (several date ranges, each with its own reason and kind). New closures default to
+  "care still needed"; closures that existed before default to "no care needed".
 - As a parent, I can set the household's Bundesland (German state); its public holidays then
   show up as closed days automatically, styled distinctly from a manual closure so I can see
   why. Only state-wide holidays are derived — a municipality-only one (Mariä Himmelfahrt in

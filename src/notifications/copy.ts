@@ -20,10 +20,15 @@ export function patternChangedNotification(actorName: string): { title: string; 
 export function closureAddedNotification(
   actorName: string,
   date: string,
+  needsCover = false,
 ): { title: string; body: string } {
   return {
     title: `Closure added for ${date}`,
-    body: `${actorName} marked ${date} as closed — there's no childcare pickup that day.`,
+    // A closure that needs cover (issue #166, ADR-0021) keeps the day a
+    // childcare day — the facility is shut, the child still needs someone.
+    body: needsCover
+      ? `${actorName} marked ${date} as closed — someone still needs to look after the child that day.`
+      : `${actorName} marked ${date} as closed — there's no childcare pickup that day.`,
   };
 }
 

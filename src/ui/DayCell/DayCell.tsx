@@ -40,6 +40,9 @@ const STATE_ICON: Partial<Record<DayDisplayState, string>> = {
 /** A derived public-holiday closure's badge (issue #167, ADR-0020) — distinct from a manual closure's "–". */
 const HOLIDAY_ICON = "★";
 
+/** The facility is closed but care is still needed — at home (issue #166, ADR-0021). */
+const AT_HOME_ICON = "⌂";
+
 const cell = cva(styles.base, {
   variants: {
     state: {
@@ -70,6 +73,12 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
    * the closed treatment, so a parent can see *why* the day is closed.
    */
   isHoliday?: boolean;
+  /**
+   * The facility is closed but the day is still a childcare day (issue #166,
+   * ADR-0021): the cell keeps its normal `state` and gains a small house
+   * marker. Orthogonal to `state`, like `isToday` / `isHoliday`.
+   */
+  isClosedAtHome?: boolean;
   /** Full date + state, for the screen-reader label on the root element. */
   ariaLabel?: string;
   /** When set, the cell is a pressable RAC `Button`. */
@@ -86,6 +95,7 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
     whoLabel,
     isToday,
     isHoliday,
+    isClosedAtHome,
     ariaLabel,
     onPress,
     isDisabled,
@@ -117,6 +127,11 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
       ) : icon != null ? (
         <span className={styles.badge} aria-hidden>
           {icon}
+        </span>
+      ) : null}
+      {isClosedAtHome ? (
+        <span className={styles.atHome} aria-hidden>
+          {AT_HOME_ICON}
         </span>
       ) : null}
       {whoLabel ? (

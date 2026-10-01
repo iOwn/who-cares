@@ -46,3 +46,12 @@ export const Pressable: Story = () => (
     <DayCell dayOfMonth={14} state="quiet" onPress={() => {}} isDisabled />
   </Grid>
 );
+
+/** Facility closed, care still needed at home (issue #166) — the state styling stays, a ⌂ marker is added. */
+export const ClosedAtHome: Story = () => (
+  <Grid>
+    <DayCell dayOfMonth={15} state="quiet" isClosedAtHome />
+    <DayCell dayOfMonth={16} state="at-risk" whoLabel="at risk" isClosedAtHome />
+    <DayCell dayOfMonth={17} state="resolved" whoLabel="Inki" isClosedAtHome />
+  </Grid>
+);

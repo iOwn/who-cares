@@ -28,6 +28,7 @@ import type {
   Closure,
   Weekday,
 } from "../types";
+import { closureNeedsCover } from "../types";
 
 /** `Date.prototype.getUTCDay()` order: 0 = Sunday … 6 = Saturday. */
 const WEEKDAYS_BY_UTC_DAY: readonly Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -100,7 +101,11 @@ export function patternVersionChangesSchedule(
 export interface ChildcareDayInputs {
   /** `date`'s weekday is in the pattern version that was in effect *then*. */
   readonly isPatternWeekday: boolean;
-  /** An explicit `Closure` row falls on `date`. */
+  /**
+   * A `Closure` that *removes* the day falls on `date`. A closure that
+   * `needsCover` (issue #166, ADR-0021) does not count — that day is still a
+   * childcare day.
+   */
   readonly hasClosure: boolean;
 }
 
@@ -117,7 +122,7 @@ export function childcareDayInputs(
   const version = resolvePatternVersion(pattern, date);
   return {
     isPatternWeekday: version?.weekdays.includes(weekdayOf(date)) ?? false,
-    hasClosure: closures.some((closure) => closure.date === date),
+    hasClosure: closures.some((closure) => closure.date === date && !closureNeedsCover(closure)),
   };
 }
 

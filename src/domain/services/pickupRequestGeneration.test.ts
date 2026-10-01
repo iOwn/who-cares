@@ -96,6 +96,17 @@ describe("planPickupRequests", () => {
       expected: [{ date: "2025-01-07", raise: true }],
     },
     {
+      name: "a closure that needsCover keeps the day in the plan (issue #166)",
+      startDate: "2025-01-06",
+      endDate: "2025-01-07",
+      absences: [soloAbsence("2025-01-06", "2025-01-07")],
+      closures: [makeClosure({ date: "2025-01-06", needsCover: true })],
+      expected: [
+        { date: "2025-01-06", raise: true },
+        { date: "2025-01-07", raise: true },
+      ],
+    },
+    {
       name: "both parents absent that day → no request (skip both-absent)",
       startDate: "2025-01-06",
       endDate: "2025-01-06",

@@ -138,6 +138,14 @@ describe("applyMigrations", () => {
     );
   });
 
+  it("adds closures.needs_cover as NOT NULL DEFAULT false (issue #166)", async () => {
+    const column = await db.$client.query<{ is_nullable: string; column_default: string | null }>(
+      `SELECT is_nullable, column_default FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'closures' AND column_name = 'needs_cover'`,
+    );
+    expect(column.rows).toEqual([{ is_nullable: "NO", column_default: "false" }]);
+  });
+
   it("creates the deferred household-graph constraint triggers", async () => {
     const result = await db.$client.query<{ tgname: string }>(
       `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal ORDER BY tgname`,

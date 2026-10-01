@@ -243,6 +243,19 @@ describe("mergeClosures", () => {
     expect(merged).toEqual(stored);
   });
 
+  it("a stored closure that needsCover wins over a derived holiday, flag included (issue #166)", () => {
+    const stored = [{ id: "c1", householdId: "h1", date: "2025-01-01", needsCover: true }];
+    const derived = [
+      {
+        id: "holiday:BY:2025-01-01",
+        householdId: "h1",
+        date: "2025-01-01",
+        kind: "public-holiday" as const,
+      },
+    ];
+    expect(mergeClosures(stored, derived)).toEqual(stored);
+  });
+
   it("unions closures on distinct dates, sorted", () => {
     const stored = [{ id: "c1", householdId: "h1", date: "2025-01-10" }];
     const derived = [

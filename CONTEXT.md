@@ -40,7 +40,11 @@ optional free-text reason; no taxonomy. A multi-day closure (a holiday week)
 is just several Closure rows, not a range. A Closure's *provenance* — hand-
 entered by a parent, or derived from the household's Bundesland (see
 **Public holiday**) — is a separate `kind`, not a taxonomy on the free-text
-reason: every Closure still means the same thing, no pickup needed.
+reason. A Closure either removes the day (no pickup needed — the default for
+a stored row, and always so for a derived public holiday) or, when it **needs
+cover**, closes the facility but leaves the day a Childcare day: the child
+still has to be looked after, so the day still needs an owner and can go
+at-risk (ADR-0021).
 _Avoid_: Holiday, day off
 
 **Public holiday**:
@@ -55,7 +59,8 @@ Fronleichnam in parts of Sachsen/Thüringen) is still entered by hand.
 
 **Childcare day**:
 A concrete date the child needs collecting: included by the childcare
-pattern and not removed by a closure. A derived concept computed from
+pattern and not removed by a closure — a closure that needs cover does not
+remove it. A derived concept computed from
 pattern + closures, never a stored record.
 _Avoid_: Pickup day, care day
 
@@ -138,4 +143,6 @@ How the UI labels a date that has no childcare because of an explicit
 the closure's free-text reason if one was given; the grid cell and list
 row keep a generic line. A **Public holiday** closure is the same `Closed`
 affordance with its own styling and copy ("Holiday" pill, "Public holiday
-— {name}") rather than the generic one — still not a separate Day state.
+— {name}") rather than the generic one — still not a separate Day state. A closure that needs cover is not "Closed"
+at all: the day keeps its own state and only carries a small "care at home"
+marker.

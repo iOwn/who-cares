@@ -1,12 +1,17 @@
 "use client";
 
 import { type DateValue, parseDate } from "@internationalized/date";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { RangeValue } from "react-aria-components";
 import type { CalendarDate, ChildcarePattern, Closure, Weekday } from "@/domain";
-import { eachDateInclusive, MAX_CLOSURE_RANGE_DAYS, resolvePatternVersion } from "@/domain";
+import {
+  closureNeedsCover,
+  eachDateInclusive,
+  MAX_CLOSURE_RANGE_DAYS,
+  resolvePatternVersion,
+} from "@/domain";
 import {
   ActionBar,
   Button,
@@ -16,10 +21,16 @@ import {
   SectionHeading,
   Surface,
   TextField,
+  ToggleGroup,
   WeekdayPicker,
 } from "@/ui";
 import styles from "./ChildcareSettings.module.css";
-import { removeClosureAction, saveClosureAction, savePatternAction } from "./childcareActions";
+import {
+  removeClosureAction,
+  saveClosureAction,
+  saveClosuresAction,
+  savePatternAction,
+} from "./childcareActions";
 
 /**
  * The childcare-settings feature (#49) — set the effective-dated pattern and
@@ -79,6 +90,40 @@ function formatDate(date: CalendarDate): string {
   });
 }
 
+/** One range in the add form (issue #166). `key` is a stable React key across removals. */
+interface ClosureRow {
+  key: number;
+  range: RangeValue<DateValue> | null;
+  reason: string;
+  needsCover: boolean;
+}
+
+let nextRowKey = 0;
+/** New rows default to *care still needed* — a wrongly hidden day is the dangerous error (ADR-0021). */
+const newRow = (): ClosureRow => ({ key: nextRowKey++, range: null, reason: "", needsCover: true });
+
+/** Care still needed (the facility is shut, the child is not) vs. no care needed. */
+function CareToggle({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (needsCover: boolean) => void;
+}) {
+  return (
+    <ToggleGroup
+      aria-label="Is care still needed?"
+      selectionMode="single"
+      disallowEmptySelection
+      value={[value ? "needed" : "none"]}
+      onChange={([next]) => onChange(next !== "none")}
+    >
+      <ToggleGroup.Item value="needed">Care still needed</ToggleGroup.Item>
+      <ToggleGroup.Item value="none">No care needed</ToggleGroup.Item>
+    </ToggleGroup>
+  );
+}
+
 export function ChildcareSettings({ pattern, closures, holidays, today }: ChildcareSettingsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -89,17 +134,23 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
   const [weekdays, setWeekdays] = useState<Weekday[]>([...currentWeekdays]);
   const [effectiveFrom, setEffectiveFrom] = useState<DateValue | null>(() => parseDate(today));
 
-  // Closures. Adding takes a range; editing is pinned to the one row's date,
-  // so the edit form swaps the range picker for a single `DateField`.
-  const [closureRange, setClosureRange] = useState<RangeValue<DateValue> | null>(null);
+  // Closures. Adding takes a *list* of rows (issue #166) — a whole year of
+  // training days and the summer break in one submit; editing is pinned to the
+  // one row's date, so the edit form swaps the row list for a single `DateField`.
+  const [rows, setRows] = useState<ClosureRow[]>(() => [newRow()]);
   const [closureDate, setClosureDate] = useState<DateValue | null>(null);
   const [closureReason, setClosureReason] = useState("");
+  const [closureNeedsCoverEdit, setClosureNeedsCoverEdit] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const updateRow = (key: number, patch: Partial<ClosureRow>) =>
+    setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+
   const resetClosureForm = () => {
-    setClosureRange(null);
+    setRows([newRow()]);
     setClosureDate(null);
     setClosureReason("");
+    setClosureNeedsCoverEdit(true);
     setEditingId(null);
   };
 
@@ -141,31 +192,44 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
       const date = iso(closureDate);
       if (!date) return setError("Pick the closure date");
       return run(
-        () => saveClosureAction({ id: editingId, date, reason: closureReason }),
+        () =>
+          saveClosureAction({
+            id: editingId,
+            date,
+            reason: closureReason,
+            needsCover: closureNeedsCoverEdit,
+          }),
         resetClosureForm,
       );
     }
 
-    const start = iso(closureRange?.start ?? null);
-    const end = iso(closureRange?.end ?? null);
-    if (!start || !end) return setError("Pick the closure dates");
-    if (end < start) return setError("The last closure date can't be before the first");
-    if (eachDateInclusive(start, end).length > MAX_CLOSURE_RANGE_DAYS) {
-      return setError(
-        `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
-      );
+    const entries: {
+      date: CalendarDate;
+      endDate: CalendarDate;
+      reason: string;
+      needsCover: boolean;
+    }[] = [];
+    for (const [index, row] of rows.entries()) {
+      const where = rows.length > 1 ? `Row ${index + 1}: ` : "";
+      const start = iso(row.range?.start ?? null);
+      const end = iso(row.range?.end ?? null);
+      if (!start || !end) return setError(`${where}Pick the closure dates`);
+      if (end < start) return setError(`${where}The last closure date can't be before the first`);
+      if (eachDateInclusive(start, end).length > MAX_CLOSURE_RANGE_DAYS) {
+        return setError(
+          `${where}That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
+        );
+      }
+      entries.push({ date: start, endDate: end, reason: row.reason, needsCover: row.needsCover });
     }
-    run(
-      () => saveClosureAction({ date: start, endDate: end, reason: closureReason }),
-      resetClosureForm,
-    );
+    run(() => saveClosuresAction({ entries }), resetClosureForm);
   };
 
   const editClosure = (closure: Closure) => {
     setEditingId(closure.id);
-    setClosureRange(null);
     setClosureDate(parseDate(closure.date));
     setClosureReason(closure.reason ?? "");
+    setClosureNeedsCoverEdit(closureNeedsCover(closure));
     setError(null);
   };
 
@@ -209,6 +273,9 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
                     {closure.reason ? (
                       <p className={styles.closureReason}>{closure.reason}</p>
                     ) : null}
+                    <p className={styles.closureKind}>
+                      {closureNeedsCover(closure) ? "Care at home" : "No care needed"}
+                    </p>
                   </div>
                   <Button variant="ghost" size="sm" onPress={() => editClosure(closure)}>
                     Edit
@@ -231,30 +298,73 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
         <Surface variant="sunken" className={styles.closureForm}>
           <p className={styles.closureFormTitle}>{editingId ? "Edit closure" : "Add closures"}</p>
           {editingId ? (
-            <DateField
-              label="Date"
-              value={closureDate}
-              onChange={setClosureDate}
-              className={styles.field}
-            />
+            <>
+              <DateField
+                label="Date"
+                value={closureDate}
+                onChange={setClosureDate}
+                className={styles.field}
+              />
+              <CareToggle value={closureNeedsCoverEdit} onChange={setClosureNeedsCoverEdit} />
+              <TextField
+                label="Reason"
+                isOptional
+                value={closureReason}
+                onChange={setClosureReason}
+                placeholder="e.g. Staff training day"
+                className={styles.field}
+              />
+            </>
           ) : (
-            <DateRangeField
-              label="Dates"
-              value={closureRange}
-              onChange={setClosureRange}
-              description="A single day or a whole stretch — pick the same day twice for one."
-              errorMessage="The last closure date can't be before the first."
-              className={styles.field}
-            />
+            <>
+              {rows.map((row, index) => (
+                <div key={row.key} className={styles.closureEntry}>
+                  {rows.length > 1 ? (
+                    <div className={styles.closureEntryHead}>
+                      <p className={styles.closureEntryTitle}>Closure {index + 1}</p>
+                      <Button
+                        variant="ghost"
+                        tone="danger"
+                        size="sm"
+                        onPress={() =>
+                          setRows((current) => current.filter((r) => r.key !== row.key))
+                        }
+                      >
+                        <Trash2 size={14} aria-hidden /> Remove
+                      </Button>
+                    </div>
+                  ) : null}
+                  <DateRangeField
+                    label="Dates"
+                    value={row.range}
+                    onChange={(range) => updateRow(row.key, { range })}
+                    description="A single day or a whole stretch — pick the same day twice for one."
+                    errorMessage="The last closure date can't be before the first."
+                    className={styles.field}
+                  />
+                  <CareToggle
+                    value={row.needsCover}
+                    onChange={(needsCover) => updateRow(row.key, { needsCover })}
+                  />
+                  <TextField
+                    label="Reason"
+                    isOptional
+                    value={row.reason}
+                    onChange={(reason) => updateRow(row.key, { reason })}
+                    placeholder="e.g. Staff training day"
+                    className={styles.field}
+                  />
+                </div>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => setRows((current) => [...current, newRow()])}
+              >
+                <Plus size={14} aria-hidden /> Add another
+              </Button>
+            </>
           )}
-          <TextField
-            label="Reason"
-            isOptional
-            value={closureReason}
-            onChange={setClosureReason}
-            placeholder="e.g. Staff training day"
-            className={styles.field}
-          />
           <div className={styles.closureFormActions}>
             {editingId ? (
               <Button variant="ghost" size="sm" onPress={resetClosureForm}>
@@ -262,7 +372,11 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
               </Button>
             ) : null}
             <Button variant="secondary" size="sm" isDisabled={pending} onPress={submitClosure}>
-              {editingId ? "Save closure" : "Add closures"}
+              {editingId
+                ? "Save closure"
+                : rows.length > 1
+                  ? `Add ${rows.length} closures`
+                  : "Add closures"}
             </Button>
           </div>
         </Surface>

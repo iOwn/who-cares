@@ -92,6 +92,13 @@
       "when": 1790849374210,
       "tag": "0012_household_bundesland",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790878606307,
+      "tag": "0013_closure_needs_cover",
+      "breakpoints": true
     }
   ]
 }
