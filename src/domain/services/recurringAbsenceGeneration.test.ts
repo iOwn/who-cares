@@ -17,6 +17,7 @@ import type {
   Clock,
   Closure,
   ClosureRepository,
+  HouseholdRepository,
   IdGenerator,
   Member,
   MemberRepository,
@@ -28,6 +29,7 @@ import {
   MEMBER_1_ID,
   MEMBER_2_ID,
   absence as makeAbsenceSpan,
+  makeHousehold,
   makeMember,
   pattern,
   resetIdCounter,
@@ -397,6 +399,14 @@ function createFakes(options: FakeOptions = {}): Fakes {
     async delete() {},
   };
 
+  const household = makeHousehold();
+  const households: HouseholdRepository = {
+    async findById(id) {
+      return id === household.id ? household : null;
+    },
+    async save() {},
+  };
+
   const memberList = options.members ?? [
     makeMember({ id: MEMBER_1_ID, name: "Alex" }),
     makeMember({ id: MEMBER_2_ID, name: "Bailey" }),
@@ -431,6 +441,7 @@ function createFakes(options: FakeOptions = {}): Fakes {
       childcarePattern,
       closures,
       members,
+      households,
       clock,
       ids,
     },

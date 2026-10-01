@@ -85,6 +85,13 @@
       "when": 1789840919955,
       "tag": "0011_drop_pending_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790849374210,
+      "tag": "0012_household_bundesland",
+      "breakpoints": true
     }
   ]
 }

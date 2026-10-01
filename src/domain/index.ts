@@ -17,5 +17,6 @@ export * from "./services/notificationBundling";
 export * from "./services/notificationCatalogue";
 export * from "./services/pickupRequestGeneration";
 export * from "./services/pickupRequestResolution";
+export * from "./services/publicHolidays";
 export * from "./services/recurringAbsenceGeneration";
 export * from "./types";

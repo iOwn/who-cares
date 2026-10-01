@@ -149,7 +149,9 @@ export function DayDetail({
           <Dialog.Header title={longDate(day.date)} closeButton />
           <div className={styles.state}>
             {isStatusDisplayState(day.displayState) ? (
-              <StatePill state={day.displayState} />
+              <StatePill state={day.displayState}>
+                {day.closureKind === "public-holiday" ? "Holiday" : undefined}
+              </StatePill>
             ) : (
               <span className={styles.neutralPill}>
                 <span className={styles.neutralDot} aria-hidden />
@@ -159,7 +161,11 @@ export function DayDetail({
           </div>
           <p className={styles.narrative}>{day.narrative}</p>
           {day.displayState === "closed" && day.closureReason ? (
-            <p className={styles.reason}>Reason given: {day.closureReason}</p>
+            <p className={styles.reason}>
+              {day.closureKind === "public-holiday"
+                ? `Public holiday — ${day.closureReason}`
+                : `Reason given: ${day.closureReason}`}
+            </p>
           ) : null}
 
           {error ? (

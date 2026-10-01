@@ -73,6 +73,12 @@
     --red-500: #e8543e;
     --red-700: #c23f2c;
 
+    /* violet — public-holiday closure (issue #167) */
+    --violet-100: #efe7fb; /* holiday surface tint */
+    --violet-300: #cbb3ef; /* holiday border */
+    --violet-500: #8d5cd1; /* holiday solid */
+    --violet-800: #4a2d78; /* AA-corrected holiday text */
+
     /* ===================================================================
      * SEMANTIC TOKENS (light) — the only tokens components may use
      * =================================================================== */
@@ -129,6 +135,14 @@
     --color-closed-solid: var(--sand-450);
     --color-closed-surface: var(--sand-100);
     --color-closed-text: var(--sand-750);
+
+    /* --- colour: holiday — UI-ONLY affordance over `closed`, NOT a domain Day
+     * state (issue #167, ADR-0020): a derived public-holiday closure, styled
+     * distinctly from a manual one so a parent can see why. */
+    --color-holiday-solid: var(--violet-500);
+    --color-holiday-surface: var(--violet-100);
+    --color-holiday-text: var(--violet-800);
+    --color-holiday-border: var(--violet-300);
 
     /* --- typography: families ---
      * --font-nunito / --font-baloo are injected on <html> by next/font/google

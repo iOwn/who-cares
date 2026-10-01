@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Household, HouseholdRepository } from "@/domain";
+import type { GermanState, Household, HouseholdRepository } from "@/domain";
 import type { DbExecutor } from "../client";
 import { children, households, members } from "../schema";
 
@@ -11,15 +11,21 @@ import { children, households, members } from "../schema";
  *
  * A `Household` is a *view* over three tables: its own row plus the member and
  * child rows that point back at it. `save()` therefore writes only the household
- * row (`id`, `name`); `memberIds` and `childId` are read-only projections and
- * are ignored on write. Membership is owned by `MemberRepository` and
- * `ChildRepository`, whose `household_id` FK is the real edge; the database —
- * not this adapter — guarantees it stays exactly two members and one child.
+ * row (`id`, `name`, `bundesland`); `memberIds` and `childId` are read-only
+ * projections and are ignored on write. Membership is owned by
+ * `MemberRepository` and `ChildRepository`, whose `household_id` FK is the real
+ * edge; the database — not this adapter — guarantees it stays exactly two
+ * members and one child.
  *
- * Because that guarantee is a deferred constraint trigger, `save()` on a
- * *brand-new* household only succeeds inside a transaction that also inserts its
- * two members and its child. Updating an existing household's name is a plain
- * statement and needs no transaction.
+ * `bundesland` (issue #167, ADR-0020), unlike `memberIds` / `childId`, **is**
+ * owned by this adapter — it is a plain column on the household's own row, no
+ * FK graph behind it, so `save()` writes it like any other scalar field.
+ *
+ * Because the member/child guarantee is a deferred constraint trigger,
+ * `save()` on a *brand-new* household only succeeds inside a transaction that
+ * also inserts its two members and its child. Updating an existing
+ * household's name or `bundesland` is a plain statement and needs no
+ * transaction.
  */
 export function createHouseholdRepository(db: DbExecutor): HouseholdRepository {
   return {
@@ -53,16 +59,23 @@ export function createHouseholdRepository(db: DbExecutor): HouseholdRepository {
         name: row.name,
         memberIds: [memberRows[0].id, memberRows[1].id],
         childId: childRow.id,
+        // NULL -> key absent, the same convention `Closure.reason` follows
+        // (src/db/repositories/closure.ts).
+        ...(row.bundesland != null ? { bundesland: row.bundesland as GermanState } : {}),
       };
     },
 
     async save(household: Household): Promise<void> {
       await db
         .insert(households)
-        .values({ id: household.id, name: household.name })
+        .values({
+          id: household.id,
+          name: household.name,
+          bundesland: household.bundesland ?? null,
+        })
         .onConflictDoUpdate({
           target: households.id,
-          set: { name: household.name },
+          set: { name: household.name, bundesland: household.bundesland ?? null },
         });
     },
   };

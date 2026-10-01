@@ -46,6 +46,10 @@ const repos = {
       makeMember({ id: MEMBER_2_ID }),
     ]),
   },
+  households: {
+    findById: vi.fn(async () => makeHousehold({ id: HOUSEHOLD_ID })),
+    save: vi.fn(async () => {}),
+  },
 };
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -62,9 +66,8 @@ vi.mock("@/notifications", async (importActual) => ({
   notificationServicesFor: () => ({ notifier: { notify }, dispatchAll }),
 }));
 
-const { removeClosureAction, saveClosureAction, savePatternAction } = await import(
-  "./childcareActions"
-);
+const { removeClosureAction, saveClosureAction, savePatternAction, setBundeslandAction } =
+  await import("./childcareActions");
 
 /** The dates the action actually wrote, in order. */
 const savedDates = () => repos.closures.save.mock.calls.map(([closure]) => closure.date);
@@ -77,9 +80,11 @@ beforeEach(() => {
   transaction.mockClear();
   repos.closures.save.mockClear();
   repos.closures.delete.mockClear();
+  repos.households.save.mockClear();
   repos.childcarePattern.findByHousehold.mockResolvedValue(null);
   repos.closures.findByDate.mockResolvedValue(null);
   repos.closures.listByHousehold.mockResolvedValue([]);
+  repos.households.findById.mockResolvedValue(makeHousehold({ id: HOUSEHOLD_ID }));
 });
 
 describe("saveClosureAction — a range is one action (issue #131)", () => {
@@ -197,6 +202,57 @@ describe("savePatternAction", () => {
     expect(dispatchAll).toHaveBeenCalledTimes(1);
     expect(dispatched()).toHaveLength(1);
     expect(dispatched()[0].recipientId).toBe(MEMBER_2_ID);
+  });
+});
+
+describe("setBundeslandAction (issue #167, ADR-0020)", () => {
+  it("persists the chosen state and notifies the other member once, under event 11", async () => {
+    const result = await setBundeslandAction("BY");
+
+    expect(result).toEqual({ ok: true });
+    expect(repos.households.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: HOUSEHOLD_ID, bundesland: "BY" }),
+    );
+    expect(dispatchAll).toHaveBeenCalledTimes(1);
+    expect(dispatched()).toHaveLength(1);
+    expect(dispatched()[0]).toMatchObject({
+      event: "childcare-pattern-changed",
+      recipientId: MEMBER_2_ID,
+    });
+  });
+
+  it("notifies nothing and writes nothing when the same value is re-selected", async () => {
+    repos.households.findById.mockResolvedValue(
+      makeHousehold({ id: HOUSEHOLD_ID, bundesland: "BY" }),
+    );
+
+    const result = await setBundeslandAction("BY");
+
+    expect(result).toEqual({ ok: true });
+    expect(repos.households.save).not.toHaveBeenCalled();
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("clearing the state back to none also notifies once", async () => {
+    repos.households.findById.mockResolvedValue(
+      makeHousehold({ id: HOUSEHOLD_ID, bundesland: "BY" }),
+    );
+
+    const result = await setBundeslandAction(null);
+
+    expect(result).toEqual({ ok: true });
+    expect(repos.households.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: HOUSEHOLD_ID, bundesland: undefined }),
+    );
+    expect(dispatchAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a value that isn't a recognised state code", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: exercising the runtime guard against a bad input
+    const result = await setBundeslandAction("XX" as any);
+
+    expect(result).toEqual({ ok: false, error: "That's not a recognised German state." });
+    expect(repos.households.save).not.toHaveBeenCalled();
   });
 });
 

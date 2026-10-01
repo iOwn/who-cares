@@ -32,11 +32,20 @@ import { removeClosureAction, saveClosureAction, savePatternAction } from "./chi
  * single date. A holiday week is then one action — still one `Closure` row per
  * date, per CONTEXT.md, but one notification to the other parent instead of
  * five (ADR-0018).
+ *
+ * `holidays` (issue #167, ADR-0020) is a second, **read-only** list below the
+ * manual one: public holidays derived from the household's Bundesland
+ * (`./BundeslandCard`), never stored rows, so there is nothing here to edit
+ * or remove — only to show. `closures` itself only ever holds manual rows
+ * (`./household/page.tsx` passes `listByHousehold`'s result straight through,
+ * never the merged view `page.tsx`'s calendar uses).
  */
 
 export interface ChildcareSettingsProps {
   readonly pattern: ChildcarePattern | null;
   readonly closures: readonly Closure[];
+  /** Derived public holidays for the household's Bundesland — read-only (issue #167). */
+  readonly holidays: readonly Closure[];
   /** `'YYYY-MM-DD'` (the server's today) — the default "effective from" date. */
   readonly today: CalendarDate;
 }
@@ -70,7 +79,7 @@ function formatDate(date: CalendarDate): string {
   });
 }
 
-export function ChildcareSettings({ pattern, closures, today }: ChildcareSettingsProps) {
+export function ChildcareSettings({ pattern, closures, holidays, today }: ChildcareSettingsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -258,6 +267,27 @@ export function ChildcareSettings({ pattern, closures, today }: ChildcareSetting
           </div>
         </Surface>
       </section>
+
+      {holidays.length > 0 ? (
+        <section>
+          <SectionHeading>Public holidays</SectionHeading>
+          <p className={styles.hint}>
+            Derived from the Bundesland setting above — not editable here.
+          </p>
+          <ul className={styles.holidayList}>
+            {holidays.map((holiday) => (
+              <li key={holiday.id}>
+                <Surface variant="sunken" className={styles.holidayRow}>
+                  <div className={styles.holidayText}>
+                    <p className={styles.holidayDate}>{formatDate(holiday.date)}</p>
+                    {holiday.reason ? <p className={styles.holidayName}>{holiday.reason}</p> : null}
+                  </div>
+                </Surface>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <ActionBar>
         <Button variant="primary" fullWidth isDisabled={pending} onPress={submitPattern}>

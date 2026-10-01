@@ -56,6 +56,21 @@
   );
 }
 
+/* --- modifier: holiday (a derived public-holiday closure, issue #167) ---
+ * Orthogonal to `.closed` the same way `.today` is orthogonal to `state` —
+ * applied together with it, never instead of it. A distinct violet tint and
+ * border over the closed stripe, and the badge below recolours to match. */
+.holiday {
+  border-color: var(--color-holiday-border);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--color-holiday-surface),
+    var(--color-holiday-surface) 5px,
+    var(--color-surface-sunken) 5px,
+    var(--color-surface-sunken) 10px
+  );
+}
+
 /* --- state: at-risk --- */
 .atRisk {
   border-color: var(--color-at-risk-border);
@@ -109,6 +124,11 @@
   color: var(--color-text-muted);
 }
 
+.holiday .badge {
+  background: var(--color-holiday-solid);
+  color: var(--color-text-on-accent);
+}
+
 /* --- the "who" label (bottom-left) --- */
 .who {
   position: absolute;
@@ -138,6 +158,10 @@
 
 .closed .who {
   color: var(--color-closed-text);
+}
+
+.holiday .who {
+  color: var(--color-holiday-text);
 }
 
 /* --- today: heavy border + shadow, orthogonal to state --- */

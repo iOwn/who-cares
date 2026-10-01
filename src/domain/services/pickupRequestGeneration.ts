@@ -33,6 +33,7 @@ import type {
   ChildcarePatternRepository,
   Clock,
   ClosureRepository,
+  HouseholdRepository,
   IdGenerator,
   MemberRepository,
   Notification,
@@ -47,6 +48,7 @@ import type {
   PickupRequest,
 } from "../types";
 import { isChildcareDay } from "./childcareDay";
+import { mergeClosures, publicHolidayClosures } from "./publicHolidays";
 
 /** Why a childcare day inside an absence did *not* raise a pickup request. */
 export type RequestSkipReason = "both-absent" | "already-assigned" | "request-exists";
@@ -140,6 +142,15 @@ export interface RecordAbsenceDeps {
   readonly childcarePattern: ChildcarePatternRepository;
   readonly closures: ClosureRepository;
   readonly members: MemberRepository;
+  /**
+   * Resolves the household's `bundesland` so a public holiday inside the
+   * absence range is treated exactly like a stored closure (ADR-0020, issue
+   * #167) — no pickup request is raised for it. Every production caller
+   * already builds this deps object by spreading `...createRepositories(tx)`
+   * (`src/app/absenceActions.ts`), which carries `households`, so adding this
+   * field changed no call site — only the test fakes.
+   */
+  readonly households: HouseholdRepository;
   readonly clock: Clock;
   readonly ids: IdGenerator;
 }
@@ -271,7 +282,23 @@ export async function recordAbsence(
   // Sequential, not `Promise.all`: the caller runs this inside one transaction,
   // and a single DB connection cannot serve parallel statements.
   const pattern = await deps.childcarePattern.findByHousehold(input.householdId);
-  const closures = await deps.closures.listByHousehold(input.householdId);
+  const storedClosures = await deps.closures.listByHousehold(input.householdId);
+  // Public holidays (ADR-0020, issue #167) are derived, never stored, and
+  // merged in here so a holiday inside the absence range behaves exactly like
+  // a manual closure: no pickup request is raised for it.
+  const household = await deps.households.findById(input.householdId);
+  const closures = household?.bundesland
+    ? mergeClosures(
+        storedClosures,
+        publicHolidayClosures({
+          householdId: input.householdId,
+          state: household.bundesland,
+          pattern,
+          from: input.startDate,
+          to: input.endDate,
+        }),
+      )
+    : storedClosures;
   const allAbsences = await deps.absences.listByHousehold(input.householdId);
   const assignments = await deps.assignments.listByHousehold(input.householdId);
   const existingRequests = await deps.pickupRequests.listByHousehold(input.householdId);

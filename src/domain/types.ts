@@ -27,6 +27,55 @@ export type CalendarDate = string;
 /** A day of the week the childcare pattern can include. */
 export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
+/** One of the 16 German states, ISO 3166-2:DE code (ADR-0020, issue #167). */
+export type GermanState =
+  | "BW"
+  | "BY"
+  | "BE"
+  | "BB"
+  | "HB"
+  | "HH"
+  | "HE"
+  | "MV"
+  | "NI"
+  | "NW"
+  | "RP"
+  | "SL"
+  | "SN"
+  | "ST"
+  | "SH"
+  | "TH";
+
+/**
+ * The 16 German states, ISO 3166-2:DE code + German display name, in that
+ * code's alphabetical order — the order the Bundesland `Select` renders.
+ */
+export const GERMAN_STATES: ReadonlyArray<{ readonly code: GermanState; readonly name: string }> = [
+  { code: "BW", name: "Baden-Württemberg" },
+  { code: "BY", name: "Bayern" },
+  { code: "BE", name: "Berlin" },
+  { code: "BB", name: "Brandenburg" },
+  { code: "HB", name: "Bremen" },
+  { code: "HH", name: "Hamburg" },
+  { code: "HE", name: "Hessen" },
+  { code: "MV", name: "Mecklenburg-Vorpommern" },
+  { code: "NI", name: "Niedersachsen" },
+  { code: "NW", name: "Nordrhein-Westfalen" },
+  { code: "RP", name: "Rheinland-Pfalz" },
+  { code: "SL", name: "Saarland" },
+  { code: "SN", name: "Sachsen" },
+  { code: "ST", name: "Sachsen-Anhalt" },
+  { code: "SH", name: "Schleswig-Holstein" },
+  { code: "TH", name: "Thüringen" },
+];
+
+const GERMAN_STATE_CODES: ReadonlySet<string> = new Set(GERMAN_STATES.map((s) => s.code));
+
+/** `true` iff `value` is one of the 16 ISO 3166-2:DE state codes. */
+export function isGermanState(value: string): value is GermanState {
+  return GERMAN_STATE_CODES.has(value);
+}
+
 /** The single family unit the app serves; v1 runs exactly one. */
 export interface Household {
   readonly id: string;
@@ -38,6 +87,13 @@ export interface Household {
   readonly memberIds: readonly [string, string];
   /** Exactly one child per household. */
   readonly childId: string;
+  /**
+   * The German state whose public holidays are derived into the household's
+   * closures (ADR-0020, issue #167) — `undefined` when unset, which
+   * reproduces pre-#167 behaviour exactly (no derived holidays). See
+   * `publicHolidaysIn` in `./services/publicHolidays`.
+   */
+  readonly bundesland?: GermanState;
 }
 
 /** A parent — one of exactly two per household — who can be held responsible for pickups. */
@@ -77,16 +133,34 @@ export interface ChildcarePattern {
 }
 
 /**
+ * How a `Closure` came to exist. `"manual"` (the default — absent `kind` means
+ * manual, same convention as `reason`) is a parent's own entry, stored and
+ * editable. `"public-holiday"` (ADR-0020, issue #167) is derived at read time
+ * from the household's `bundesland` and never stored or editable — see
+ * `publicHolidayClosures` in `./services/publicHolidays`.
+ */
+export type ClosureKind = "manual" | "public-holiday";
+
+/** `true` iff `closure` is a derived public-holiday closure, not a stored row. */
+export function isPublicHolidayClosure(closure: Pick<Closure, "kind">): boolean {
+  return closure.kind === "public-holiday";
+}
+
+/**
  * A single date on which a weekday the pattern would include has no childcare
  * after all. A multi-day closure is several `Closure` rows, not a range
- * (CONTEXT.md).
+ * (CONTEXT.md). `reason` itself still carries no taxonomy — free text, shown
+ * verbatim; `kind` is provenance, not a subject category, and for a public
+ * holiday it holds the holiday's own German name.
  */
 export interface Closure {
   readonly id: string;
   readonly householdId: string;
   readonly date: CalendarDate;
-  /** Optional free text; no taxonomy. */
+  /** Optional free text; no taxonomy. For a public holiday, its German name. */
   readonly reason?: string;
+  /** Absent ⇒ `"manual"`, the same optional-property convention as `reason`. */
+  readonly kind?: ClosureKind;
 }
 
 /**

@@ -11,6 +11,9 @@ import {
   type ChildcarePatternVersion,
   CLOSURE_ADDED_EVENT,
   eachDateInclusive,
+  GERMAN_STATES,
+  type GermanState,
+  isGermanState,
   MAX_CLOSURE_RANGE_DAYS,
   type Member,
   type Notification,
@@ -21,6 +24,7 @@ import {
   closureAddedNotification,
   notificationServicesFor,
   patternChangedNotification,
+  publicHolidaysChangedNotification,
 } from "@/notifications";
 
 /**
@@ -117,6 +121,44 @@ export async function savePatternAction(input: {
     }));
   }
   revalidateAll();
+}
+
+export type SetBundeslandResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Set or clear the household's Bundesland (issue #167, ADR-0020) — the
+ * setting its public holidays are derived from. Reuses catalogue event 11
+ * `childcare-pattern-changed`: changing it changes which days are childcare
+ * days, same recipient and same "the other parent is notified" promise as
+ * `savePatternAction`, so a 13th event would add nothing. A no-op (the same
+ * value re-selected) notifies nothing, the same guard `savePatternAction`
+ * applies via `patternVersionChangesSchedule`.
+ */
+export async function setBundeslandAction(state: GermanState | null): Promise<SetBundeslandResult> {
+  if (state !== null && !isGermanState(state)) {
+    return { ok: false, error: "That's not a recognised German state." };
+  }
+
+  const ctx = await context();
+  const { householdId, repos } = ctx;
+  const household = await repos.households.findById(householdId);
+  if (!household) {
+    return { ok: false, error: "Something went wrong saving that. Please try again." };
+  }
+
+  const isRealChange = (household.bundesland ?? null) !== state;
+  if (!isRealChange) return { ok: true };
+
+  await repos.households.save({ ...household, bundesland: state ?? undefined });
+
+  const stateName = state ? (GERMAN_STATES.find((s) => s.code === state)?.name ?? state) : null;
+  await notifyOtherMember(ctx, [state ?? "none"], (recipientId, actorName) => ({
+    recipientId,
+    event: CHILDCARE_PATTERN_CHANGED_EVENT,
+    ...publicHolidaysChangedNotification(actorName, stateName),
+  }));
+  revalidateAll();
+  return { ok: true };
 }
 
 /** `true` iff `id` names a closure that belongs to `householdId`. */

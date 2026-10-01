@@ -22,6 +22,10 @@ function toClosure(row: {
     householdId: row.householdId,
     date: row.date,
     ...(row.reason != null ? { reason: row.reason } : {}),
+    // Every stored row is a parent's own entry — a derived public-holiday
+    // closure (issue #167, ADR-0020) is never written here (`toClosure` is
+    // only ever called from `save` / the two list/find reads).
+    kind: "manual",
   };
 }
 

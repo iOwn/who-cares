@@ -66,6 +66,7 @@ export const CalendarGrid = forwardRef<HTMLElement, CalendarGridProps>(function 
                   state={day.displayState}
                   whoLabel={day.whoLabel}
                   isToday={day.isToday}
+                  isHoliday={day.closureKind === "public-holiday"}
                   ariaLabel={day.ariaLabel}
                   onPress={onDayPress ? () => onDayPress(day.date) : undefined}
                 />

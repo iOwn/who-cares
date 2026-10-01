@@ -26,3 +26,26 @@ export function closureAddedNotification(
     body: `${actorName} marked ${date} as closed — there's no childcare pickup that day.`,
   };
 }
+
+/**
+ * Copy for setting or clearing the household's Bundesland (issue #167,
+ * ADR-0020) — sent under the existing catalogue event 11
+ * `childcare-pattern-changed`, since it changes which days are childcare
+ * days exactly as a pattern edit does. `stateName` is the German display
+ * name (e.g. `"Bayern"`), or `null` when the setting was cleared.
+ */
+export function publicHolidaysChangedNotification(
+  actorName: string,
+  stateName: string | null,
+): { title: string; body: string } {
+  if (stateName) {
+    return {
+      title: "Public holidays turned on",
+      body: `${actorName} set the household's state to ${stateName}. Its public holidays now show as closed days on the calendar.`,
+    };
+  }
+  return {
+    title: "Public holidays turned off",
+    body: `${actorName} cleared the household's state. Public holidays no longer show automatically — add one as a closure if you need it.`,
+  };
+}
