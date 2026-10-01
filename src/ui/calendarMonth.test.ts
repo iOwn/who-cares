@@ -115,6 +115,26 @@ describe("buildCalendarMonth", () => {
     });
   });
 
+  it("keeps a closure that needsCover a childcare day, marked closed-at-home (issue #166)", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [makeClosure({ date: "2025-01-08", reason: "Staff day", needsCover: true })],
+      today: "2025-01-15",
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-08")).toMatchObject({
+      displayState: "quiet",
+      isClosedAtHome: true,
+      closureReason: "Staff day",
+      narrative: "A normal childcare day. Nobody has flagged being away.",
+    });
+    expect(byDate.get("2025-01-08")?.ariaLabel).toMatch(/care at home/);
+    expect(byDate.get("2025-01-09")?.isClosedAtHome).toBe(false);
+  });
+
   it("gives a manual closure the generic closed copy and kind 'manual'", () => {
     const view = buildCalendarMonth({
       year: 2025,

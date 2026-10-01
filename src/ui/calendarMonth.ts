@@ -21,6 +21,7 @@ import {
   type Closure,
   type ClosureKind,
   childcareDayInputs,
+  closureNeedsCover,
   type DayState,
   type DayStateReason,
   dayState,
@@ -89,6 +90,13 @@ export interface CalendarDayView {
    * derived from the household's Bundesland. Undefined for every other day.
    */
   readonly closureKind?: ClosureKind;
+  /**
+   * The facility is closed but the day is **still a childcare day** (issue
+   * #166, ADR-0021): a closure with `needsCover` on a pattern weekday. The day
+   * keeps its normal display state; this only drives the grid marker and the
+   * `DayDetail` line. `closureReason` is set on such a day too.
+   */
+  readonly isClosedAtHome?: boolean;
   /**
    * Full date + state, for a `DayCell`'s screen-reader label — the visible grid
    * is otherwise a wall of bare numbers. `""` for the adjacent-month blanks.
@@ -421,6 +429,7 @@ export function buildCalendarMonth({
     const closure = closureByDate.get(date);
     const closureReason = closure?.reason;
     const closureKind = closure ? (closure.kind ?? "manual") : undefined;
+    const isClosedAtHome = isPatternWeekday && closure != null && closureNeedsCover(closure);
     const { whoLabel, narrative } = describeDay({
       displayState,
       reason,
@@ -441,7 +450,10 @@ export function buildCalendarMonth({
       narrative,
       closureReason,
       closureKind,
-      ariaLabel: inMonth ? dayAriaLabel(date, displayState, whoLabel) : "",
+      isClosedAtHome,
+      ariaLabel: inMonth
+        ? `${dayAriaLabel(date, displayState, whoLabel)}${isClosedAtHome ? ", facility closed — care at home" : ""}`
+        : "",
     });
   }
 

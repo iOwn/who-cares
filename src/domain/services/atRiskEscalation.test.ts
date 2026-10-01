@@ -13,6 +13,7 @@ import {
   MEMBER_2_ID,
   makeAbsence,
   makeAssignment,
+  makeClosure,
   makeHousehold,
   makeMember,
   makePickupRequest,
@@ -29,7 +30,7 @@ import type {
   MemberRepository,
   PickupRequestRepository,
 } from "../ports";
-import type { Absence, Assignment, GermanState, PickupRequest } from "../types";
+import type { Absence, Assignment, Closure, GermanState, PickupRequest } from "../types";
 import { escalationKey, planAtRiskEscalations, runAtRiskEscalation } from "./atRiskEscalation";
 import type { DayStateFacts } from "./dayState";
 import {
@@ -159,6 +160,8 @@ function createFakes(seed: {
   staleReads?: boolean;
   /** The household's Bundesland (issue #167, ADR-0020) — unset by default. */
   bundesland?: GermanState;
+  /** Stored closures (issue #166). */
+  closures?: readonly Closure[];
 }) {
   const absences = [...(seed.absences ?? [])];
   const requests = [...(seed.requests ?? [])];
@@ -202,7 +205,7 @@ function createFakes(seed: {
 
   const closures: ClosureRepository = {
     async listByHousehold() {
-      return [];
+      return [...(seed.closures ?? [])];
     },
     async findByDate() {
       return null;
@@ -433,6 +436,37 @@ describe("runAtRiskEscalation", () => {
 
     const result = await runAtRiskEscalation(deps, { householdId: HOUSEHOLD_ID, horizonDays: 14 });
     expect(result.escalations).toEqual([]);
+  });
+
+  describe("closures that need cover (issue #166, ADR-0021)", () => {
+    const bothAbsentOn = (date: string) => [
+      makeAbsence({ id: "a1", memberId: MEMBER_1_ID, startDate: date, endDate: date }),
+      makeAbsence({ id: "a2", memberId: MEMBER_2_ID, startDate: date, endDate: date }),
+    ];
+
+    it("escalates an uncovered day under a needsCover closure", async () => {
+      const { deps } = createFakes({
+        absences: bothAbsentOn(ANCHOR_DATE),
+        closures: [makeClosure({ date: ANCHOR_DATE, needsCover: true })],
+      });
+      const result = await runAtRiskEscalation(deps, {
+        householdId: HOUSEHOLD_ID,
+        horizonDays: 14,
+      });
+      expect(result.escalations.map((e) => e.date)).toEqual([ANCHOR_DATE]);
+    });
+
+    it("still skips the same day under a plain closure", async () => {
+      const { deps } = createFakes({
+        absences: bothAbsentOn(ANCHOR_DATE),
+        closures: [makeClosure({ date: ANCHOR_DATE })],
+      });
+      const result = await runAtRiskEscalation(deps, {
+        householdId: HOUSEHOLD_ID,
+        horizonDays: 14,
+      });
+      expect(result.escalations).toEqual([]);
+    });
   });
 
   describe("public holidays (issue #167, ADR-0020)", () => {

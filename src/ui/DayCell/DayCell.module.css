@@ -201,3 +201,22 @@
     transform: none;
   }
 }
+
+/* --- marker: facility closed, care still needed at home (issue #166) ---
+ * Not a state — the cell keeps its resolved / pending / at-risk / quiet
+ * treatment. A small neutral chip bottom-right, clear of the state badge
+ * (top-right) and the "who" label (bottom-left, which truncates before it). */
+.atHome {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+/* Leave room for the marker so the "who" label truncates before it. */
+.base:has(.atHome) .who {
+  max-width: calc(100% - var(--space-8) - 1rem);
+}

@@ -152,7 +152,7 @@ describe("bundleNotifications — copy", () => {
 
     expect(bundled.title).toBe("5 closures added");
     expect(bundled.body).toBe(
-      "5 days on 2025-06-02, 2025-06-03, 2025-06-04, 2025-06-05 and 2025-06-06 are now marked closed — there's no childcare pickup on them.",
+      "5 days on 2025-06-02, 2025-06-03, 2025-06-04, 2025-06-05 and 2025-06-06 are now marked closed. Check the calendar to see which of them still need someone to look after the child.",
     );
   });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "closures" ADD COLUMN "needs_cover" boolean DEFAULT false NOT NULL;

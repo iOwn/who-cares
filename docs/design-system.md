@@ -206,6 +206,12 @@ line reads "Public holiday — {name}" instead of "Reason given: …". The `Lege
 entries unchanged — the holiday name in `DayDetail` / the List row is the explanation, not a new
 legend swatch. Settings shows derived holidays in their own read-only block, with no Edit/Remove.
 
+**Closed-at-home variant (issue #166, ADR-0021).** A closure that `needsCover` is *not* a `closed`
+day — it is still a childcare day with its own state (Sorted / Waiting / At risk / quiet). `DayCell`
+keeps that state's styling and adds a small neutral `⌂` marker (`isClosedAtHome`, orthogonal to
+`state`, bottom-right so it clears the state badge); `DayDetail` adds "Facility closed — care at
+home needed" (+ the reason). No new swatch in the `Legend`.
+
 ### P1 — feature-composed (documented lighter in #30, built with their features)
 
 `CalendarGrid`, `DayCell`, `MonthPager`, `MonthPicker`, `Legend`, `ListRow`, `RequestCard`,

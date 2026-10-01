@@ -161,6 +161,19 @@ export interface Closure {
   readonly reason?: string;
   /** Absent ⇒ `"manual"`, the same optional-property convention as `reason`. */
   readonly kind?: ClosureKind;
+  /**
+   * The facility is closed but the child still needs looking after (a
+   * staff-training day, the summer break) — the day **stays a childcare day**
+   * (ADR-0021, issue #166), so it still needs an owner, can raise a pickup
+   * request and can go at-risk. Absent ⇒ `false`, today's behaviour: the closure
+   * removes the day. A derived public holiday never needs cover.
+   */
+  readonly needsCover?: boolean;
+}
+
+/** `true` iff `closure` closes the facility but keeps the day a childcare day. */
+export function closureNeedsCover(closure: Pick<Closure, "needsCover">): boolean {
+  return closure.needsCover === true;
 }
 
 /**

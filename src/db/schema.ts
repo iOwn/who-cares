@@ -153,6 +153,8 @@ export const closures = pgTable(
       .references(() => households.id, { onDelete: "cascade" }),
     date: date("date").notNull(),
     reason: text("reason"),
+    /** The day stays a childcare day (issue #166, ADR-0021). Existing rows are `false`. */
+    needsCover: boolean("needs_cover").notNull().default(false),
   },
   (table) => [unique("closures_household_date_unique").on(table.householdId, table.date)],
 );

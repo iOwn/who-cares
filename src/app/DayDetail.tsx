@@ -160,6 +160,12 @@ export function DayDetail({
             )}
           </div>
           <p className={styles.narrative}>{day.narrative}</p>
+          {day.isClosedAtHome ? (
+            <p className={styles.reason}>
+              Facility closed — care at home needed
+              {day.closureReason ? ` · Reason given: ${day.closureReason}` : ""}
+            </p>
+          ) : null}
           {day.displayState === "closed" && day.closureReason ? (
             <p className={styles.reason}>
               {day.closureKind === "public-holiday"

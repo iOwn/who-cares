@@ -37,7 +37,7 @@ const repos = {
       ): Promise<{ id: string; householdId: string } | null> => null,
     ),
     listByHousehold: vi.fn(async (): Promise<{ id: string }[]> => []),
-    save: vi.fn(async (_closure: { id: string; date: string }) => {}),
+    save: vi.fn(async (_closure: { id: string; date: string; needsCover?: boolean }) => {}),
     delete: vi.fn(async () => {}),
   },
   members: {
@@ -66,8 +66,13 @@ vi.mock("@/notifications", async (importActual) => ({
   notificationServicesFor: () => ({ notifier: { notify }, dispatchAll }),
 }));
 
-const { removeClosureAction, saveClosureAction, savePatternAction, setBundeslandAction } =
-  await import("./childcareActions");
+const {
+  removeClosureAction,
+  saveClosureAction,
+  saveClosuresAction,
+  savePatternAction,
+  setBundeslandAction,
+} = await import("./childcareActions");
 
 /** The dates the action actually wrote, in order. */
 const savedDates = () => repos.closures.save.mock.calls.map(([closure]) => closure.date);
@@ -192,6 +197,104 @@ describe("saveClosureAction — a range is one action (issue #131)", () => {
 
     expect(savedDates()).toEqual(["2025-06-02"]);
     expect(dispatchAll).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveClosureAction — needsCover (issue #166)", () => {
+  it("persists needsCover on every row of the range", async () => {
+    await saveClosureAction({ date: "2025-06-02", endDate: "2025-06-03", needsCover: true });
+
+    for (const [closure] of repos.closures.save.mock.calls) {
+      expect(closure.needsCover).toBe(true);
+    }
+  });
+
+  it("omits the flag by default, as before", async () => {
+    await saveClosureAction({ date: "2025-06-02" });
+
+    expect(repos.closures.save.mock.calls[0][0]).not.toHaveProperty("needsCover");
+  });
+
+  it("an edit can flip the flag and sends nothing", async () => {
+    repos.closures.listByHousehold.mockResolvedValue([{ id: "c1" }]);
+    repos.closures.findByDate.mockResolvedValue({ id: "c1", householdId: HOUSEHOLD_ID });
+
+    await saveClosureAction({ id: "c1", date: "2025-06-02", needsCover: true });
+
+    expect(repos.closures.save.mock.calls[0][0]).toMatchObject({ id: "c1", needsCover: true });
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("the closure-added copy differs per kind", async () => {
+    await saveClosureAction({ date: "2025-06-02", needsCover: true });
+    expect(dispatched()[0].body).toMatch(/still needs to look after the child/);
+
+    await saveClosureAction({ date: "2025-06-03" });
+    expect(dispatched()[0].body).toMatch(/no childcare pickup/);
+  });
+});
+
+describe("saveClosuresAction — a year of closures in one go (issue #166)", () => {
+  const entries = [
+    { date: "2026-02-13", reason: "Staff training", needsCover: true },
+    { date: "2026-07-27", endDate: "2026-08-14", reason: "Summer break", needsCover: true },
+    { date: "2026-12-28", endDate: "2026-12-31", needsCover: true },
+  ];
+
+  it("writes every row in one transaction and sends one dispatch", async () => {
+    const result = await saveClosuresAction({ entries });
+
+    expect(result).toEqual({ ok: true, addedCount: 1 + 19 + 4 });
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(dispatchAll).toHaveBeenCalledTimes(1);
+    expect(dispatched()).toHaveLength(24);
+    expect(savedDates()).toContain("2026-12-31"); // a date a year out
+  });
+
+  it("saves nothing and names the row when one is invalid", async () => {
+    const result = await saveClosuresAction({
+      entries: [entries[0], { date: "2026-08-14", endDate: "2026-08-01" }],
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Row 2: The last closure date can't be before the first.",
+    });
+    expect(repos.closures.save).not.toHaveBeenCalled();
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("applies the per-range cap, but not a cap across the batch", async () => {
+    const tooLong = await saveClosuresAction({
+      entries: [{ date: "2026-01-01", endDate: "2026-12-31" }],
+    });
+    expect(tooLong.ok).toBe(false);
+
+    const manyRanges = Array.from({ length: 12 }, (_, month) => ({
+      date: `2026-${String(month + 1).padStart(2, "0")}-01`,
+      endDate: `2026-${String(month + 1).padStart(2, "0")}-28`,
+    }));
+    expect((await saveClosuresAction({ entries: manyRanges })).ok).toBe(true);
+  });
+
+  it("resolves overlapping rows to one notification per date", async () => {
+    await saveClosuresAction({
+      entries: [
+        { date: "2026-03-02", endDate: "2026-03-04" },
+        { date: "2026-03-04", endDate: "2026-03-05" },
+      ],
+    });
+
+    expect(dispatched().map((n) => n.subjectLabel)).toEqual([
+      "2026-03-02",
+      "2026-03-03",
+      "2026-03-04",
+      "2026-03-05",
+    ]);
+  });
+
+  it("rejects an empty batch", async () => {
+    expect((await saveClosuresAction({ entries: [] })).ok).toBe(false);
   });
 });
 

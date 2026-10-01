@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { CalendarDate, Closure, ClosureRepository } from "@/domain";
+import { closureNeedsCover } from "@/domain";
 import type { DbExecutor } from "../client";
 import { closures } from "../schema";
 
@@ -16,6 +17,7 @@ function toClosure(row: {
   householdId: string;
   date: string;
   reason: string | null;
+  needsCover: boolean;
 }): Closure {
   return {
     id: row.id,
@@ -26,6 +28,7 @@ function toClosure(row: {
     // closure (issue #167, ADR-0020) is never written here (`toClosure` is
     // only ever called from `save` / the two list/find reads).
     kind: "manual",
+    ...(row.needsCover ? { needsCover: true } : {}),
   };
 }
 
@@ -35,6 +38,7 @@ export function createClosureRepository(db: DbExecutor): ClosureRepository {
     householdId: closures.householdId,
     date: closures.date,
     reason: closures.reason,
+    needsCover: closures.needsCover,
   };
 
   return {
@@ -64,6 +68,7 @@ export function createClosureRepository(db: DbExecutor): ClosureRepository {
           householdId: closure.householdId,
           date: closure.date,
           reason: closure.reason ?? null,
+          needsCover: closureNeedsCover(closure),
         })
         .onConflictDoUpdate({
           target: closures.id,
@@ -71,6 +76,7 @@ export function createClosureRepository(db: DbExecutor): ClosureRepository {
             householdId: closure.householdId,
             date: closure.date,
             reason: closure.reason ?? null,
+            needsCover: closureNeedsCover(closure),
           },
         });
     },

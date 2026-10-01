@@ -136,7 +136,7 @@ const BUNDLE_COPY: Readonly<Record<string, BundleCopy>> = {
   [CLOSURE_ADDED_EVENT]: {
     title: (count) => `${count} closures added`,
     body: (count, days) =>
-      `${count} days${onDays(days)} are now marked closed — there's no childcare pickup on them.`,
+      `${count} days${onDays(days)} are now marked closed. Check the calendar to see which of them still need someone to look after the child.`,
   },
 };
 

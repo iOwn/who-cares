@@ -1,7 +1,7 @@
 # Public holidays are derived from a Bundesland setting, never stored as closure rows
 
 A public holiday is "a special type of closure" (issue #167's own words): on a public holiday
-the childcare day disappears exactly as it does for any other `Closure` (CONTEXT.md) — no pickup
+the childcare day disappears exactly as it does for a plain `Closure` (since ADR-0021 a closure may instead keep the day — a public holiday never does) (CONTEXT.md) — no pickup
 is needed, because the facility is shut *and* both parents are off work. Today a parent has to
 notice every German public holiday themselves and type it in one at a time through the closure
 range form, which is both tedious and a correctness risk — a missed Reformationstag looks like an

@@ -133,6 +133,21 @@ describe("ClosureRepository", () => {
     ]);
   });
 
+  it("round-trips needsCover; a plain row reads back without the key (issue #166)", async () => {
+    await repos.closures.save(makeClosure({ id: "c1", date: "2025-02-10", needsCover: true }));
+    await repos.closures.save(makeClosure({ id: "c2", date: "2025-02-11" }));
+
+    const [withCover, plain] = await repos.closures.listByHousehold(HOUSEHOLD_ID);
+    expect(withCover?.needsCover).toBe(true);
+    expect(plain).not.toHaveProperty("needsCover");
+
+    // Flipping it on an existing row sticks.
+    await repos.closures.save(makeClosure({ id: "c1", date: "2025-02-10" }));
+    expect(await repos.closures.findByDate(HOUSEHOLD_ID, "2025-02-10")).not.toHaveProperty(
+      "needsCover",
+    );
+  });
+
   it("removes a closure", async () => {
     await repos.closures.save(makeClosure({ id: "c1", date: "2025-02-10" }));
     await repos.closures.delete("c1");

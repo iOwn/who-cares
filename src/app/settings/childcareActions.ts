@@ -181,64 +181,87 @@ async function closureBelongsToHousehold(
  */
 export type SaveClosureResult = { ok: true; addedCount: number } | { ok: false; error: string };
 
-export async function saveClosureAction(input: {
-  /** Present when editing an existing closure. */
-  id?: string;
+/** One closure range as the settings form submits it (issue #131, #166). */
+export interface ClosureEntry {
   date: CalendarDate;
   /**
    * Last date of an inclusive range (issue #131). One `Closure` row is still
-   * written **per date** — CONTEXT.md keeps a closure a single day — but it is
-   * one action, so the other parent gets one bundled notification instead of
-   * one per day. Omitted, or when editing, it is just `date`.
+   * written **per date** — CONTEXT.md keeps a closure a single day. Omitted,
+   * it is just `date`.
    */
   endDate?: CalendarDate;
   reason?: string;
-}): Promise<SaveClosureResult> {
-  const ctx = await context();
-  const { householdId, repos } = ctx;
-  const reason = input.reason?.trim() ? input.reason.trim() : undefined;
+  /** The day stays a childcare day (issue #166, ADR-0021). Omitted ⇒ `false`. */
+  needsCover?: boolean;
+}
 
-  // A client-supplied `id` is only honoured if it's this household's row —
-  // otherwise `save`'s upsert could re-parent someone else's closure (latent
-  // until multi-household, but cheap to close now).
-  const editId =
-    input.id && (await closureBelongsToHousehold(repos, householdId, input.id))
-      ? input.id
-      : undefined;
+/**
+ * Write closure entries as **one** action: one transaction (every row commits
+ * or none), one `dispatchAll` call so the other parent gets one bundled
+ * notification (ADR-0018). `editId` pins the single row being edited — an edit
+ * ignores any range and never notifies (event 12 is add-only).
+ */
+async function writeClosureEntries(
+  ctx: Awaited<ReturnType<typeof context>>,
+  entries: readonly ClosureEntry[],
+  editId?: string,
+): Promise<SaveClosureResult> {
+  const { householdId } = ctx;
+  // With several rows, name the offending one so a parent can find it.
+  const where = (index: number) => (entries.length > 1 ? `Row ${index + 1}: ` : "");
 
-  // Editing is always the one row being edited; a range only applies to adds.
-  const endDate = editId ? input.date : (input.endDate ?? input.date);
-  if (endDate < input.date) {
-    return { ok: false, error: "The last closure date can't be before the first." };
+  const planned: { date: CalendarDate; reason?: string; needsCover: boolean }[] = [];
+  for (const [index, entry] of entries.entries()) {
+    // Editing is always the one row being edited; a range only applies to adds.
+    const endDate = editId ? entry.date : (entry.endDate ?? entry.date);
+    if (!entry.date || !endDate)
+      return { ok: false, error: `${where(index)}Pick the closure dates.` };
+    if (endDate < entry.date) {
+      return {
+        ok: false,
+        error: `${where(index)}The last closure date can't be before the first.`,
+      };
+    }
+    const dates = eachDateInclusive(entry.date, endDate);
+    if (dates.length > MAX_CLOSURE_RANGE_DAYS) {
+      return {
+        ok: false,
+        error: `${where(index)}That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
+      };
+    }
+    const reason = entry.reason?.trim() ? entry.reason.trim() : undefined;
+    for (const date of dates) {
+      planned.push({ date, ...(reason ? { reason } : {}), needsCover: entry.needsCover === true });
+    }
   }
-  const dates = eachDateInclusive(input.date, endDate);
-  if (dates.length > MAX_CLOSURE_RANGE_DAYS) {
-    return {
-      ok: false,
-      error: `That's more than ${MAX_CLOSURE_RANGE_DAYS} days of closures in one go — add them in shorter stretches.`,
-    };
-  }
 
-  // The whole range commits together, the same way `savePatternAction` wraps its
-  // own multi-statement write: a failure part-way through a 31-day stretch would
-  // otherwise leave half the days closed *and* — since the notification is built
-  // from what was added — tell the other parent about none of it.
-  let added: CalendarDate[];
+  // The whole batch commits together, the same way `savePatternAction` wraps its
+  // own multi-statement write: a failure part-way through would otherwise leave
+  // some days closed *and* — since the notification is built from what was
+  // added — tell the other parent about none of it.
+  let added: Map<CalendarDate, boolean>;
   try {
     added = await db.transaction(async (tx) => {
       const closures = createRepositories(tx).closures;
-      // One closure per date: reuse the row already on that date if there is one.
-      const addedDates: CalendarDate[] = [];
-      for (const date of dates) {
+      const addedDates = new Map<CalendarDate, boolean>();
+      for (const { date, reason, needsCover } of planned) {
+        // One closure per date: reuse the row already on that date if there is
+        // one — including one an earlier row of this same batch just wrote, so
+        // overlapping rows resolve to one row per date, the later row winning.
         const onDate = await closures.findByDate(householdId, date);
         const isNewClosure = !editId && !onDate;
         const id = editId ?? onDate?.id ?? crypto.randomUUID();
 
-        await closures.save({ id, householdId, date, ...(reason ? { reason } : {}) });
+        await closures.save({
+          id,
+          householdId,
+          date,
+          ...(reason ? { reason } : {}),
+          ...(needsCover ? { needsCover: true } : {}),
+        });
         // Catalogue event 12 fires on a closure being *added*, not on a later
-        // edit to one that already exists — so a range spanning a day that is
-        // already closed produces no notification for that day.
-        if (isNewClosure) addedDates.push(date);
+        // edit to one that already exists.
+        if (isNewClosure) addedDates.set(date, needsCover);
       }
       return addedDates;
     });
@@ -248,14 +271,45 @@ export async function saveClosureAction(input: {
   }
 
   // After commit, so a slow send can't hold the transaction open (ADR-0005).
-  await notifyOtherMember(ctx, added, (recipientId, actorName, date) => ({
+  await notifyOtherMember(ctx, [...added.keys()], (recipientId, actorName, date) => ({
     recipientId,
     event: CLOSURE_ADDED_EVENT,
     subjectLabel: date,
-    ...closureAddedNotification(actorName, date),
+    ...closureAddedNotification(actorName, date, added.get(date) === true),
   }));
   revalidateAll();
-  return { ok: true, addedCount: added.length };
+  return { ok: true, addedCount: added.size };
+}
+
+/** Add one closure range, or edit one existing closure when `id` is given. */
+export async function saveClosureAction(
+  input: ClosureEntry & {
+    /** Present when editing an existing closure. */
+    id?: string;
+  },
+): Promise<SaveClosureResult> {
+  const ctx = await context();
+  // A client-supplied `id` is only honoured if it's this household's row —
+  // otherwise `save`'s upsert could re-parent someone else's closure (latent
+  // until multi-household, but cheap to close now).
+  const editId =
+    input.id && (await closureBelongsToHousehold(ctx.repos, ctx.householdId, input.id))
+      ? input.id
+      : undefined;
+  const { id: _id, ...entry } = input;
+  return writeClosureEntries(ctx, [entry], editId);
+}
+
+/**
+ * Add several closure ranges in one go (issue #166) — a whole year of
+ * training days and the summer break from one form submit. All-or-nothing, one
+ * bundled notification; a rejected row is named in the error.
+ */
+export async function saveClosuresAction(input: {
+  entries: readonly ClosureEntry[];
+}): Promise<SaveClosureResult> {
+  if (input.entries.length === 0) return { ok: false, error: "Add at least one closure." };
+  return writeClosureEntries(await context(), input.entries);
 }
 
 export async function removeClosureAction(id: string): Promise<void> {

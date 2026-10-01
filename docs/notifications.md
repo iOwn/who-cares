@@ -48,7 +48,7 @@ domain service ──returns──▶ Notification[] ──▶ dispatchAll()
 | 9 | `day-at-risk-both-absent` | **both** | `runAtRiskEscalation` (daily cron) |
 | 10 | `day-at-risk-escalated` | **both** | `runAtRiskEscalation` (daily cron) |
 | 11 | `childcare-pattern-changed` | other parent | `savePatternAction`, `setBundeslandAction` (issue #167 — reuses this event, no 13th was added) |
-| 12 | `closure-added` | other parent | `saveClosureAction` (add only) |
+| 12 | `closure-added` | other parent | `saveClosureAction` / `saveClosuresAction` (add only; a batch is one bundled notification, issue #166) |
 
 Every event also carries **bundled copy** of its own in
 `notificationBundling.ts`, so a bundle is never written in generic wording;
