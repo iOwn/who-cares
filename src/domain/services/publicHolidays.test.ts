@@ -4,11 +4,10 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { GERMAN_STATES, type GermanState } from "@/domain";
 import { pattern } from "@/testing";
 import {
   easterSunday,
-  GERMAN_STATES,
-  type GermanState,
   mergeClosures,
   publicHolidayClosures,
   publicHolidaysIn,

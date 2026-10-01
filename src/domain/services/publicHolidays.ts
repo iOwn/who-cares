@@ -22,10 +22,10 @@ import type { CalendarDate, ChildcarePattern, Closure, GermanState, Weekday } fr
 import { resolvePatternVersion, weekdayOf } from "./childcareDay";
 
 // `GermanState` / `GERMAN_STATES` / `isGermanState` live in `../types` (plain
-// domain data, the same place `Weekday` and `PICKUP_REQUEST_STATES` live) and
-// are re-exported from `../index` — nothing state-related is redeclared here.
-export type { GermanState } from "../types";
-export { GERMAN_STATES, isGermanState } from "../types";
+// domain data, the same place `Weekday` and `PICKUP_REQUEST_STATES` live).
+// `src/domain/index.ts` already re-exports `./types` in full, so nothing here
+// needs to re-export them a second time — only `GermanState` is imported, for
+// this module's own signatures below.
 
 /** A named public holiday on a concrete date. */
 export interface PublicHoliday {
