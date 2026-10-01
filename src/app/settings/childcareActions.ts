@@ -261,7 +261,7 @@ async function writeClosureEntries(
         });
         // Catalogue event 12 fires on a closure being *added*, not on a later
         // edit to one that already exists.
-        if (isNewClosure) addedDates.set(date, needsCover);
+        if (isNewClosure || addedDates.has(date)) addedDates.set(date, needsCover);
       }
       return addedDates;
     });

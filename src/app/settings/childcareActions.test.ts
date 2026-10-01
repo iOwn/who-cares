@@ -293,6 +293,28 @@ describe("saveClosuresAction — a year of closures in one go (issue #166)", () 
     ]);
   });
 
+  it("the notification for an overlapped date follows the later row's kind", async () => {
+    // Like the real adapter, `findByDate` sees a row an earlier entry of this batch just wrote.
+    const written = new Map<string, { id: string; householdId: string }>();
+    repos.closures.save.mockImplementation(async (closure: { id: string; date: string }) => {
+      written.set(closure.date, { id: closure.id, householdId: HOUSEHOLD_ID });
+    });
+    repos.closures.findByDate.mockImplementation(
+      async (_h: string, date: string) => written.get(date) ?? null,
+    );
+
+    await saveClosuresAction({
+      entries: [
+        { date: "2026-03-02", endDate: "2026-03-03", needsCover: false },
+        { date: "2026-03-03", needsCover: true },
+      ],
+    });
+
+    const byDate = new Map(dispatched().map((n) => [n.subjectLabel, n.body]));
+    expect(byDate.get("2026-03-02")).toMatch(/no childcare pickup/);
+    expect(byDate.get("2026-03-03")).toMatch(/still needs to look after the child/);
+  });
+
   it("rejects an empty batch", async () => {
     expect((await saveClosuresAction({ entries: [] })).ok).toBe(false);
   });
