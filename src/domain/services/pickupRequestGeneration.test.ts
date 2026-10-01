@@ -16,6 +16,8 @@ import type {
   Clock,
   Closure,
   ClosureRepository,
+  Household,
+  HouseholdRepository,
   IdGenerator,
   Member,
   MemberRepository,
@@ -28,6 +30,7 @@ import {
   absence as makeAbsenceSpan,
   makeAssignment,
   makeClosure,
+  makeHousehold,
   makeMember,
   makePickupRequest,
   pattern,
@@ -185,6 +188,7 @@ function createFakes(options: {
   absences?: readonly Absence[];
   assignments?: readonly Assignment[];
   existingRequests?: readonly PickupRequest[];
+  household?: Partial<Household>;
   now?: Date;
 }): Fakes {
   const savedAbsences: Absence[] = [...(options.absences ?? [])];
@@ -265,6 +269,14 @@ function createFakes(options: {
     async delete() {},
   };
 
+  const household = makeHousehold(options.household ?? {});
+  const householdRepo: HouseholdRepository = {
+    async findById(id) {
+      return id === household.id ? household : null;
+    },
+    async save() {},
+  };
+
   const members = options.members ?? [
     makeMember({ id: MEMBER_1_ID, name: "Alex" }),
     makeMember({ id: MEMBER_2_ID, name: "Bailey" }),
@@ -299,6 +311,7 @@ function createFakes(options: {
       childcarePattern: patternRepo,
       closures: closureRepo,
       members: memberRepo,
+      households: householdRepo,
       clock,
       ids,
     },
@@ -462,5 +475,68 @@ describe("recordAbsence", () => {
         endDate: "2025-01-06",
       }),
     ).rejects.toThrow(/hasn't signed in yet/i);
+  });
+
+  describe("public holidays (issue #167, ADR-0020)", () => {
+    // Neujahr (nationwide) 2026-01-01 is a Thursday — a Mon-Fri pattern day.
+    const NEUJAHR = "2026-01-01";
+
+    it("raises no request on a derived public holiday", async () => {
+      const fakes = createFakes({
+        household: { bundesland: "BY" },
+        now: new Date("2025-12-20T09:00:00.000Z"),
+      });
+      const result = await recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: NEUJAHR,
+        endDate: NEUJAHR,
+      });
+      // A holiday closure is treated exactly like a stored one — `isChildcareDay`
+      // is false, so `planPickupRequests` produces no entry for it at all (the
+      // same as a weekend or any other closed day).
+      expect(result.requests).toEqual([]);
+      expect(result.plan).toEqual([]);
+    });
+
+    it("still raises a request on the adjacent, non-holiday day", async () => {
+      const fakes = createFakes({
+        household: { bundesland: "BY" },
+        now: new Date("2025-12-20T09:00:00.000Z"),
+      });
+      const result = await recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: "2026-01-02", // Friday, not a holiday
+        endDate: "2026-01-02",
+      });
+      expect(result.requests.map((r) => r.date)).toEqual(["2026-01-02"]);
+    });
+
+    it("raises a request on the same date when the household has no bundesland set", async () => {
+      const fakes = createFakes({ now: new Date("2025-12-20T09:00:00.000Z") });
+      const result = await recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: NEUJAHR,
+        endDate: NEUJAHR,
+      });
+      expect(result.requests.map((r) => r.date)).toEqual([NEUJAHR]);
+    });
+
+    it("a manual closure on the same date behaves the same, with no double-counting", async () => {
+      const fakes = createFakes({
+        household: { bundesland: "BY" },
+        closures: [makeClosure({ date: NEUJAHR, reason: "Manual override" })],
+        now: new Date("2025-12-20T09:00:00.000Z"),
+      });
+      const result = await recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: NEUJAHR,
+        endDate: NEUJAHR,
+      });
+      expect(result.requests).toEqual([]);
+    });
   });
 });

@@ -204,6 +204,18 @@ describe("notification catalogue — recipient rule", () => {
         },
         async save() {},
       },
+      // No bundesland set — the holiday merge (issue #167, ADR-0020) is a no-op.
+      households: {
+        async findById() {
+          return {
+            id: "household-1",
+            name: "H",
+            memberIds: [MEMBER_1_ID, MEMBER_2_ID] as [string, string],
+            childId: "c1",
+          };
+        },
+        async save() {},
+      },
       clock: { now: () => new Date("2025-01-06T09:00:00.000Z") },
       ids: {
         next: (() => {

@@ -13,6 +13,7 @@ import {
   MEMBER_2_ID,
   makeAbsence,
   makeAssignment,
+  makeHousehold,
   makeMember,
   makePickupRequest,
   resetIdCounter,
@@ -24,10 +25,11 @@ import type {
   ChildcarePatternRepository,
   Clock,
   ClosureRepository,
+  HouseholdRepository,
   MemberRepository,
   PickupRequestRepository,
 } from "../ports";
-import type { Absence, Assignment, PickupRequest } from "../types";
+import type { Absence, Assignment, GermanState, PickupRequest } from "../types";
 import { escalationKey, planAtRiskEscalations, runAtRiskEscalation } from "./atRiskEscalation";
 import type { DayStateFacts } from "./dayState";
 import {
@@ -155,6 +157,8 @@ function createFakes(seed: {
    * A second `runAtRiskEscalation` then re-plans every day but claims none.
    */
   staleReads?: boolean;
+  /** The household's Bundesland (issue #167, ADR-0020) — unset by default. */
+  bundesland?: GermanState;
 }) {
   const absences = [...(seed.absences ?? [])];
   const requests = [...(seed.requests ?? [])];
@@ -205,6 +209,17 @@ function createFakes(seed: {
     },
     async save() {},
     async delete() {},
+  };
+
+  const household = makeHousehold({
+    id: HOUSEHOLD_ID,
+    ...(seed.bundesland ? { bundesland: seed.bundesland } : {}),
+  });
+  const households: HouseholdRepository = {
+    async findById(id) {
+      return id === HOUSEHOLD_ID ? household : null;
+    },
+    async save() {},
   };
 
   const absenceRepo: AbsenceRepository = {
@@ -268,6 +283,7 @@ function createFakes(seed: {
       members,
       childcarePattern,
       closures,
+      households,
       absences: absenceRepo,
       pickupRequests: requestRepo,
       assignments: assignmentRepo,
@@ -417,5 +433,62 @@ describe("runAtRiskEscalation", () => {
 
     const result = await runAtRiskEscalation(deps, { householdId: HOUSEHOLD_ID, horizonDays: 14 });
     expect(result.escalations).toEqual([]);
+  });
+
+  describe("public holidays (issue #167, ADR-0020)", () => {
+    // Heilige Drei Könige (BW/BY/ST) falls on the 2025-01-06 anchor — a Monday,
+    // inside the Mon-Fri pattern and inside a 14-day horizon from NOW.
+    const HEILIGE_DREI_KOENIGE = ANCHOR_DATE;
+
+    it("does not escalate a both-absent day that is a derived public holiday", async () => {
+      const { deps } = createFakes({
+        bundesland: "BY",
+        absences: [
+          makeAbsence({
+            id: "a1",
+            memberId: MEMBER_1_ID,
+            startDate: HEILIGE_DREI_KOENIGE,
+            endDate: HEILIGE_DREI_KOENIGE,
+          }),
+          makeAbsence({
+            id: "a2",
+            memberId: MEMBER_2_ID,
+            startDate: HEILIGE_DREI_KOENIGE,
+            endDate: HEILIGE_DREI_KOENIGE,
+          }),
+        ],
+      });
+
+      const result = await runAtRiskEscalation(deps, {
+        householdId: HOUSEHOLD_ID,
+        horizonDays: 14,
+      });
+      expect(result.escalations).toEqual([]);
+    });
+
+    it("still escalates the same both-absent day when no bundesland is set", async () => {
+      const { deps } = createFakes({
+        absences: [
+          makeAbsence({
+            id: "a1",
+            memberId: MEMBER_1_ID,
+            startDate: HEILIGE_DREI_KOENIGE,
+            endDate: HEILIGE_DREI_KOENIGE,
+          }),
+          makeAbsence({
+            id: "a2",
+            memberId: MEMBER_2_ID,
+            startDate: HEILIGE_DREI_KOENIGE,
+            endDate: HEILIGE_DREI_KOENIGE,
+          }),
+        ],
+      });
+
+      const result = await runAtRiskEscalation(deps, {
+        householdId: HOUSEHOLD_ID,
+        horizonDays: 14,
+      });
+      expect(result.escalations.map((e) => e.date)).toEqual([HEILIGE_DREI_KOENIGE]);
+    });
   });
 });

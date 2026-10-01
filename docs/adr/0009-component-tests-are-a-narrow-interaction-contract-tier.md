@@ -7,12 +7,14 @@ React components were left to manual review plus the one Playwright smoke path, 
 non-trivial *pure* display logic extracted and unit-tested. A component library changes that
 calculus for a small, specific set of primitives.
 
-**A narrow component-test tier now exists.** Four primitives — `Dialog`, `SegmentedControl`,
-`DateField`, `DateRangeField` — carry automated tests for their interaction and accessibility
-contract: focus trap / Escape / focus-restore on the dialog, roving tabindex and arrow-key nav
-on the segmented control, and `minValue` / `maxValue` enforcement (including the four-week
-booking cap) on the date fields. These are the primitives where the app's own configuration of
-RAC — not RAC's internals — is load-bearing and easy to regress silently in a refactor.
+**A narrow component-test tier now exists.** Five primitives — `Dialog`, `SegmentedControl`,
+`DateField`, `DateRangeField`, `Select` (added with issue #167) — carry automated tests for
+their interaction and accessibility contract: focus trap / Escape / focus-restore on the
+dialog, roving tabindex and arrow-key nav on the segmented control, `minValue` / `maxValue`
+enforcement (including the four-week booking cap) on the date fields, and open / select / close
+/ value-reported / label-association on the select. These are the primitives where the app's own
+configuration of RAC — not RAC's internals — is load-bearing and easy to regress silently in a
+refactor.
 
 **Everything else stays untested at the component level.** No tests for feature-composed
 components, screens, or pages. No visual, variant, or snapshot coverage. No `axe-core` or other

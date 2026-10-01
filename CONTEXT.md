@@ -10,7 +10,9 @@ responsible for collecting their child from childcare each day, by turning
 
 **Household**:
 The single family unit the app serves — its members, its child, its
-childcare pattern and closures. A first-class entity; v1 runs exactly one.
+childcare pattern and closures, and an optional Bundesland (the German
+state whose public holidays feed into its closures — see **Public
+holiday**). A first-class entity; v1 runs exactly one.
 
 **Member**:
 A parent — one of exactly two per household — who signs in and can be held
@@ -35,8 +37,21 @@ _Avoid_: Schedule, recurrence
 A single date on which a weekday the pattern would include has no childcare
 after all — public holiday, facility closed, child off sick. Carries an
 optional free-text reason; no taxonomy. A multi-day closure (a holiday week)
-is just several Closure rows, not a range.
+is just several Closure rows, not a range. A Closure's *provenance* — hand-
+entered by a parent, or derived from the household's Bundesland (see
+**Public holiday**) — is a separate `kind`, not a taxonomy on the free-text
+reason: every Closure still means the same thing, no pickup needed.
 _Avoid_: Holiday, day off
+
+**Public holiday**:
+A Closure derived, never stored, from the household's optional Bundesland
+setting: the state's public holidays on dates the childcare pattern in
+effect then would otherwise include. Behaves exactly like any other
+Closure — no pickup, no domain Day state of its own — styled distinctly in
+the UI so a parent can see why the day is closed, and not editable: a
+manual Closure on the same date always wins. Only state-wide holidays are
+derived; a municipality-scoped one (Mariä Himmelfahrt in Bayern,
+Fronleichnam in parts of Sachsen/Thüringen) is still entered by hand.
 
 **Childcare day**:
 A concrete date the child needs collecting: included by the childcare
@@ -121,4 +136,6 @@ How the UI labels a date that has no childcare because of an explicit
 `Closure`. It is a presentation-only affordance — the domain has no
 "Closed" state, only `n/a` for any non-childcare date. `DayDetail` shows
 the closure's free-text reason if one was given; the grid cell and list
-row keep a generic line.
+row keep a generic line. A **Public holiday** closure is the same `Closed`
+affordance with its own styling and copy ("Holiday" pill, "Public holiday
+— {name}") rather than the generic one — still not a separate Day state.

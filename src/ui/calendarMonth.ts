@@ -19,6 +19,7 @@ import {
   type CalendarDate,
   type ChildcarePattern,
   type Closure,
+  type ClosureKind,
   childcareDayInputs,
   type DayState,
   type DayStateReason,
@@ -82,6 +83,12 @@ export interface CalendarDayView {
   readonly narrative: string;
   /** The closure's free-text reason, when this day is `closed` and one was entered. */
   readonly closureReason?: string;
+  /**
+   * The closing closure's provenance, when this day is `closed` (issue #167,
+   * ADR-0020): `"manual"` for a parent's own entry, `"public-holiday"` for one
+   * derived from the household's Bundesland. Undefined for every other day.
+   */
+  readonly closureKind?: ClosureKind;
   /**
    * Full date + state, for a `DayCell`'s screen-reader label — the visible grid
    * is otherwise a wall of bare numbers. `""` for the adjacent-month blanks.
@@ -224,12 +231,17 @@ interface DescribeDayParams {
   readonly openRequest: PickupRequest | null;
   /** `id → display name`; falls back to a generic phrase when a member is unknown. */
   readonly nameOf: (id: string) => string;
+  /** The closing closure's kind, when `displayState` is `"closed"` (issue #167). */
+  readonly closureKind?: ClosureKind;
 }
 
 /**
  * The `{ whoLabel, narrative }` copy for a day. The `n/a` trio (`closed` / `off`
  * / `quiet`) is disambiguated by `displayState`; every contested state's copy is
  * keyed off the `dayState()` `reason` so the pill and the sentence can't drift.
+ * A `closed` day carrying a derived public-holiday closure (issue #167,
+ * ADR-0020) gets its own copy so a parent can see *why* — a manual closure's
+ * copy stays generic, the free-text reason is `DayDetail`-only.
  */
 function describeDay({
   displayState,
@@ -237,9 +249,12 @@ function describeDay({
   assignment,
   openRequest,
   nameOf,
+  closureKind,
 }: DescribeDayParams): DayCopy {
   if (displayState === "closed") {
-    return { whoLabel: "closed", narrative: "No childcare on this day." };
+    return closureKind === "public-holiday"
+      ? { whoLabel: "holiday", narrative: "Public holiday — no childcare." }
+      : { whoLabel: "closed", narrative: "No childcare on this day." };
   }
   if (displayState === "off") {
     return { whoLabel: "", narrative: "Not a childcare day." };
@@ -403,13 +418,16 @@ export function buildCalendarMonth({
       now,
     );
     const displayState = dayDisplayState({ dayState: state, isPatternWeekday, hasClosure });
-    const closureReason = closureByDate.get(date)?.reason;
+    const closure = closureByDate.get(date);
+    const closureReason = closure?.reason;
+    const closureKind = closure ? (closure.kind ?? "manual") : undefined;
     const { whoLabel, narrative } = describeDay({
       displayState,
       reason,
       assignment,
       openRequest,
       nameOf,
+      closureKind,
     });
 
     days.push({
@@ -422,6 +440,7 @@ export function buildCalendarMonth({
       whoLabel,
       narrative,
       closureReason,
+      closureKind,
       ariaLabel: inMonth ? dayAriaLabel(date, displayState, whoLabel) : "",
     });
   }

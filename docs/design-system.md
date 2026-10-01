@@ -198,6 +198,14 @@ A UI-only display state, never a domain `Day state`. Surfaces on:
 
 Grid cell + list row keep a **generic** line; only `DayDetail` surfaces the free-text reason.
 
+**Public-holiday variant (issue #167, ADR-0020).** A derived public-holiday closure is the same
+`closed` display state — no new domain or display state — styled distinctly so a parent can see
+*why*: `DayCell` gets a violet tint + a star badge via an `isHoliday` modifier orthogonal to
+`state` (the same way `isToday` is); `StatePill` reads "Holiday" instead of "Closed"; `DayDetail`'s
+line reads "Public holiday — {name}" instead of "Reason given: …". The `Legend` keeps its 4
+entries unchanged — the holiday name in `DayDetail` / the List row is the explanation, not a new
+legend swatch. Settings shows derived holidays in their own read-only block, with no Edit/Remove.
+
 ### P1 — feature-composed (documented lighter in #30, built with their features)
 
 `CalendarGrid`, `DayCell`, `MonthPager`, `MonthPicker`, `Legend`, `ListRow`, `RequestCard`,

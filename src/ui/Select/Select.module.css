@@ -1,0 +1,142 @@
+/*
+ * Select — label + dropdown trigger + popover listbox. The label / optional /
+ * description / error rules are shared with TextField / DateField via
+ * `composes:` from `../field.module.css`. Consumes ONLY semantic tokens
+ * (tokens.css). Interaction state via RAC's `[data-*]` attributes, never
+ * render-prop booleans. Trigger height matches Button/DateField (2.5rem). The
+ * popover sits at `--z-popover` so it clears the modal / scrim layer
+ * (docs/design-system.md Token model).
+ */
+
+.field {
+  composes: field from "../field.module.css";
+}
+
+.label {
+  composes: label from "../field.module.css";
+}
+
+.optional {
+  composes: optional from "../field.module.css";
+}
+
+.description {
+  composes: description from "../field.module.css";
+}
+
+.error {
+  composes: error from "../field.module.css";
+}
+
+/* --- trigger button --- */
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: 2.5rem;
+  padding-block: var(--space-4);
+  padding-inline: var(--space-12);
+  border: var(--border) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+/* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
+.trigger[data-focus-visible] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-border-strong);
+}
+
+.trigger[data-invalid] {
+  border-color: var(--color-at-risk-solid);
+}
+
+.trigger[data-disabled] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+
+.value[data-placeholder] {
+  color: var(--color-text-placeholder);
+}
+
+.chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.trigger[data-open] .chevron {
+  color: var(--color-text);
+}
+
+/* --- popover + listbox --- */
+.popover {
+  z-index: var(--z-popover);
+  width: var(--trigger-width);
+  min-width: var(--trigger-width);
+  padding: var(--space-4);
+  border: var(--border) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.listbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding-block: var(--space-8);
+  padding-inline: var(--space-8);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.optionLabel {
+  flex: 1;
+}
+
+.check {
+  flex: none;
+  visibility: hidden;
+  color: var(--color-accent);
+}
+
+.option[data-selected] .check {
+  visibility: visible;
+}
+
+.option[data-focus-visible],
+.option[data-hovered] {
+  background: var(--color-accent-surface);
+  outline: none;
+}
+
+.option[data-disabled] {
+  color: var(--color-text-placeholder);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

@@ -94,8 +94,14 @@ describe("ClosureRepository", () => {
     await repos.closures.save(makeClosure({ id: "c2", date: "2025-01-20" }));
 
     expect(await repos.closures.listByHousehold(HOUSEHOLD_ID)).toEqual([
-      { id: "c2", householdId: HOUSEHOLD_ID, date: "2025-01-20" },
-      { id: "c1", householdId: HOUSEHOLD_ID, date: "2025-02-10", reason: "Staff day" },
+      { id: "c2", householdId: HOUSEHOLD_ID, date: "2025-01-20", kind: "manual" },
+      {
+        id: "c1",
+        householdId: HOUSEHOLD_ID,
+        date: "2025-02-10",
+        reason: "Staff day",
+        kind: "manual",
+      },
     ]);
   });
 
@@ -107,6 +113,7 @@ describe("ClosureRepository", () => {
       householdId: HOUSEHOLD_ID,
       date: "2025-02-10",
       reason: "Closed",
+      kind: "manual",
     });
     expect(await repos.closures.findByDate(HOUSEHOLD_ID, "2025-02-11")).toBeNull();
   });
@@ -116,7 +123,13 @@ describe("ClosureRepository", () => {
     await repos.closures.save(makeClosure({ id: "c1", date: "2025-02-11", reason: "Corrected" }));
 
     expect(await repos.closures.listByHousehold(HOUSEHOLD_ID)).toEqual([
-      { id: "c1", householdId: HOUSEHOLD_ID, date: "2025-02-11", reason: "Corrected" },
+      {
+        id: "c1",
+        householdId: HOUSEHOLD_ID,
+        date: "2025-02-11",
+        reason: "Corrected",
+        kind: "manual",
+      },
     ]);
   });
 

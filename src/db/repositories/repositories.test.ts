@@ -104,6 +104,14 @@ describe("HouseholdRepository", () => {
     expect((await repos.households.findById(HOUSEHOLD_ID))?.name).toBe("Renamed");
   });
 
+  it("round-trips bundesland, including back to unset (issue #167)", async () => {
+    await repos.households.save(makeHousehold({ bundesland: "BY" }));
+    expect((await repos.households.findById(HOUSEHOLD_ID))?.bundesland).toBe("BY");
+
+    await repos.households.save(makeHousehold({}));
+    expect((await repos.households.findById(HOUSEHOLD_ID))?.bundesland).toBeUndefined();
+  });
+
   it("ignores memberIds and childId on save — membership is the other repos'", async () => {
     // `Household` is a view over three tables; `save()` owns only its own row.
     // Handing it a different membership must not rewrite, reorder or orphan the

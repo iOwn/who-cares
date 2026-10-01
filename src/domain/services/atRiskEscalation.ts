@@ -34,6 +34,7 @@ import type {
   ChildcarePatternRepository,
   Clock,
   ClosureRepository,
+  HouseholdRepository,
   MemberRepository,
   Notification,
   PickupRequestRepository,
@@ -46,6 +47,7 @@ import {
   DAY_AT_RISK_ESCALATED_EVENT,
 } from "./notificationCatalogue";
 import { eachDateInclusive, todayOf } from "./pickupRequestGeneration";
+import { mergeClosures, publicHolidayClosures } from "./publicHolidays";
 
 /** How far forward `runAtRiskEscalation` scans by default, in days. */
 export const DEFAULT_ESCALATION_HORIZON_DAYS = 28;
@@ -137,6 +139,14 @@ export interface AtRiskEscalationDeps {
   readonly members: MemberRepository;
   readonly childcarePattern: ChildcarePatternRepository;
   readonly closures: ClosureRepository;
+  /**
+   * Resolves the household's `bundesland` so a public holiday inside the scan
+   * window is treated exactly like a stored closure (ADR-0020, issue #167) —
+   * never at-risk, never escalated. The cron handler already builds this deps
+   * object from `createRepositories(db)` (`src/app/api/cron/at-risk/route.ts`),
+   * which carries `households`, so adding this field changed no call site.
+   */
+  readonly households: HouseholdRepository;
   readonly absences: AbsenceRepository;
   readonly pickupRequests: PickupRequestRepository;
   readonly assignments: AssignmentRepository;
@@ -192,7 +202,22 @@ export async function runAtRiskEscalation(
   const horizonEnd = addDays(today, horizonDays);
 
   const pattern = await deps.childcarePattern.findByHousehold(householdId);
-  const closures = await deps.closures.listByHousehold(householdId);
+  const storedClosures = await deps.closures.listByHousehold(householdId);
+  // Public holidays (ADR-0020, issue #167) are derived, never stored, and
+  // merged in here so a holiday inside the scan window is never at-risk.
+  const household = await deps.households.findById(householdId);
+  const closures = household?.bundesland
+    ? mergeClosures(
+        storedClosures,
+        publicHolidayClosures({
+          householdId,
+          state: household.bundesland,
+          pattern,
+          from: today,
+          to: horizonEnd,
+        }),
+      )
+    : storedClosures;
   const absences = await deps.absences.listByHousehold(householdId);
   const assignments = await deps.assignments.listByHousehold(householdId);
   const requests = await deps.pickupRequests.listByHousehold(householdId);

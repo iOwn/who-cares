@@ -7,7 +7,11 @@
  * more. Server Actions and the Vercel Cron handler are the callers.
  */
 
-export { closureAddedNotification, patternChangedNotification } from "./copy";
+export {
+  closureAddedNotification,
+  patternChangedNotification,
+  publicHolidaysChangedNotification,
+} from "./copy";
 export { dispatchAll, dispatchNotification } from "./dispatch";
 export { getCronSecret, getGmailConfig, getVapidConfig } from "./env";
 export { createNotifier } from "./notifier";

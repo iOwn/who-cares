@@ -55,6 +55,42 @@
   color: var(--color-text-muted);
 }
 
+/* --- derived public-holiday block (issue #167) — read-only, no Edit/Remove --- */
+.holidayList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.holidayRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-12);
+}
+
+.holidayText {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.holidayDate {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.holidayName {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-holiday-text);
+}
+
 .closureForm {
   padding: var(--space-12);
 }

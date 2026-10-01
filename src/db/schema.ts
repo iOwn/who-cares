@@ -34,12 +34,33 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 
-/** The single family unit the app serves; v1 runs exactly one. */
-export const households = pgTable("households", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+/**
+ * The single family unit the app serves; v1 runs exactly one.
+ *
+ * `bundesland` (issue #167, ADR-0020) is the ISO 3166-2:DE code of the German
+ * state whose public holidays are derived into this household's closures at
+ * read time — nullable, no default: `NULL` reproduces pre-#167 behaviour
+ * exactly (no derived holidays). The `check` pins it to the 16 real codes,
+ * the same shape as `members_slot_range` / `assignments_source_valid` below.
+ */
+export const households = pgTable(
+  "households",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    bundesland: text("bundesland"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      "households_bundesland_valid",
+      sql`${table.bundesland} is null or ${table.bundesland} in (
+        'BW', 'BY', 'BE', 'BB', 'HB', 'HH', 'HE', 'MV',
+        'NI', 'NW', 'RP', 'SL', 'SN', 'ST', 'SH', 'TH'
+      )`,
+    ),
+  ],
+);
 
 /**
  * A parent — one of exactly two per household. `slot` is the member's position

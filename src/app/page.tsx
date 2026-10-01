@@ -3,6 +3,7 @@ import { getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
+import { mergeClosures, publicHolidayClosures, publicHolidayWindow } from "@/domain";
 import { AppShell } from "./AppShell";
 import { HIDE_WEEKENDS_COOKIE, parseHideWeekends } from "./calendarPreferences";
 import { SignInScreen } from "./SignInScreen";
@@ -19,18 +20,35 @@ export default async function Home() {
   const hideWeekends = parseHideWeekends(cookieStore.get(HIDE_WEEKENDS_COOKIE)?.value);
 
   const repos = createRepositories(db);
-  const [pattern, closures, members, absences, assignments, pickupRequests] = await Promise.all([
-    repos.childcarePattern.findByHousehold(current.household.id),
-    repos.closures.listByHousehold(current.household.id),
-    repos.members.listByHousehold(current.household.id),
-    repos.absences.listByHousehold(current.household.id),
-    repos.assignments.listByHousehold(current.household.id),
-    repos.pickupRequests.listByHousehold(current.household.id),
-  ]);
+  const [pattern, storedClosures, members, absences, assignments, pickupRequests] =
+    await Promise.all([
+      repos.childcarePattern.findByHousehold(current.household.id),
+      repos.closures.listByHousehold(current.household.id),
+      repos.members.listByHousehold(current.household.id),
+      repos.absences.listByHousehold(current.household.id),
+      repos.assignments.listByHousehold(current.household.id),
+      repos.pickupRequests.listByHousehold(current.household.id),
+    ]);
 
   // One server instant, formatted two ways — the calendar corrects both to the
   // viewer's clock after mount.
   const serverNow = new Date();
+  const today = serverNow.toISOString().slice(0, 10);
+
+  // Public holidays (issue #167, ADR-0020) are derived, never stored, and
+  // merged in here — the one place the whole client calendar (Grid, List,
+  // DayDetail, the "+ I'm out" impact preview) loads its closures from.
+  const closures = current.household.bundesland
+    ? mergeClosures(
+        storedClosures,
+        publicHolidayClosures({
+          householdId: current.household.id,
+          state: current.household.bundesland,
+          pattern,
+          ...publicHolidayWindow(today),
+        }),
+      )
+    : storedClosures;
 
   return (
     <AppShell
@@ -42,7 +60,7 @@ export default async function Home() {
       absences={absences}
       assignments={assignments}
       pickupRequests={pickupRequests}
-      initialToday={serverNow.toISOString().slice(0, 10)}
+      initialToday={today}
       initialNow={serverNow.toISOString()}
       hideWeekends={hideWeekends}
     />

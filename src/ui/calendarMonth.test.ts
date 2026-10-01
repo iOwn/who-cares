@@ -89,6 +89,50 @@ describe("buildCalendarMonth", () => {
     expect(byDate.get("2025-01-15")?.isToday).toBe(true);
   });
 
+  it("gives a derived public-holiday closure its own copy (issue #167) while staying displayState closed", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [
+        makeClosure({
+          id: "holiday:BY:2025-01-06",
+          date: "2025-01-06",
+          reason: "Heilige Drei Könige",
+          kind: "public-holiday",
+        }),
+      ],
+      today: "2025-01-15",
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-06")).toMatchObject({
+      displayState: "closed",
+      closureKind: "public-holiday",
+      whoLabel: "holiday",
+      narrative: "Public holiday — no childcare.",
+      closureReason: "Heilige Drei Könige",
+    });
+  });
+
+  it("gives a manual closure the generic closed copy and kind 'manual'", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [makeClosure({ date: "2025-01-08", reason: "Staff day" })],
+      today: "2025-01-15",
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-08")).toMatchObject({
+      displayState: "closed",
+      closureKind: "manual",
+      whoLabel: "closed",
+      narrative: "No childcare on this day.",
+    });
+  });
+
   it("gives in-month cells a full date + state aria-label, blanks none", () => {
     const view = buildCalendarMonth({
       year: 2025,

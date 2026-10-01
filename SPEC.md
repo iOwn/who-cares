@@ -142,6 +142,12 @@ specified below.
   collecting), effective from a chosen date, without altering how past dates are derived.
 - As a parent, I can add a closure (single date, optional free-text reason) that removes a
   childcare day the pattern would otherwise include.
+- As a parent, I can set the household's Bundesland (German state); its public holidays then
+  show up as closed days automatically, styled distinctly from a manual closure so I can see
+  why. Only state-wide holidays are derived — a municipality-only one (Mariä Himmelfahrt in
+  Bayern, Fronleichnam in parts of Sachsen/Thüringen) I still add as a manual closure. Derived
+  holidays aren't editable; a manual closure on the same date always wins. The other parent is
+  notified when I change the Bundesland, the same as any other change here.
 
 **Absence entry**
 - As a parent, I can declare a one-off absence over a date range, with an optional label and

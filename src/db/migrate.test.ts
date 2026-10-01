@@ -113,6 +113,31 @@ describe("applyMigrations", () => {
     expect(result.rows).toEqual([]);
   });
 
+  it("adds households.bundesland as a nullable column with a 16-code check constraint (issue #167)", async () => {
+    const column = await db.$client.query<{ is_nullable: string; column_default: string | null }>(
+      `SELECT is_nullable, column_default FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'households' AND column_name = 'bundesland'`,
+    );
+    expect(column.rows).toEqual([{ is_nullable: "YES", column_default: null }]);
+
+    await expect(
+      db.$client.query(
+        `INSERT INTO households (id, name, bundesland) VALUES ('h-bad', 'Bad', 'XX')`,
+      ),
+    ).rejects.toThrow(/households_bundesland_valid/);
+
+    // The check itself is immediate (not deferred like the member/child-graph
+    // triggers — migration `0001`), so a valid value passes it inside a
+    // transaction this test then rolls back, never touching the two-member /
+    // one-child invariant a bare household row would otherwise violate at
+    // COMMIT.
+    await db.$client.exec(
+      `BEGIN;
+       INSERT INTO households (id, name, bundesland) VALUES ('h-ok', 'OK', 'BY');
+       ROLLBACK;`,
+    );
+  });
+
   it("creates the deferred household-graph constraint triggers", async () => {
     const result = await db.$client.query<{ tgname: string }>(
       `SELECT tgname FROM pg_trigger WHERE NOT tgisinternal ORDER BY tgname`,

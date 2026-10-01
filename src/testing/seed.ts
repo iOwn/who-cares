@@ -49,7 +49,7 @@ export interface SeedReport {
   readonly skipped: readonly UnpersistedKind[];
 }
 
-const INSERT_HOUSEHOLD = `INSERT INTO households (id, name) VALUES ($1, $2)`;
+const INSERT_HOUSEHOLD = `INSERT INTO households (id, name, bundesland) VALUES ($1, $2, $3)`;
 const INSERT_MEMBER = `INSERT INTO members (id, household_id, slot, name, email) VALUES ($1, $2, $3, $4, $5)`;
 const INSERT_CHILD = `INSERT INTO children (id, household_id, name) VALUES ($1, $2, $3)`;
 const INSERT_PATTERN_VERSION = `INSERT INTO childcare_pattern_versions (id, household_id, weekdays, effective_from) VALUES ($1, $2, $3, $4)`;
@@ -63,7 +63,7 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
     graph;
 
   await db.$client.transaction(async (tx) => {
-    await tx.query(INSERT_HOUSEHOLD, [household.id, household.name]);
+    await tx.query(INSERT_HOUSEHOLD, [household.id, household.name, household.bundesland ?? null]);
     // Slot is the member's index in `Household.memberIds`, 1-based — the one
     // place the tuple order becomes a stored column.
     for (const [index, member] of members.entries()) {

@@ -12,7 +12,8 @@ into a final TypeScript signature following the conventions in
 [`design-system.md`](./design-system.md) §"API & authoring conventions"; this doc does **not**
 pin 22 signatures.
 
-**Counts: 22 P0 primitives, 13 P1 feature-composed components.**
+**Counts: 22 P0 primitives from the original #30 resolution, 13 P1 feature-composed components,
+plus `Select` (#23) added for issue #167.**
 
 ## Display state vs domain Day state
 
@@ -184,6 +185,16 @@ Inline + block loading. Calendar month load, inbox load; also the pull-to-refres
 
 Icon + line + optional action. List (no notable days), Inbox (all caught up), first-run (no
 pattern set). Props: `icon, title, description?, action?`.
+
+### 23. Select
+
+Label + single-choice dropdown + optional hint + error. Settings — the household Bundesland
+picker (issue #167). Added outside the original #30 resolution: none of the 22 primitives above
+covers a closed-set dropdown (`ToggleGroup` is a multi/single *key row*, too tall for 16 long
+state names; ToggleGroup's sibling `WeekdayPicker` tops out at 7 short keys). RAC `Select` +
+`Button` + `Popover` + `ListBox`; popover portals to body at `--z-popover`, same as `DateField`.
+Props: `label, options ({value, label}[]), value, defaultValue, onChange, placeholder,
+description, errorMessage, isRequired, isOptional, isDisabled`.
 
 ## P1 — feature-composed (documented lighter, built with their features)
 

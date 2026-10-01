@@ -37,6 +37,9 @@ const STATE_ICON: Partial<Record<DayDisplayState, string>> = {
   closed: "–",
 };
 
+/** A derived public-holiday closure's badge (issue #167, ADR-0020) — distinct from a manual closure's "–". */
+const HOLIDAY_ICON = "★";
+
 const cell = cva(styles.base, {
   variants: {
     state: {
@@ -56,10 +59,17 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
   dayOfMonth: number;
   /** The UI display state. */
   state: DayDisplayState;
-  /** The one-line label under the date (assignee / "asked …" / "closed"). */
+  /** The one-line label under the date (assignee / "asked …" / "closed" / "holiday"). */
   whoLabel?: string;
   /** Heavy border + shadow — the real current date. Orthogonal to `state`. */
   isToday?: boolean;
+  /**
+   * A derived public-holiday closure, not a manual one (issue #167,
+   * ADR-0020) — only meaningful when `state` is `"closed"`. Orthogonal to
+   * `state`, the same way `isToday` is: a distinct badge glyph + tint over
+   * the closed treatment, so a parent can see *why* the day is closed.
+   */
+  isHoliday?: boolean;
   /** Full date + state, for the screen-reader label on the root element. */
   ariaLabel?: string;
   /** When set, the cell is a pressable RAC `Button`. */
@@ -70,11 +80,26 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
 }
 
 export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
-  { dayOfMonth, state, whoLabel, isToday, ariaLabel, onPress, isDisabled, className, style },
+  {
+    dayOfMonth,
+    state,
+    whoLabel,
+    isToday,
+    isHoliday,
+    ariaLabel,
+    onPress,
+    isDisabled,
+    className,
+    style,
+  },
   ref,
 ) {
-  const icon = STATE_ICON[state];
-  const classes = cx(cell({ state, today: isToday }), className);
+  const icon = isHoliday && state === "closed" ? HOLIDAY_ICON : STATE_ICON[state];
+  const classes = cx(
+    cell({ state, today: isToday }),
+    isHoliday && state === "closed" && styles.holiday,
+    className,
+  );
 
   // When `ariaLabel` is given it carries the full date + state, so the visible
   // number / "who" line become decorative to a screen reader (they'd otherwise
