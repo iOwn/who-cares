@@ -128,6 +128,32 @@ const cases: readonly Case[] = [
     reason: "no-one-assigned",
   },
 
+  // --- third-party cover (ADR-0023): not a member, so never absent ---
+  {
+    name: "third-party cover, nobody away",
+    facts: facts({
+      assignment: makeAssignment({ date: DAY, assigneeId: null, source: "third-party" }),
+    }),
+    now: NOW,
+    expected: "Resolved",
+    reason: "third-party-covers",
+  },
+  {
+    name: "third-party cover while both parents are away",
+    facts: facts({
+      assignment: makeAssignment({
+        date: DAY,
+        assigneeId: null,
+        source: "third-party",
+        thirdPartyLabel: "Gran",
+      }),
+      absentMemberIds: [A, B],
+    }),
+    now: NOW,
+    expected: "Resolved",
+    reason: "third-party-covers",
+  },
+
   // --- both members absent → straight to At-risk, no request raised ---
   {
     name: "both away, no assignment, no request",

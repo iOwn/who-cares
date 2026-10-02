@@ -30,6 +30,7 @@ import {
   PICKUP_REQUEST_WITHDRAWN_EVENT,
   planAtRiskEscalations,
   recordAbsence,
+  THIRD_PARTY_COVER_EVENT,
 } from "@/domain";
 import {
   ANCHOR_DATE,
@@ -71,6 +72,7 @@ const CATALOGUE: readonly Row[] = [
     recipients: "single-non-actor",
   },
   { n: 7, event: DIRECT_CLAIM_EVENT, recipients: "single-non-actor" },
+  { n: 13, event: THIRD_PARTY_COVER_EVENT, recipients: "single-non-actor" },
   { n: 8, event: ASSIGNMENT_STANDS_EVENT, recipients: "single-non-actor" },
   { n: 9, event: DAY_AT_RISK_BOTH_ABSENT_EVENT, recipients: "both" },
   { n: 10, event: DAY_AT_RISK_ESCALATED_EVENT, recipients: "both" },

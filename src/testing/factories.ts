@@ -153,6 +153,7 @@ export function makeAssignment(overrides: Partial<Assignment> = {}): Assignment 
     date: ANCHOR_DATE,
     assigneeId: MEMBER_1_ID,
     source: "direct-claim",
+    thirdPartyLabel: null,
     createdAt: instantOn(ANCHOR_DATE, 9),
     ...overrides,
   };

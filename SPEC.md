@@ -183,8 +183,14 @@ specified below.
 - As a parent, I can claim any childcare day outright — assigned or not — bypassing the
   request flow. The newest claim wins with no confirmation step (ADR-0001); the previously
   assigned parent, if any, is notified after the fact, not asked first.
-- Direct claim is the *only* path back to coverage after a request is Declined or Withdrawn —
+- A direct claim is one of two paths back to coverage after a request is Declined or Withdrawn —
   there's no in-app re-ask.
+
+**Third-party cover**
+- As a parent, I can record "someone else is covering" on a contested day (with an optional
+  free-text name, e.g. "Grandma"). The day becomes Resolved/Sorted even if both of us are away;
+  the other parent is notified. Like a direct claim, the newest action wins with no confirmation
+  and an open request on the day withdraws (ADR-0023).
 
 **At-risk surfacing**
 - A childcare day shows as **Resolved**, **Pending**, **At-risk**, or n/a, computed live, never
@@ -202,7 +208,7 @@ specified below.
   notification per (recipient, event), bundled with the days it covers and sent immediately —
   no window, no queue, no lag (ADR-0018). Where a burst would otherwise span several taps, the
   UI makes it one tap (batch answer, closure date range).
-- Full event catalogue (12 events and their exact recipients): see
+- Full event catalogue (13 events and their exact recipients): see
   the Notification events catalogue decision, linked from `CONTEXT.md`'s revision history /
   the map's Decisions-so-far.
 - Copy tone is plain, calm, and factual — never urgency- or guilt-toned, even for at-risk.
@@ -230,8 +236,8 @@ specified below.
 - Any automatic reassignment or load-balancing logic — every change of assignee is an explicit
   human action (direct claim, or accepting a request).
 - Fairness / pickup-count ledger.
-- Third-party assignee (grandparent / sitter as a named non-login stand-in) — v1 assignee is a
-  Member or nobody.
+- A persisted third-party entity (saved helpers, contact details, login) or notifying the helper —
+  a third-party cover is only a free-text label on the day's assignment (ADR-0023).
 - Public multi-tenant signup — v1 is a single hard-wired household via a deploy-time allowlist.
 - Re-ask / "ask again" after a Decline or Withdrawn request — would reintroduce an in-app
   negotiation loop; direct claim already covers it.

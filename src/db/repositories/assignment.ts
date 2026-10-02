@@ -18,6 +18,7 @@ function toAssignment(row: {
   date: string;
   assigneeId: string | null;
   source: string;
+  thirdPartyLabel: string | null;
   createdAt: Date;
 }): Assignment {
   return {
@@ -26,6 +27,7 @@ function toAssignment(row: {
     date: row.date,
     assigneeId: row.assigneeId,
     source: row.source as Assignment["source"],
+    thirdPartyLabel: row.thirdPartyLabel,
     createdAt: row.createdAt,
   };
 }
@@ -37,6 +39,7 @@ export function createAssignmentRepository(db: DbExecutor): AssignmentRepository
     date: assignments.date,
     assigneeId: assignments.assigneeId,
     source: assignments.source,
+    thirdPartyLabel: assignments.thirdPartyLabel,
     createdAt: assignments.createdAt,
   };
 
@@ -66,6 +69,7 @@ export function createAssignmentRepository(db: DbExecutor): AssignmentRepository
         date: assignment.date,
         assigneeId: assignment.assigneeId,
         source: assignment.source,
+        thirdPartyLabel: assignment.thirdPartyLabel,
         createdAt: assignment.createdAt,
       };
       await db

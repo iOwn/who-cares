@@ -53,3 +53,11 @@
   gap: var(--space-8);
   margin-top: var(--space-4);
 }
+
+/* Third-party cover (#183): the inline "Who?" field + Save. */
+.cover {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-8);
+}

@@ -43,6 +43,7 @@ import {
   PICKUP_REQUEST_DECLINED_EVENT,
   PICKUP_REQUEST_WITHDRAWN_EVENT,
 } from "./pickupRequestResolution";
+import { THIRD_PARTY_COVER_EVENT } from "./thirdPartyCover";
 
 /** How many `subjectLabel`s a bundled body lists before it says "and N more". */
 export const MAX_LISTED_SUBJECTS = 5;
@@ -112,6 +113,11 @@ const BUNDLE_COPY: Readonly<Record<string, BundleCopy>> = {
     title: (count) => `You're off pickup for ${count} days`,
     body: (count, days) =>
       `The other parent claimed pickup${onDays(days)}, so you're no longer down for those ${count} days.`,
+  },
+  [THIRD_PARTY_COVER_EVENT]: {
+    title: (count) => `Cover arranged for ${count} days`,
+    body: (count, days) =>
+      `The other parent arranged for someone else to do pickup${onDays(days)}, so those ${count} days are covered.`,
   },
   [ASSIGNMENT_STANDS_EVENT]: {
     title: (count) => `You're still on pickup for ${count} days`,

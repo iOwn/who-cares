@@ -230,7 +230,7 @@ export interface PickupRequest {
 }
 
 /** How an assignment came to be. */
-export type AssignmentSource = "accepted-request" | "direct-claim";
+export type AssignmentSource = "accepted-request" | "direct-claim" | "third-party";
 
 /**
  * The record of who is responsible for collecting the child on a given
@@ -243,8 +243,13 @@ export interface Assignment {
   readonly id: string;
   readonly householdId: string;
   readonly date: CalendarDate;
-  /** A member, or `null` for nobody. */
+  /** A member, or `null` for nobody — always `null` for a `third-party` cover. */
   readonly assigneeId: string | null;
   readonly source: AssignmentSource;
+  /**
+   * Who the third party is ("Grandma"), free text — set only on a `third-party`
+   * assignment, and optional there. `null` otherwise.
+   */
+  readonly thirdPartyLabel: string | null;
   readonly createdAt: Date;
 }

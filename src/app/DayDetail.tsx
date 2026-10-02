@@ -4,12 +4,17 @@ import { House } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "@/domain";
-import { isPastDate } from "@/domain";
+import { isPastDate, MAX_THIRD_PARTY_LABEL_LENGTH } from "@/domain";
 import type { CalendarDayView } from "@/ui";
-import { Button, Callout, Dialog, isStatusDisplayState, StatePill } from "@/ui";
+import { Button, Callout, Dialog, isStatusDisplayState, StatePill, TextField } from "@/ui";
 import styles from "./DayDetail.module.css";
 import { longDate, shortDate } from "./formatCalendarDate";
-import { cancelAbsenceAction, claimDayAction, withdrawRequestAction } from "./requestActions";
+import {
+  arrangeThirdPartyCoverAction,
+  cancelAbsenceAction,
+  claimDayAction,
+  withdrawRequestAction,
+} from "./requestActions";
 
 /**
  * `DayDetail` (the design-system's `DayDetailSheet`, #50) — the modal that opens
@@ -90,6 +95,9 @@ export function DayDetail({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Third-party cover (#183): the inline "Who?" field is closed until asked for.
+  const [coverOpen, setCoverOpen] = useState(false);
+  const [coverLabel, setCoverLabel] = useState("");
 
   const myOpenRequest =
     day && currentMemberId && !(today && isPastDate(day.date, today))
@@ -124,7 +132,16 @@ export function DayDetail({
       ? (members.find((m) => m.id === dayAssignment.assigneeId)?.name ?? "the other parent")
       : null;
 
-  const showActions = myOpenRequest != null || myAbsence != null || canDeclare || canClaim;
+  // Third-party cover (#183, ADR-0023): offered on the same contested days as a
+  // claim, but — unlike a claim — also to a member who is away that day: the
+  // absent parent arranging a grandparent is the main use case.
+  const canArrangeCover =
+    day != null &&
+    !!currentMemberId &&
+    (CLAIMABLE_DISPLAY_STATES as readonly string[]).includes(day.displayState);
+
+  const showActions =
+    myOpenRequest != null || myAbsence != null || canDeclare || canClaim || canArrangeCover;
 
   const run = (
     action: () => Promise<{ ok: true; note?: string } | { ok: false; error: string }>,
@@ -146,7 +163,11 @@ export function DayDetail({
       presentation="sheet"
       isOpen={day != null}
       onOpenChange={(open) => {
-        if (!open) setError(null);
+        if (!open) {
+          setError(null);
+          setCoverOpen(false);
+          setCoverLabel("");
+        }
         onOpenChange(open);
       }}
     >
@@ -204,6 +225,28 @@ export function DayDetail({
             </p>
           ) : null}
 
+          {canArrangeCover && coverOpen ? (
+            <form
+              className={styles.cover}
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(() => arrangeThirdPartyCoverAction(day.date, coverLabel));
+              }}
+            >
+              <TextField
+                label="Who?"
+                isOptional
+                value={coverLabel}
+                onChange={setCoverLabel}
+                maxLength={MAX_THIRD_PARTY_LABEL_LENGTH}
+                placeholder="e.g. Grandma"
+              />
+              <Button type="submit" variant="primary" size="sm" isDisabled={pending}>
+                Save
+              </Button>
+            </form>
+          ) : null}
+
           {showActions ? (
             <div className={styles.actions}>
               {myOpenRequest ? (
@@ -229,6 +272,16 @@ export function DayDetail({
               {canDeclare ? (
                 <Button variant="secondary" size="sm" onPress={() => onDeclareAbsence?.(day.date)}>
                   I&rsquo;m out this day
+                </Button>
+              ) : null}
+              {canArrangeCover && !coverOpen ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  isDisabled={pending}
+                  onPress={() => setCoverOpen(true)}
+                >
+                  Someone else is covering
                 </Button>
               ) : null}
               {canClaim ? (
