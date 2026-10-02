@@ -191,28 +191,36 @@ Push payload (`webPushSender` → `sw.js`):
 Not wired yet: a deep-linking push. `sw.js` reads `data.url`, but the server
 payload (`webPushSender`) sends none, so a tapped notification opens `/`.
 
-## App-icon badge (issue #134, ADR-0017)
+## App-icon badge (issues #134, #174, ADR-0017, ADR-0022)
 
-The installed app's icon carries the number of **open pickup requests addressed
-to the member** — the same count the header bell shows, never a broader "unread"
-tally. Two halves keep it right:
+The installed app's icon carries what **needs the member**: open pickup requests
+addressed to them **plus at-risk childcare days in the next 28 days** (a day that
+is also their open request counts once). FYI events — closure added, pattern
+changed, accepted / declined — never add to it. The header bell is **not** the
+same number: it stays requests-only. Two halves keep the icon right:
 
-- **While the app is closed** — `dispatchNotification` reads
-  `pickupRequests.countOpenForRecipient` and puts it on the push as
+- **While the app is closed** — `dispatchNotification` calls
+  `badgeCount(recipientId)` (`loadNeedsAttentionCount`,
+  `src/domain/services/needsAttention.ts`) and puts it on the push as
   `PushMessage.badge`; `sw.js` mirrors it onto the icon in the `push` handler.
-  Every event carries it, not just the request ones, so a withdrawal push clears
-  the badge that withdrawal resolved. The count is read at **dispatch** time, so
-  a bundled batch ships the number that is true as each push goes out.
-- **While the app is open** — `useAppBadge` in `AppShell` re-asserts the server's
-  count on change and on resume (via `useOnResume`, alongside ADR-0016's
-  refresh), so the badge and the bell can never disagree.
+  Every event carries it, so a withdrawal push clears what that withdrawal
+  resolved and an at-risk push (events 9 / 10) lights the icon. Read at
+  **dispatch** time, so a bundled batch ships the number true as each push goes out.
+- **While the app is open** — `page.tsx` computes the same number
+  (`needsAttentionCount`) and passes it to `AppShell` as `iconBadgeCount`;
+  `useAppBadge` re-asserts it on change and on resume (via `useOnResume`,
+  alongside ADR-0016's refresh).
+
+**iOS needs notification permission for the badge.** The prompt lives only on
+the `/settings` push card, so `PushNudge` (`shouldShowPushNudge`) asks an
+installed iOS app whose permission is still `default` to turn it on.
 
 The count → badge rule lives twice: `badgeUpdateFor` (`src/app/appBadge.ts`) and
 `applyAppBadge` (`public/sw.js`), because the worker is a static file and cannot
 import from `src/`. Keep the shared half — clear at zero, floor to an integer —
 in step; they differ on junk input on purpose, since an absent `badge` key means
 "no count was sent" and must leave the icon alone. Android Chrome has no Badging
-API and iOS rejects it without notification permission — both a silent no-op.
+API (nothing to show there) and iOS rejects it without notification permission (see the nudge above) — both a silent no-op.
 
 Related but not push: the installed app also refreshes its data on resume and
 on pull-to-refresh (`RefreshOnResume`, `PullToRefresh`, ADR-0016) — the

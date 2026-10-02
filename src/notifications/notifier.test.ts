@@ -62,15 +62,12 @@ function createFakes() {
     async save() {},
   };
 
-  // The unresolved count each push carries as its app-icon badge (issue #134).
-  const openRequests = { count: 0 };
-  const pickupRequests = {
-    async countOpenForRecipient() {
-      return openRequests.count;
-    },
-  };
+  // The needs-attention count each push carries as its app-icon badge (issues
+  // #134, #174) — a stand-in for `loadNeedsAttentionCount`, tested on its own.
+  const badge = { count: 0 };
+  const badgeCount: (memberId: string) => Promise<number> = async () => badge.count;
 
-  return { emails, pushes, mailer, pushSender, members, pickupRequests, openRequests };
+  return { emails, pushes, mailer, pushSender, members, badgeCount, badge };
 }
 
 const notification = (over: Partial<Notification> = {}): Notification => ({
@@ -215,7 +212,7 @@ describe("dispatchAll — per-action bundling (issue #131)", () => {
 describe("dispatch — the app-icon badge count (issue #134)", () => {
   it("carries the recipient's unresolved count on the push", async () => {
     const f = createFakes();
-    f.openRequests.count = 3;
+    f.badge.count = 3;
 
     await createNotifier(f).notify(notification());
 
@@ -228,7 +225,7 @@ describe("dispatch — the app-icon badge count (issue #134)", () => {
     // what makes it self-correcting: the withdrawal notification itself is what
     // clears the icon the withdrawn request had lit up.
     const f = createFakes();
-    f.openRequests.count = 0;
+    f.badge.count = 0;
 
     await createNotifier(f).notify(notification());
 
@@ -237,11 +234,11 @@ describe("dispatch — the app-icon badge count (issue #134)", () => {
 
   it("reads the count at send time, so a bundle ships the post-action number", async () => {
     const f = createFakes();
-    f.openRequests.count = 1;
+    f.badge.count = 1;
 
     // The count moves between building the notifications and dispatching them,
     // exactly as a post-commit dispatch sees it.
-    f.openRequests.count = 0;
+    f.badge.count = 0;
     await dispatchAll(f, [notification()]);
 
     expect(f.pushes[0].badge).toBe(0);
@@ -253,7 +250,7 @@ describe("dispatch — the app-icon badge count (issue #134)", () => {
     // `badge` makes `sw.js` leave whatever is on the icon alone.
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const f = createFakes();
-    f.pickupRequests.countOpenForRecipient = async () => {
+    f.badgeCount = async () => {
       throw new Error("db down");
     };
 

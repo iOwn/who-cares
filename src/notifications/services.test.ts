@@ -20,6 +20,11 @@ const { createTransport, sendMail } = vi.hoisted(() => {
 vi.mock("nodemailer", () => ({ createTransport }));
 
 import {
+  type AbsenceRepository,
+  type AssignmentRepository,
+  type ChildcarePatternRepository,
+  type ClosureRepository,
+  type HouseholdRepository,
   type Mailer,
   type MemberRepository,
   PICKUP_REQUEST_ACCEPTED_EVENT,
@@ -55,8 +60,8 @@ function repos() {
     async save() {},
     async deleteByEndpoint() {},
   };
-  // Only `countOpenForRecipient` is ever reached from here — it is what
-  // `dispatchNotification` reads for the app-icon badge (issue #134).
+  // Only reads are reached from here: `loadNeedsAttentionCount` loads these for
+  // the app-icon badge (issues #134, #174). Everything is empty, so the count is 0.
   const pickupRequests: PickupRequestRepository = {
     async findById() {
       return null;
@@ -72,7 +77,37 @@ function repos() {
     },
     async save() {},
   };
-  return { members, pushSubscriptions, pickupRequests };
+  return {
+    members,
+    pushSubscriptions,
+    pickupRequests,
+    households: {
+      async findById() {
+        return null;
+      },
+      async save() {},
+    } as unknown as HouseholdRepository,
+    childcarePattern: {
+      async findByHousehold() {
+        return null;
+      },
+    } as unknown as ChildcarePatternRepository,
+    closures: {
+      async listByHousehold() {
+        return [];
+      },
+    } as unknown as ClosureRepository,
+    absences: {
+      async listByHousehold() {
+        return [];
+      },
+    } as unknown as AbsenceRepository,
+    assignments: {
+      async listByHousehold() {
+        return [];
+      },
+    } as unknown as AssignmentRepository,
+  };
 }
 
 beforeEach(() => {

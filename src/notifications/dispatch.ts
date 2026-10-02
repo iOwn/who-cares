@@ -19,7 +19,6 @@ import {
   type Mailer,
   type MemberRepository,
   type Notification,
-  type PickupRequestRepository,
   type PushSender,
 } from "@/domain";
 
@@ -27,8 +26,12 @@ export interface DispatchDeps {
   readonly mailer: Mailer;
   readonly pushSender: PushSender;
   readonly members: MemberRepository;
-  /** Only the badge count is needed here — see the push branch below (#134). */
-  readonly pickupRequests: Pick<PickupRequestRepository, "countOpenForRecipient">;
+  /**
+   * What the app icon shows for a member (#134, #174, ADR-0022): open requests
+   * plus at-risk days. A function, not a repository, so dispatch stays ignorant
+   * of how it is derived.
+   */
+  readonly badgeCount: (memberId: string) => Promise<number>;
 }
 
 /**
@@ -55,7 +58,7 @@ export async function dispatchNotification(
     body: notification.body,
   });
 
-  // The app-icon badge count (issue #134, ADR-0017) rides along with every push,
+  // The app-icon badge count (issues #134 / #174, ADR-0017 / ADR-0022) rides along with every push,
   // not just the request events, which is what makes it self-correcting: a
   // withdrawal push carries the lower count that withdrawal produced.
   //
@@ -69,7 +72,7 @@ export async function dispatchNotification(
   // payload omits the key, and `sw.js` leaves whatever is on the icon alone.
   let badge: number | undefined;
   try {
-    badge = await deps.pickupRequests.countOpenForRecipient(notification.recipientId);
+    badge = await deps.badgeCount(notification.recipientId);
   } catch (error) {
     console.warn(`badge count for ${notification.event} failed`, error);
   }

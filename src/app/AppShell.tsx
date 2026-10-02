@@ -16,6 +16,7 @@ import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
 import { Inbox } from "./Inbox";
 import { InstallPrompt } from "./InstallPrompt";
+import { PushNudge } from "./PushNudge";
 import { usePrefetchRoute } from "./prefetchRoute";
 import { markSettingsOpenedFromApp, sessionStorageOrNull } from "./settings/backNavigation";
 import { useAppBadge } from "./useAppBadge";
@@ -30,6 +31,12 @@ export interface AppShellProps {
   readonly absences: readonly Absence[];
   readonly assignments: readonly Assignment[];
   readonly pickupRequests: readonly PickupRequest[];
+  /**
+   * What the installed app's icon shows (issue #174, ADR-0022): open requests
+   * plus at-risk days, computed on the server by `needsAttentionCount`. Not the
+   * bell's number — the bell stays requests-only.
+   */
+  readonly iconBadgeCount: number;
   /** The real current date as the server saw it (`'YYYY-MM-DD'`, UTC). */
   readonly initialToday: CalendarDate;
   /** The real current instant as the server saw it (ISO). */
@@ -44,8 +51,9 @@ export interface AppShellProps {
  * function props, `Calendar` owns paging state, and the bell toggles the inbox.
  *
  * The bell's count is the number of **open** requests addressed to the current
- * member; the inbox lists those, mounted only while open. That same count is
- * mirrored onto the installed app's icon badge (`useAppBadge`, issue #134).
+ * member; the inbox lists those, mounted only while open. That count is
+ * not what the installed app's icon shows — that is `iconBadgeCount`, which also
+ * counts at-risk days (`useAppBadge`, issues #134, #174).
  */
 export function AppShell({
   childName,
@@ -56,6 +64,7 @@ export function AppShell({
   absences,
   assignments,
   pickupRequests,
+  iconBadgeCount,
   initialToday,
   initialNow,
   hideWeekends,
@@ -72,10 +81,10 @@ export function AppShell({
     [pickupRequests, currentMemberId],
   );
 
-  // The same number the bell shows, mirrored onto the installed app's icon
-  // (issue #134, ADR-0017). Lives here because this is where the count already
-  // is, and it re-renders with fresh requests after every `router.refresh()`.
-  useAppBadge(myOpenRequests.length);
+  // The icon badge (issues #134, #174, ADR-0022): open requests plus at-risk
+  // days, not the bell's number. Computed on the server in `page.tsx`, so it is
+  // fresh after every `router.refresh()`.
+  useAppBadge(iconBadgeCount);
 
   // Settings is the only route reachable from here; keep its loading shell
   // warm so the gear responds on the tap, not on the server's first byte
@@ -97,6 +106,7 @@ export function AppShell({
       />
       <main aria-label="Calendar">
         <InstallPrompt className={styles.installNudge} />
+        <PushNudge className={styles.installNudge} />
         <Calendar
           currentMemberId={currentMemberId}
           pattern={pattern}
