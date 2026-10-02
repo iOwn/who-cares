@@ -39,6 +39,7 @@ import type {
   PickupRequestRepository,
 } from "../ports";
 import type { Assignment, Member, PickupRequest } from "../types";
+import { isPastDate, todayOf } from "./pickupRequestGeneration";
 
 /* ------------------------------------------------------------------ *
  * Notification catalogue keys (issue #5).
@@ -93,6 +94,15 @@ export function assertOpenRequest(request: PickupRequest | null): asserts reques
   if (request.state !== "Open") {
     throw new PickupRequestStateError(
       `That request is already ${request.state.toLowerCase()}, so it can't be changed now.`,
+    );
+  }
+}
+
+/** A request whose day has passed is inert (issue #182) — it can't be answered or withdrawn. */
+function assertNotPast(request: PickupRequest, clock: Clock): void {
+  if (isPastDate(request.date, todayOf(clock))) {
+    throw new PickupRequestStateError(
+      "That day has already passed, so the request can't be answered.",
     );
   }
 }
@@ -245,6 +255,7 @@ export async function acceptRequest(
 ): Promise<AcceptRequestResult> {
   const request = await deps.pickupRequests.findById(input.requestId);
   assertOpenRequest(request);
+  assertNotPast(request, deps.clock);
   assertRecipient(request, input.actingMemberId);
 
   const members = await deps.members.listByHousehold(request.householdId);
@@ -306,6 +317,7 @@ export async function declineRequest(
 ): Promise<DeclineRequestResult> {
   const request = await deps.pickupRequests.findById(input.requestId);
   assertOpenRequest(request);
+  assertNotPast(request, deps.clock);
   assertRecipient(request, input.actingMemberId);
 
   const nameOf = nameLookup(await deps.members.listByHousehold(request.householdId));
@@ -353,6 +365,7 @@ export async function withdrawRequest(
 ): Promise<WithdrawRequestResult> {
   const request = await deps.pickupRequests.findById(input.requestId);
   assertOpenRequest(request);
+  assertNotPast(request, deps.clock);
   assertRequester(request, input.actingMemberId);
 
   const members = await deps.members.listByHousehold(request.householdId);

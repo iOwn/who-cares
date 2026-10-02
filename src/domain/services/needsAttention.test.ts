@@ -186,3 +186,10 @@ describe("loadNeedsAttentionCount", () => {
     expect(await loadNeedsAttentionCount(fakes(), "ghost")).toBe(0);
   });
 });
+
+describe("needsAttentionCount past requests (#182)", () => {
+  it("does not count an open request dated before today, but counts today's", () => {
+    const requests = [openRequest("2025-01-05"), openRequest("2025-01-06")];
+    expect(needsAttentionCount({ memberId: MEMBER_1_ID, requests, days: [], now: NOW })).toBe(1);
+  });
+});

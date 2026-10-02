@@ -267,3 +267,20 @@ describe("claimDay", () => {
     }
   });
 });
+
+describe("claimDay on a past request (#182)", () => {
+  it("withdraws it silently — no event-6 notification — while a future one still notifies", async () => {
+    const past = createFakes({
+      requests: [openRequest({ requesterId: OTHER, recipientId: CLAIMANT })],
+    });
+    const later = { now: () => new Date("2025-01-08T09:00:00.000Z") };
+
+    const result = await claimDay(
+      { ...past.deps, clock: later },
+      { householdId: HOUSEHOLD_ID, date: DATE, actingMemberId: CLAIMANT },
+    );
+
+    expect(past.requests[0].state).toBe("Withdrawn");
+    expect(result.notifications).toEqual([]);
+  });
+});

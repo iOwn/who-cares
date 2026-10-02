@@ -44,6 +44,7 @@ import type {
   PickupRequestRepository,
 } from "../ports";
 import type { Assignment, CalendarDate, Member, PickupRequest } from "../types";
+import { isPastDate, todayOf } from "./pickupRequestGeneration";
 import { withdrawnNotification } from "./pickupRequestResolution";
 
 /** Catalogue event 7 — recipient: the previously-assigned member, if any. */
@@ -145,7 +146,10 @@ export async function claimDay(
   if (openRequest !== null && openRequest.state === "Open") {
     withdrawnRequest = { ...openRequest, state: "Withdrawn" };
     await deps.pickupRequests.save(withdrawnRequest);
-    notifications.push(withdrawnNotification(openRequest, "day-claimed", nameOf));
+    // A past request is withdrawn silently — nobody is waiting on it (#182).
+    if (!isPastDate(openRequest.date, todayOf(deps.clock))) {
+      notifications.push(withdrawnNotification(openRequest, "day-claimed", nameOf));
+    }
   }
 
   return {

@@ -80,7 +80,9 @@ other member to take responsibility for that day's pickup. Moves from
 **Withdrawn** — and never reopens and is never re-raised: once a request
 is Declined or Withdrawn, the only way the day gets covered is a direct
 claim. If both members are absent on the same childcare day, no request
-is raised at all — the day goes straight to at-risk.
+is raised at all — the day goes straight to at-risk. A request whose day has
+passed is inert: it can't be answered, is not shown or counted, and sends no
+notifications — it keeps its stored state rather than gaining a new one.
 _Avoid_: Wish, ask
 
 **Withdrawn**:

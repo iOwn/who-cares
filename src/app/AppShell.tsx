@@ -11,6 +11,7 @@ import type {
   Member,
   PickupRequest,
 } from "@/domain";
+import { isPastDate } from "@/domain";
 import { AppHeader } from "@/ui";
 import styles from "./AppShell.module.css";
 import { Calendar } from "./Calendar";
@@ -73,12 +74,21 @@ export function AppShell({
   const [inboxOpen, setInboxOpen] = useState(false);
   const now = useWallClock(initialNow);
 
+  // Past-dated requests are inert (#182): not listed, not counted. Keyed on the
+  // UTC date of `now` (the domain's "today"), so a tab left open past midnight
+  // drops them on the next clock tick.
+  const todayUtc = now.toISOString().slice(0, 10);
   const myOpenRequests = useMemo(
     () =>
       pickupRequests
-        .filter((r) => r.state === "Open" && r.recipientId === currentMemberId)
+        .filter(
+          (r) =>
+            r.state === "Open" &&
+            r.recipientId === currentMemberId &&
+            !isPastDate(r.date, todayUtc),
+        )
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
-    [pickupRequests, currentMemberId],
+    [pickupRequests, currentMemberId, todayUtc],
   );
 
   // The icon badge (issues #134, #174, ADR-0022): open requests plus at-risk

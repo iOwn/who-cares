@@ -37,7 +37,7 @@ import type {
 } from "../types";
 import { isChildcareDay } from "./childcareDay";
 import { type DayStateFacts, dayState } from "./dayState";
-import { eachDateInclusive, todayOf } from "./pickupRequestGeneration";
+import { eachDateInclusive, isPastDate, todayOf } from "./pickupRequestGeneration";
 import { mergeClosures, publicHolidayClosures } from "./publicHolidays";
 
 /** How far forward at-risk days are looked for, in days (the cron's horizon). */
@@ -91,8 +91,11 @@ export interface NeedsAttentionParams {
 /** Open requests addressed to `memberId` + at-risk days not already one of those. */
 export function needsAttentionCount(params: NeedsAttentionParams): number {
   const { memberId, requests, days, now } = params;
+  const today = now.toISOString().slice(0, 10);
   const myRequestDates = new Set(
-    requests.filter((r) => r.state === "Open" && r.recipientId === memberId).map((r) => r.date),
+    requests
+      .filter((r) => r.state === "Open" && r.recipientId === memberId && !isPastDate(r.date, today))
+      .map((r) => r.date),
   );
   const atRiskOnly = days.filter(
     (facts) => dayState(facts, now).state === "At-risk" && !myRequestDates.has(facts.date),

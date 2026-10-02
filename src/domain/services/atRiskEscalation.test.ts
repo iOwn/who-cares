@@ -526,3 +526,28 @@ describe("runAtRiskEscalation", () => {
     });
   });
 });
+
+describe("runAtRiskEscalation ignores past days (#182)", () => {
+  it("never escalates an at-risk day that is already behind us", async () => {
+    const { deps } = createFakes({
+      absences: [
+        makeAbsence({
+          id: "a1",
+          memberId: MEMBER_1_ID,
+          startDate: "2025-01-03",
+          endDate: "2025-01-03",
+        }),
+        makeAbsence({
+          id: "a2",
+          memberId: MEMBER_2_ID,
+          startDate: "2025-01-03",
+          endDate: "2025-01-03",
+        }),
+      ],
+    });
+
+    const result = await runAtRiskEscalation(deps, { householdId: HOUSEHOLD_ID, horizonDays: 14 });
+
+    expect(result.escalations).toEqual([]);
+  });
+});
