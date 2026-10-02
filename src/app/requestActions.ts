@@ -250,10 +250,10 @@ export async function cancelAbsenceAction(absenceId: string): Promise<RequestAct
   let outcome: Awaited<ReturnType<typeof cancelAbsence>>;
   try {
     outcome = await db.transaction((tx) =>
-      cancelAbsence(createRepositories(tx), {
-        absenceId,
-        actingMemberId: session.member.id,
-      }),
+      cancelAbsence(
+        { ...createRepositories(tx), clock: noopAdapters.systemClock },
+        { absenceId, actingMemberId: session.member.id },
+      ),
     );
   } catch (thrown) {
     return toResult(thrown, "cancelAbsenceAction");
@@ -277,12 +277,15 @@ export async function shortenAbsenceAction(input: {
   let outcome: Awaited<ReturnType<typeof shortenAbsence>>;
   try {
     outcome = await db.transaction((tx) =>
-      shortenAbsence(createRepositories(tx), {
-        absenceId: input.absenceId,
-        actingMemberId: session.member.id,
-        startDate: input.startDate,
-        endDate: input.endDate,
-      }),
+      shortenAbsence(
+        { ...createRepositories(tx), clock: noopAdapters.systemClock },
+        {
+          absenceId: input.absenceId,
+          actingMemberId: session.member.id,
+          startDate: input.startDate,
+          endDate: input.endDate,
+        },
+      ),
     );
   } catch (thrown) {
     return toResult(thrown, "shortenAbsenceAction");

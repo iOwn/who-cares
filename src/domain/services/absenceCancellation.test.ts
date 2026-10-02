@@ -13,6 +13,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
+import { noopAdapters } from "@/domain";
 import {
   MEMBER_1_ID,
   MEMBER_2_ID,
@@ -153,6 +154,7 @@ function createFakes(options: {
   requests?: readonly PickupRequest[];
   assignments?: readonly Assignment[];
   members?: readonly Member[];
+  now?: Date;
 }): Fakes {
   const absences: Absence[] = [...(options.absences ?? [])];
   const requests: PickupRequest[] = [...(options.requests ?? [])];
@@ -246,6 +248,7 @@ function createFakes(options: {
       pickupRequests: requestRepo,
       assignments: assignmentRepo,
       members: memberRepo,
+      clock: noopAdapters.fixedClock(options.now ?? new Date("2025-01-04T09:00:00.000Z")),
     },
     absences,
     requests,
@@ -367,6 +370,25 @@ describe("cancelAbsence", () => {
     expect(notifications).toEqual([
       expect.objectContaining({ recipientId: RECIPIENT, event: ASSIGNMENT_STANDS_EVENT }),
     ]);
+  });
+
+  it("withdraws a past request silently (#182) while a future one still notifies", async () => {
+    const fakes = createFakes({
+      absences: [absenceRow()],
+      requests: [
+        openReq({ id: "r6", date: "2025-01-06" }),
+        openReq({ id: "r7", date: "2025-01-07" }),
+      ],
+      now: new Date("2025-01-07T09:00:00.000Z"),
+    });
+
+    const result = await cancelAbsence(fakes.deps, {
+      absenceId: "abs-1",
+      actingMemberId: REQUESTER,
+    });
+
+    expect(fakes.requests.map((r) => r.state)).toEqual(["Withdrawn", "Withdrawn"]);
+    expect(result.notifications.map((n) => n.subjectLabel)).toEqual(["2025-01-07"]);
   });
 
   it("rejects a cancel of someone else's absence", async () => {

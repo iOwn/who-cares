@@ -220,6 +220,15 @@ export function todayOf(clock: Clock): CalendarDate {
   return clock.now().toISOString().slice(0, 10);
 }
 
+/**
+ * Whether `date` is before `today` (issue #182). A pickup request for such a day
+ * is inert: it can't be answered, isn't shown or counted, and sends no
+ * notifications. Today itself is not past.
+ */
+export function isPastDate(date: CalendarDate, today: CalendarDate): boolean {
+  return date < today;
+}
+
 /** Whole days from `start` to `end` inclusive (1 for a single-day absence). */
 function spanDays(start: CalendarDate, end: CalendarDate): number {
   const ms = Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`);

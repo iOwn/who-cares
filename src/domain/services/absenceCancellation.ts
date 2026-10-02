@@ -31,12 +31,18 @@
 import type {
   AbsenceRepository,
   AssignmentRepository,
+  Clock,
   MemberRepository,
   Notification,
   PickupRequestRepository,
 } from "../ports";
 import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "../types";
-import { AbsenceInputError, eachDateInclusive } from "./pickupRequestGeneration";
+import {
+  AbsenceInputError,
+  eachDateInclusive,
+  isPastDate,
+  todayOf,
+} from "./pickupRequestGeneration";
 import { withdrawnNotification } from "./pickupRequestResolution";
 
 /** Catalogue event 8 — recipient: the assignee whose accepted pickup still stands. */
@@ -124,6 +130,7 @@ export interface AbsenceCancellationDeps {
   readonly pickupRequests: PickupRequestRepository;
   readonly assignments: AssignmentRepository;
   readonly members: MemberRepository;
+  readonly clock: Clock;
 }
 
 export interface AbsenceChangeResult {
@@ -180,6 +187,7 @@ async function applyAbsenceChange(
   });
 
   const nameOf = nameLookup(await deps.members.listByHousehold(original.householdId));
+  const today = todayOf(deps.clock);
 
   // Transition the affected requests to their terminal `Withdrawn` state, and
   // for a full cancel drop their now-dangling `absenceId`. The row must stay:
@@ -214,7 +222,10 @@ async function applyAbsenceChange(
   }
 
   const notifications: Notification[] = [
-    ...plan.requestsToWithdraw.map((r) => withdrawnNotification(r, reason, nameOf)),
+    // A past request is withdrawn silently — nobody is waiting on it (#182).
+    ...plan.requestsToWithdraw
+      .filter((r) => !isPastDate(r.date, today))
+      .map((r) => withdrawnNotification(r, reason, nameOf)),
     ...plan.standingAssignments.map(
       (a): Notification => ({
         recipientId: a.assigneeId as string,

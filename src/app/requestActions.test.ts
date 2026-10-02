@@ -17,7 +17,7 @@
  * implementation of accept / decline.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Assignment, Notification, PickupRequest } from "@/domain";
 import {
   HOUSEHOLD_ID,
@@ -100,6 +100,9 @@ const ids = () => [...store.requests.keys()];
 const dispatched = (): readonly Notification[] => dispatchAll.mock.calls.at(-1)?.[0] ?? [];
 
 beforeEach(() => {
+  // The seeded requests are dated January 2025; pin "today" just before them.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2025-01-04T09:00:00.000Z"));
   dispatchAll.mockClear();
   store.requests.clear();
   store.assignments.clear();
@@ -220,5 +223,21 @@ describe("answerAllRequestsAction — a real failure", () => {
 
     expect(result).toEqual({ ok: false, error: "Something went wrong. Please try again." });
     expect(dispatchAll).not.toHaveBeenCalled();
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("answerAllRequestsAction — past requests (#182)", () => {
+  it("skips a request whose day has passed and answers the rest", async () => {
+    seedOpenRequests();
+    vi.setSystemTime(new Date("2025-01-09T09:00:00.000Z"));
+
+    const result = await answerAllRequestsAction(ids(), "accept");
+
+    expect(result).toEqual({ ok: true, answered: 2, skipped: 1 });
+    expect(store.requests.get("req-0")?.state).toBe("Open");
   });
 });

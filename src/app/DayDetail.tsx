@@ -4,6 +4,7 @@ import { House } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "@/domain";
+import { isPastDate } from "@/domain";
 import type { CalendarDayView } from "@/ui";
 import { Button, Callout, Dialog, isStatusDisplayState, StatePill } from "@/ui";
 import styles from "./DayDetail.module.css";
@@ -42,6 +43,11 @@ export interface DayDetailProps {
   readonly onDeclareAbsence?: (date: CalendarDate) => void;
   /** The signed-in member — decides which requester-side affordances show. */
   readonly currentMemberId?: string;
+  /**
+   * Today's date — a request on an earlier day is inert (#182), so its
+   * "Withdraw request" is not offered. Omit to skip the check.
+   */
+  readonly today?: CalendarDate;
   /** Every pickup request for the household (any state). */
   readonly pickupRequests?: readonly PickupRequest[];
   /** Every absence for the household. */
@@ -75,6 +81,7 @@ export function DayDetail({
   onOpenChange,
   onDeclareAbsence,
   currentMemberId,
+  today,
   pickupRequests = [],
   absences = [],
   assignments = [],
@@ -85,7 +92,7 @@ export function DayDetail({
   const [error, setError] = useState<string | null>(null);
 
   const myOpenRequest =
-    day && currentMemberId
+    day && currentMemberId && !(today && isPastDate(day.date, today))
       ? (pickupRequests.find(
           (r) => r.date === day.date && r.state === "Open" && r.requesterId === currentMemberId,
         ) ?? null)

@@ -235,6 +235,7 @@ export function Calendar({
           setAbsenceAnchor(date);
         }}
         currentMemberId={currentMemberId}
+        today={today}
         pickupRequests={pickupRequests}
         absences={absences}
         assignments={assignments}

@@ -314,3 +314,38 @@ describe("withdrawRequest", () => {
     ).rejects.toBeInstanceOf(PickupRequestStateError);
   });
 });
+
+describe("past-dated requests are inert (#182)", () => {
+  const LATER = { now: () => new Date("2025-01-08T09:00:00.000Z") };
+  const pastRequest = () => openRequest({ date: "2025-01-07" });
+
+  it.each([
+    ["accept", acceptRequest, RECIPIENT],
+    ["decline", declineRequest, RECIPIENT],
+    ["withdraw", withdrawRequest, REQUESTER],
+  ] as const)(
+    "%s throws, leaving the request Open with no Assignment",
+    async (_name, service, actor) => {
+      const fakes = createFakes({ requests: [pastRequest()] });
+
+      await expect(
+        service({ ...fakes.deps, clock: LATER }, { requestId: "req-1", actingMemberId: actor }),
+      ).rejects.toBeInstanceOf(PickupRequestStateError);
+
+      expect(fakes.requests[0].state).toBe("Open");
+      expect(fakes.assignments).toHaveLength(0);
+    },
+  );
+
+  it("a request dated today is still answerable", async () => {
+    const fakes = createFakes({ requests: [pastRequest()] });
+    const today = { now: () => new Date("2025-01-07T09:00:00.000Z") };
+
+    const result = await acceptRequest(
+      { ...fakes.deps, clock: today },
+      { requestId: "req-1", actingMemberId: RECIPIENT },
+    );
+
+    expect(result.request.state).toBe("Accepted");
+  });
+});

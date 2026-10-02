@@ -37,6 +37,7 @@ import {
   resetIdCounter,
 } from "@/testing";
 import {
+  isPastDate,
   MAX_ABSENCE_SPAN_DAYS,
   PICKUP_REQUEST_RECEIVED_EVENT,
   planPickupRequests,
@@ -549,5 +550,13 @@ describe("recordAbsence", () => {
       });
       expect(result.requests).toEqual([]);
     });
+  });
+});
+
+describe("isPastDate (#182)", () => {
+  it("is true for yesterday, false for today and tomorrow", () => {
+    expect(isPastDate("2025-01-05", "2025-01-06")).toBe(true);
+    expect(isPastDate("2025-01-06", "2025-01-06")).toBe(false);
+    expect(isPastDate("2025-01-07", "2025-01-06")).toBe(false);
   });
 });

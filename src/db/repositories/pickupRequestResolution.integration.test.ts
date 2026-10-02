@@ -108,7 +108,7 @@ describe("cancelAbsence over real repositories", () => {
     // Accept one day first; its Assignment must survive the cancel untouched.
     await acceptRequest(deps(), { requestId: "r6", actingMemberId: MEMBER_2_ID });
 
-    const result = await cancelAbsence(repos, {
+    const result = await cancelAbsence(deps(), {
       absenceId: "abs-1",
       actingMemberId: MEMBER_1_ID,
     });
@@ -145,7 +145,7 @@ describe("cancelAbsence over real repositories", () => {
     expect(await repos.pickupRequests.findById("r7")).toMatchObject({ state: "Declined" });
 
     // A cancels the absence...
-    await cancelAbsence(repos, { absenceId: "abs-1", actingMemberId: MEMBER_1_ID });
+    await cancelAbsence(deps(), { absenceId: "abs-1", actingMemberId: MEMBER_1_ID });
     // ...the Declined row is still there (SET NULL, not cascade).
     expect(await repos.pickupRequests.findById("r7")).toMatchObject({
       state: "Declined",
