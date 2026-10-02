@@ -63,6 +63,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* iOS Safari zooms the page on focusing an editable control under 16px (issue
+   #173). Touch only: desktop keeps the --text-md density. */
+@media (pointer: coarse) {
+  .input {
+    font-size: var(--text-lg);
+  }
+}
+
 .segment {
   padding-inline: var(--space-2);
   border-radius: var(--radius-sm);

@@ -105,7 +105,10 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
 - **Viewport meta MUST allow pinch-zoom** — no `user-scalable=no` / `maximum-scale=1` (WCAG
   1.4.4). Set explicitly via the `viewport` export in `src/app/layout.tsx`
   (`maximumScale: 5`, `userScalable: true`), not left to Next's default, so the requirement has
-  a comment to argue with.
+  a comment to argue with. Accidental zoom is suppressed without touching that: double-tap zoom
+  via `touch-action: manipulation` on `html` (`globals.css`), and iOS focus-zoom by setting
+  editable controls (`TextField`, `TextArea`, `DateField`/`DateRangeField`) to 16px under
+  `@media (pointer: coarse)`. Deliberate pinch-zoom remains.
 - **`--color-focus-ring`** is a token the designs didn't have — the Toybox screens show no
   focus-visible state, and RAC surfaces focus via `[data-focus-visible]` which **must** be
   styled. See [API & authoring conventions](#api--authoring-conventions) §3.
