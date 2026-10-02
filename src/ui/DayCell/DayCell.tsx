@@ -42,6 +42,7 @@ const HOLIDAY_ICON = "★";
 
 /** The facility is closed but care is still needed — at home (issue #166, ADR-0021). */
 const AT_HOME_ICON = "⌂";
+const AT_HOME_WORD = "Home";
 
 const cell = cva(styles.base, {
   variants: {
@@ -75,8 +76,8 @@ export interface DayCellProps extends Omit<VariantProps<typeof cell>, "state"> {
   isHoliday?: boolean;
   /**
    * The facility is closed but the day is still a childcare day (issue #166,
-   * ADR-0021): the cell keeps its normal `state` and gains a small house
-   * marker. Orthogonal to `state`, like `isToday` / `isHoliday`.
+   * ADR-0021): the cell keeps its normal `state` and gains a dashed border
+   * and a labelled strip along the bottom edge (issue #181). Orthogonal to `state`, like `isToday` / `isHoliday`.
    */
   isClosedAtHome?: boolean;
   /** Full date + state, for the screen-reader label on the root element. */
@@ -108,6 +109,7 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
   const classes = cx(
     cell({ state, today: isToday }),
     isHoliday && state === "closed" && styles.holiday,
+    isClosedAtHome && styles.homeBorder,
     className,
   );
 
@@ -131,7 +133,7 @@ export const DayCell = forwardRef<HTMLElement, DayCellProps>(function DayCell(
       ) : null}
       {isClosedAtHome ? (
         <span className={styles.atHome} aria-hidden>
-          {AT_HOME_ICON}
+          {AT_HOME_ICON} {AT_HOME_WORD}
         </span>
       ) : null}
       {whoLabel ? (

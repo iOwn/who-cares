@@ -47,11 +47,12 @@ export const Pressable: Story = () => (
   </Grid>
 );
 
-/** Facility closed, care still needed at home (issue #166) — the state styling stays, a ⌂ marker is added. */
+/** Facility closed, care still needed at home (issue #166) — the state styling stays, a dashed border + "⌂ Home" strip are added (issue #181). */
 export const ClosedAtHome: Story = () => (
   <Grid>
     <DayCell dayOfMonth={15} state="quiet" isClosedAtHome />
     <DayCell dayOfMonth={16} state="at-risk" whoLabel="at risk" isClosedAtHome />
     <DayCell dayOfMonth={17} state="resolved" whoLabel="Inki" isClosedAtHome />
+    <DayCell dayOfMonth={18} state="pending" whoLabel="asked Bailey" isClosedAtHome isToday />
   </Grid>
 );

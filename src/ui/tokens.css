@@ -79,6 +79,11 @@
     --violet-500: #8d5cd1; /* holiday solid */
     --violet-800: #4a2d78; /* AA-corrected holiday text */
 
+    /* teal — facility closed, care still needed at home (issue #181) */
+    --teal-100: #e1f3f1; /* at-home surface tint */
+    --teal-700: #0f766e; /* at-home solid + border (white text 5.5:1) */
+    --teal-900: #0b4f4a; /* at-home text */
+
     /* ===================================================================
      * SEMANTIC TOKENS (light) — the only tokens components may use
      * =================================================================== */
@@ -143,6 +148,14 @@
     --color-holiday-surface: var(--violet-100);
     --color-holiday-text: var(--violet-800);
     --color-holiday-border: var(--violet-300);
+
+    /* --- colour: at-home — UI-ONLY marker over a normal day state, NOT a domain
+     * Day state (issue #181, ADR-0021): the facility is closed but care is
+     * still needed. Hue distinct from every state colour above. */
+    --color-at-home-solid: var(--teal-700);
+    --color-at-home-surface: var(--teal-100);
+    --color-at-home-text: var(--teal-900);
+    --color-at-home-border: var(--teal-700);
 
     /* --- typography: families ---
      * --font-nunito / --font-baloo are injected on <html> by next/font/google

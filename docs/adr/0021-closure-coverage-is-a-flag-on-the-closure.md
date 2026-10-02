@@ -14,8 +14,12 @@ A closure that `needsCover` leaves the date a childcare day; `childcareDayInputs
 other closures as `hasClosure`. That is the whole behavioural change: `isChildcareDay`, `dayState`,
 pickup-request generation, the at-risk cron and the calendar all read that one gate, so a
 `needsCover` day goes through Resolved / Pending / At-risk like any other day. **No new Day state,
-no new `DayDisplayState`, no 5th `Legend` entry** — the grid cell keeps its normal state styling
-and gains a `⌂` marker (`isClosedAtHome`), `DayDetail` says *Facility closed — care at home needed*.
+no new `DayDisplayState`, no 5th state `Legend` dot** — the grid cell keeps its normal state fill
+and gains a marker (`isClosedAtHome`): a dashed teal border plus a filled "⌂ Home" strip along the
+bottom edge (issue #181 — the original bare corner glyph was too easy to miss). The List tab always
+lists such a day (even when quiet) with an "At home" pill, `DayDetail` leads with a *Facility
+closed — care at home needed* `Callout`, and the `Legend` keys the marker as a separate item after
+the four state dots (a marker key, not a state).
 
 - **Flag, not a `kind` value.** `ClosureKind` is *provenance* (hand-entered vs derived from the
   Bundesland). Coverage is an orthogonal axis — a manual closure can be either, and a manual

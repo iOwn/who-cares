@@ -129,10 +129,24 @@ describe("buildCalendarMonth", () => {
       displayState: "quiet",
       isClosedAtHome: true,
       closureReason: "Staff day",
-      narrative: "A normal childcare day. Nobody has flagged being away.",
+      narrative:
+        "A normal childcare day. Nobody has flagged being away. Facility closed — care at home needed.",
     });
     expect(byDate.get("2025-01-08")?.ariaLabel).toMatch(/care at home/);
     expect(byDate.get("2025-01-09")?.isClosedAtHome).toBe(false);
+    expect(byDate.get("2025-01-09")?.narrative).not.toMatch(/care at home/);
+  });
+
+  it("lists a quiet closed-at-home day as notable, but not an ordinary quiet day (issue #181)", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [makeClosure({ date: "2025-01-08", needsCover: true })],
+      today: "2025-01-15",
+    });
+
+    expect(view.notableDays.map((day) => day.date)).toEqual(["2025-01-08"]);
   });
 
   it("gives a manual closure the generic closed copy and kind 'manual'", () => {

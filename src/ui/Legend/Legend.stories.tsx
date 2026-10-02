@@ -23,3 +23,10 @@ export const Subset: Story = () => (
     <Legend states={["at-risk", "pending", "resolved"]} />
   </div>
 );
+
+/** With the closed-at-home marker key (issue #181). */
+export const WithAtHomeMarker: Story = () => (
+  <div style={{ maxWidth: "22rem" }}>
+    <Legend showAtHome />
+  </div>
+);

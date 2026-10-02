@@ -154,6 +154,9 @@ function leadingBlankCount(year: number, month: number): number {
   return (sundayZero + 6) % 7;
 }
 
+/** Appended to the narrative of a closed-at-home day (issue #181) so Grid, List and Detail agree. */
+const AT_HOME_SENTENCE = "Facility closed — care at home needed.";
+
 const NOT_NOTABLE: ReadonlySet<DayDisplayState> = new Set(["quiet", "off"]);
 
 /** The state phrase a `DayCell` aria-label ends with, per display state. */
@@ -430,7 +433,7 @@ export function buildCalendarMonth({
     const closureReason = closure?.reason;
     const closureKind = closure ? (closure.kind ?? "manual") : undefined;
     const isClosedAtHome = isPatternWeekday && closure != null && closureNeedsCover(closure);
-    const { whoLabel, narrative } = describeDay({
+    const { whoLabel, narrative: stateNarrative } = describeDay({
       displayState,
       reason,
       assignment,
@@ -438,6 +441,8 @@ export function buildCalendarMonth({
       nameOf,
       closureKind,
     });
+
+    const narrative = isClosedAtHome ? `${stateNarrative} ${AT_HOME_SENTENCE}` : stateNarrative;
 
     days.push({
       date,
@@ -481,6 +486,8 @@ export function buildCalendarMonth({
     }).filter((header) => isVisible(header.weekdayIndex)),
     weeks,
     days,
-    notableDays: days.filter((day) => day.inMonth && !NOT_NOTABLE.has(day.displayState)),
+    notableDays: days.filter(
+      (day) => day.inMonth && (day.isClosedAtHome || !NOT_NOTABLE.has(day.displayState)),
+    ),
   };
 }

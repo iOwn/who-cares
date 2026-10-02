@@ -211,9 +211,11 @@ legend swatch. Settings shows derived holidays in their own read-only block, wit
 
 **Closed-at-home variant (issue #166, ADR-0021).** A closure that `needsCover` is *not* a `closed`
 day — it is still a childcare day with its own state (Sorted / Waiting / At risk / quiet). `DayCell`
-keeps that state's styling and adds a small neutral `⌂` marker (`isClosedAtHome`, orthogonal to
-`state`, bottom-right so it clears the state badge); `DayDetail` adds "Facility closed — care at
-home needed" (+ the reason). No new swatch in the `Legend`.
+keeps that state's styling and adds a dashed teal border and a filled "⌂ Home" strip along the bottom edge
+(`isClosedAtHome`, orthogonal to `state`; the "who" label sits above it; issue #181). The List
+lists the day even when quiet, with an "At home" pill and the narrative sentence; `DayDetail` leads
+with an info `Callout` "Facility closed — care at home needed" (+ the reason). `Legend` takes an
+opt-in `showAtHome` that keys the marker after the four state dots — not a fifth state.
 
 ### P1 — feature-composed (documented lighter in #30, built with their features)
 

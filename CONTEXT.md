@@ -144,5 +144,5 @@ the closure's free-text reason if one was given; the grid cell and list
 row keep a generic line. A **Public holiday** closure is the same `Closed`
 affordance with its own styling and copy ("Holiday" pill, "Public holiday
 — {name}") rather than the generic one — still not a separate Day state. A closure that needs cover is not "Closed"
-at all: the day keeps its own state and only carries a small "care at home"
-marker.
+at all: the day keeps its own state and only carries an "at home" marker (a
+labelled strip on the grid cell, a pill in the List, a callout in the day detail).
