@@ -450,6 +450,36 @@ describe("replaceClosureRangeAction (issue #171)", () => {
     expect(dispatchAll).not.toHaveBeenCalled();
   });
 
+  it("re-saving a bridged Fri-to-Mon group invents no weekend and notifies nobody", async () => {
+    const bridged = [
+      { id: "f", date: "2026-08-07" },
+      { id: "m", date: "2026-08-10" },
+    ];
+    repos.closures.listByHousehold.mockResolvedValue(bridged);
+
+    await replaceClosureRangeAction({
+      ids: ["f", "m"],
+      date: "2026-08-07",
+      endDate: "2026-08-10",
+      reason: "Summer",
+    });
+
+    expect(savedDates()).toEqual(["2026-08-07", "2026-08-10"]);
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("extending a bridged group past its end writes every new calendar day", async () => {
+    repos.closures.listByHousehold.mockResolvedValue([
+      { id: "f", date: "2026-08-07" },
+      { id: "m", date: "2026-08-10" },
+    ]);
+
+    await replaceClosureRangeAction({ ids: ["f", "m"], date: "2026-08-07", endDate: "2026-08-12" });
+
+    expect(savedDates()).toEqual(["2026-08-07", "2026-08-10", "2026-08-11", "2026-08-12"]);
+    expect(dispatched().map((n) => n.subjectLabel)).toEqual(["2026-08-11", "2026-08-12"]);
+  });
+
   it("rejects a foreign id without writing anything", async () => {
     const result = await replaceClosureRangeAction({
       ids: ["a", "someone-elses"],

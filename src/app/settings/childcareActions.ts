@@ -350,8 +350,15 @@ export async function replaceClosureRangeAction(input: {
     return { ok: false, error: "The last closure date can't be before the first." };
   }
 
-  const dates = eachDateInclusive(input.date, input.endDate);
   const idByDate = new Map(owned.map((closure) => [closure.date, closure.id]));
+  // A bridged group (Fri to Mon) has no stored weekend inside it, and a re-save
+  // must not invent one: inside the group's original span only days that are
+  // already stored are written; dates outside it are new, as in the add form.
+  const groupDates = input.ids.map((id) => ownedById.get(id)?.date ?? "").sort();
+  const [oldStart, oldEnd] = [groupDates[0], groupDates[groupDates.length - 1]];
+  const dates = eachDateInclusive(input.date, input.endDate).filter(
+    (date) => idByDate.has(date) || date < oldStart || date > oldEnd,
+  );
   const newDates = dates.filter((date) => !idByDate.has(date));
   if (newDates.length > MAX_CLOSURE_RANGE_DAYS) {
     return {
