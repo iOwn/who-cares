@@ -19,6 +19,7 @@
  */
 
 import type { CalendarDate, ChildcarePattern, Closure, GermanState, Weekday } from "../types";
+import { closureNeedsCover } from "../types";
 import { resolvePatternVersion, weekdayOf } from "./childcareDay";
 
 // `GermanState` / `GERMAN_STATES` / `isGermanState` live in `../types` (plain
@@ -209,14 +210,18 @@ export function publicHolidayClosures(params: PublicHolidayClosuresParams): Clos
 
 /**
  * Merge stored closures with derived public-holiday closures, one per date —
- * a parent's own manual closure on a holiday date always wins (it carries
- * their own reason and stays editable; `saveClosureAction`'s "reuse the row
- * already on that date" write path is what keeps the two from ever
- * double-existing). Sorted by date, matching `ClosureRepository.listByHousehold`.
+ * a parent's own manual closure on a holiday date wins (it carries their own
+ * reason and stays editable; `saveClosureAction`'s "reuse the row already on
+ * that date" write path is what keeps the two from ever double-existing),
+ * unless it needs cover: then the holiday wins and the stored row is merely
+ * shadowed, because on a public holiday both parents are off (issue #172).
+ * Sorted by date, matching `ClosureRepository.listByHousehold`.
  */
 export function mergeClosures(stored: readonly Closure[], derived: readonly Closure[]): Closure[] {
-  const storedDates = new Set(stored.map((c) => c.date));
-  const merged = [...stored, ...derived.filter((c) => !storedDates.has(c.date))];
+  const derivedDates = new Set(derived.map((c) => c.date));
+  const keptStored = stored.filter((c) => !(derivedDates.has(c.date) && closureNeedsCover(c)));
+  const storedDates = new Set(keptStored.map((c) => c.date));
+  const merged = [...keptStored, ...derived.filter((c) => !storedDates.has(c.date))];
   return merged.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 

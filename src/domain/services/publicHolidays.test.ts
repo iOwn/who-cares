@@ -243,7 +243,7 @@ describe("mergeClosures", () => {
     expect(merged).toEqual(stored);
   });
 
-  it("a stored closure that needsCover wins over a derived holiday, flag included (issue #166)", () => {
+  it("a derived holiday wins over a stored closure that needsCover (issue #172)", () => {
     const stored = [{ id: "c1", householdId: "h1", date: "2025-01-01", needsCover: true }];
     const derived = [
       {
@@ -253,7 +253,23 @@ describe("mergeClosures", () => {
         kind: "public-holiday" as const,
       },
     ];
-    expect(mergeClosures(stored, derived)).toEqual(stored);
+    expect(mergeClosures(stored, derived)).toEqual(derived);
+  });
+
+  it("a stored needsCover closure on a non-holiday date is kept", () => {
+    const stored = [{ id: "c1", householdId: "h1", date: "2025-01-10", needsCover: true }];
+    const derived = [
+      {
+        id: "holiday:BY:2025-01-01",
+        householdId: "h1",
+        date: "2025-01-01",
+        kind: "public-holiday" as const,
+      },
+    ];
+    expect(mergeClosures(stored, derived).map((c) => c.id)).toEqual([
+      "holiday:BY:2025-01-01",
+      "c1",
+    ]);
   });
 
   it("unions closures on distinct dates, sorted", () => {
