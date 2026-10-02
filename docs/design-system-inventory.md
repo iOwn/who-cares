@@ -225,7 +225,7 @@ description, errorMessage, isRequired, isOptional, isDisabled`.
   `maxValue` cap. ImOut, Recurring.
 - **WeekdayPicker** — `ToggleGroup` specialised to Mon–Fri keys, weekday-typed value, starts
   blank (SPEC — no saved preference). Recurring, Settings.
-- **ClosureRow** — Settings closure list item. Composes `Surface` + date chip + date/reason
+- **ClosureRow** — Settings closure list item, one per *range* of consecutive same-kind/reason closures (issue #171: date range + "N days"). Composes `Surface` + date range + date/reason
   text + destructive "Remove" `Button`.
 - **AbsenceImpact** — `Callout tone="info"` wrapper deriving "covers N childcare days, M
   requests fire". ImOut.

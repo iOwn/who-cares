@@ -321,3 +321,87 @@ export async function removeClosureAction(id: string): Promise<void> {
   await repos.closures.delete(id);
   revalidateAll();
 }
+
+/**
+ * Replace a whole range the Settings list presents as one row (issue #171,
+ * `groupClosureRanges`). `ids` are the stored rows of that group: dates inside
+ * the new `date`–`endDate` are upserted with the new kind/reason, group dates
+ * outside it are deleted. Only the days *newly* closed count towards the
+ * typo-guard cap and notify the other parent (event 12) — shortening and
+ * kind/reason edits stay silent, as a single-row edit does. One transaction.
+ */
+export async function replaceClosureRangeAction(input: {
+  ids: readonly string[];
+  date: CalendarDate;
+  endDate: CalendarDate;
+  reason?: string;
+  needsCover?: boolean;
+}): Promise<SaveClosureResult> {
+  const ctx = await context();
+  const { householdId, repos } = ctx;
+  const owned = await repos.closures.listByHousehold(householdId);
+  const ownedById = new Map(owned.map((closure) => [closure.id, closure]));
+  // Every id must be this household's — refuse the whole edit otherwise.
+  if (input.ids.length === 0 || input.ids.some((id) => !ownedById.has(id))) {
+    return { ok: false, error: "That closure no longer exists." };
+  }
+  if (!input.date || !input.endDate) return { ok: false, error: "Pick the closure dates." };
+  if (input.endDate < input.date) {
+    return { ok: false, error: "The last closure date can't be before the first." };
+  }
+
+  const dates = eachDateInclusive(input.date, input.endDate);
+  const idByDate = new Map(owned.map((closure) => [closure.date, closure.id]));
+  const newDates = dates.filter((date) => !idByDate.has(date));
+  if (newDates.length > MAX_CLOSURE_RANGE_DAYS) {
+    return {
+      ok: false,
+      error: `That's more than ${MAX_CLOSURE_RANGE_DAYS} new days of closures in one go — add them in shorter stretches.`,
+    };
+  }
+  const reason = input.reason?.trim() ? input.reason.trim() : undefined;
+  const needsCover = input.needsCover === true;
+  const keep = new Set(dates);
+  const dropIds = input.ids.filter((id) => !keep.has(ownedById.get(id)?.date ?? ""));
+
+  try {
+    await db.transaction(async (tx) => {
+      const closures = createRepositories(tx).closures;
+      for (const id of dropIds) await closures.delete(id);
+      for (const date of dates) {
+        await closures.save({
+          id: idByDate.get(date) ?? crypto.randomUUID(),
+          householdId,
+          date,
+          ...(reason ? { reason } : {}),
+          ...(needsCover ? { needsCover: true } : {}),
+        });
+      }
+    });
+  } catch (thrown) {
+    console.error("replaceClosureRangeAction failed", thrown);
+    return { ok: false, error: "Something went wrong saving that. Please try again." };
+  }
+
+  await notifyOtherMember(ctx, newDates, (recipientId, actorName, date) => ({
+    recipientId,
+    event: CLOSURE_ADDED_EVENT,
+    subjectLabel: date,
+    ...closureAddedNotification(actorName, date, needsCover),
+  }));
+  revalidateAll();
+  return { ok: true, addedCount: newDates.length };
+}
+
+/** Remove every stored row of a range in one transaction (issue #171). */
+export async function removeClosuresAction(ids: readonly string[]): Promise<void> {
+  const { householdId, repos } = await context();
+  const owned = new Set((await repos.closures.listByHousehold(householdId)).map((c) => c.id));
+  // One foreign id voids the whole call — never a partial delete.
+  if (ids.length === 0 || ids.some((id) => !owned.has(id))) return;
+  await db.transaction(async (tx) => {
+    const closures = createRepositories(tx).closures;
+    for (const id of ids) await closures.delete(id);
+  });
+  revalidateAll();
+}

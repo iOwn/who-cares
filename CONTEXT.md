@@ -37,7 +37,7 @@ _Avoid_: Schedule, recurrence
 A single date on which a weekday the pattern would include has no childcare
 after all — public holiday, facility closed, child off sick. Carries an
 optional free-text reason; no taxonomy. A multi-day closure (a holiday week)
-is just several Closure rows, not a range. A Closure's *provenance* — hand-
+is just several Closure rows, not a range (the Settings list only *presents* consecutive same-kind, same-reason rows as one range; storage stays per day). A Closure's *provenance* — hand-
 entered by a parent, or derived from the household's Bundesland (see
 **Public holiday**) — is a separate `kind`, not a taxonomy on the free-text
 reason. A Closure either removes the day (no pickup needed — the default for

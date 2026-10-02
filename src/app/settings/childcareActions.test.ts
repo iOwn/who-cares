@@ -36,9 +36,9 @@ const repos = {
         _date: string,
       ): Promise<{ id: string; householdId: string } | null> => null,
     ),
-    listByHousehold: vi.fn(async (): Promise<{ id: string }[]> => []),
+    listByHousehold: vi.fn(async (): Promise<{ id: string; date?: string }[]> => []),
     save: vi.fn(async (_closure: { id: string; date: string; needsCover?: boolean }) => {}),
-    delete: vi.fn(async () => {}),
+    delete: vi.fn(async (_id: string) => {}),
   },
   members: {
     listByHousehold: vi.fn(async () => [
@@ -68,6 +68,8 @@ vi.mock("@/notifications", async (importActual) => ({
 
 const {
   removeClosureAction,
+  removeClosuresAction,
+  replaceClosureRangeAction,
   saveClosureAction,
   saveClosuresAction,
   savePatternAction,
@@ -394,6 +396,121 @@ describe("removeClosureAction", () => {
     repos.closures.listByHousehold.mockResolvedValue([{ id: "mine" }]);
 
     await removeClosureAction("someone-elses");
+
+    expect(repos.closures.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("replaceClosureRangeAction (issue #171)", () => {
+  const group = [
+    { id: "a", date: "2026-08-03" },
+    { id: "b", date: "2026-08-04" },
+    { id: "c", date: "2026-08-05" },
+  ];
+  beforeEach(() => repos.closures.listByHousehold.mockResolvedValue(group));
+
+  it("shrinking deletes the dropped days, rewrites the rest and notifies nobody", async () => {
+    const result = await replaceClosureRangeAction({
+      ids: ["a", "b", "c"],
+      date: "2026-08-03",
+      endDate: "2026-08-04",
+      reason: " Summer ",
+    });
+
+    expect(result).toEqual({ ok: true, addedCount: 0 });
+    expect(repos.closures.delete).toHaveBeenCalledTimes(1);
+    expect(repos.closures.delete).toHaveBeenCalledWith("c");
+    expect(savedDates()).toEqual(["2026-08-03", "2026-08-04"]);
+    expect(repos.closures.save.mock.calls.map(([c]) => c.id)).toEqual(["a", "b"]);
+    expect(dispatchAll).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("extending notifies only about the newly covered dates", async () => {
+    await replaceClosureRangeAction({
+      ids: ["a", "b", "c"],
+      date: "2026-08-03",
+      endDate: "2026-08-07",
+      needsCover: true,
+    });
+
+    expect(repos.closures.delete).not.toHaveBeenCalled();
+    expect(dispatched().map((n) => n.subjectLabel)).toEqual(["2026-08-06", "2026-08-07"]);
+    expect(repos.closures.save.mock.calls.every(([c]) => c.needsCover === true)).toBe(true);
+  });
+
+  it("a kind change alone sends nothing", async () => {
+    await replaceClosureRangeAction({
+      ids: ["a", "b", "c"],
+      date: "2026-08-03",
+      endDate: "2026-08-05",
+      needsCover: true,
+    });
+
+    expect(dispatchAll).not.toHaveBeenCalled();
+  });
+
+  it("rejects a foreign id without writing anything", async () => {
+    const result = await replaceClosureRangeAction({
+      ids: ["a", "someone-elses"],
+      date: "2026-08-03",
+      endDate: "2026-08-04",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(repos.closures.save).not.toHaveBeenCalled();
+    expect(repos.closures.delete).not.toHaveBeenCalled();
+  });
+
+  it("rejects an end before the start", async () => {
+    const result = await replaceClosureRangeAction({
+      ids: ["a"],
+      date: "2026-08-05",
+      endDate: "2026-08-03",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(repos.closures.save).not.toHaveBeenCalled();
+  });
+
+  it("caps newly added days, not the group's total", async () => {
+    const long = Array.from({ length: 40 }, (_, i) => ({
+      id: `l${i}`,
+      date: new Date(Date.UTC(2026, 6, 1 + i)).toISOString().slice(0, 10),
+    }));
+    repos.closures.listByHousehold.mockResolvedValue(long);
+    const ids = long.map((c) => c.id);
+
+    const resave = await replaceClosureRangeAction({
+      ids,
+      date: long[0].date,
+      endDate: long[39].date,
+    });
+    expect(resave.ok).toBe(true);
+
+    const tooMany = await replaceClosureRangeAction({
+      ids,
+      date: long[0].date,
+      endDate: "2026-10-30",
+    });
+    expect(tooMany.ok).toBe(false);
+  });
+});
+
+describe("removeClosuresAction (issue #171)", () => {
+  it("deletes every row of a range this household owns, in one transaction", async () => {
+    repos.closures.listByHousehold.mockResolvedValue([{ id: "a" }, { id: "b" }, { id: "x" }]);
+
+    await removeClosuresAction(["a", "b"]);
+
+    expect(repos.closures.delete.mock.calls.map(([id]) => id)).toEqual(["a", "b"]);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes nothing when any id is foreign", async () => {
+    repos.closures.listByHousehold.mockResolvedValue([{ id: "a" }]);
+
+    await removeClosuresAction(["a", "someone-elses"]);
 
     expect(repos.closures.delete).not.toHaveBeenCalled();
   });
