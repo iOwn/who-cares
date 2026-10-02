@@ -462,6 +462,8 @@ Revisit once the smoke path proves stable.
 **Dependabot** (`.github/dependabot.yml`) — one grouped weekly PR for non-major updates,
 majors as separate PRs, security updates on. Rides the same CI gates, so a bad bump can't
 self-merge. Chosen over Renovate (more config) and manual bumping (rots between sessions).
+`@types/node` major bumps are ignored: they track the runtime major (`engines.node`), so they
+are done by hand together with a Node upgrade.
 
 ## What the build effort creates
 
