@@ -53,7 +53,7 @@ setting: the state's public holidays on dates the childcare pattern in
 effect then would otherwise include. Behaves exactly like any other
 Closure — no pickup, no domain Day state of its own — styled distinctly in
 the UI so a parent can see why the day is closed, and not editable: a
-manual Closure on the same date always wins. Only state-wide holidays are
+manual Closure on the same date wins, unless it needs cover — then the holiday wins. Only state-wide holidays are
 derived; a municipality-scoped one (Mariä Himmelfahrt in Bayern,
 Fronleichnam in parts of Sachsen/Thüringen) is still entered by hand.
 

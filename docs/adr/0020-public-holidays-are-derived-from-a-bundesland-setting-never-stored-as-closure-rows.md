@@ -21,7 +21,8 @@ movable feasts. `publicHolidayClosures({ state, pattern, from, to })` turns a st
 *effective-dated* pattern (ADR-0002) actually includes on each date — so a holiday that lands on
 a weekend, or on a weekday a household never has childcare on, correctly produces nothing at all,
 not a closure that overrides "hide weekend days" (#130). `mergeClosures(stored, derived)` unions
-the two per date, stored always winning: a parent's own manual closure on a holiday date keeps its
+the two per date, stored winning (except a stored closure that needs cover, which the holiday
+overrides since #172): a parent's own manual closure on a holiday date keeps its
 own reason and stays editable, the derived one is simply dropped for that date.
 
 Only **state-wide, unambiguous** holidays are derived. A handful of German holidays are scoped to

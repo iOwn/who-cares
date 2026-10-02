@@ -19,7 +19,9 @@ and gains a `⌂` marker (`isClosedAtHome`), `DayDetail` says *Facility closed �
 
 - **Flag, not a `kind` value.** `ClosureKind` is *provenance* (hand-entered vs derived from the
   Bundesland). Coverage is an orthogonal axis — a manual closure can be either, and a manual
-  closure on a holiday date still wins (ADR-0020) *with* its `needsCover`.
+  closure on a holiday date wins (ADR-0020) — *unless* it `needsCover`: since #172 the derived
+  holiday then wins and the stored row is merely shadowed, because on a public holiday both
+  parents are off.
 - **Default for new closures: care needed.** A wrongly hidden day is the dangerous error (the same
   argument as ADR-0020's state-wide-only rule); a parent consciously picks *No care needed* for,
   say, a municipal holiday. Migration `0013` backfills existing rows to `false`, so nothing that
