@@ -149,7 +149,7 @@ export function DayDetail({
         <div className={styles.body}>
           <Dialog.Header title={longDate(day.date)} closeButton />
           {day.isClosedAtHome ? (
-            <Callout tone="info" icon={House} title="Facility closed — care at home needed">
+            <Callout tone="info" icon={House} title="Care at home needed">
               {day.closureReason ? `Reason given: ${day.closureReason}` : undefined}
             </Callout>
           ) : null}
