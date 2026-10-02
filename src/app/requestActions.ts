@@ -9,9 +9,11 @@ import type { CalendarDate } from "@/domain";
 import {
   AbsenceInputError,
   acceptRequest,
+  arrangeThirdPartyCover,
   cancelAbsence,
   claimDay,
   declineRequest,
+  MAX_THIRD_PARTY_LABEL_LENGTH,
   type Notification,
   noopAdapters,
   type PickupRequestResolutionDeps,
@@ -238,6 +240,47 @@ export async function claimDayAction(date: CalendarDate): Promise<RequestActionR
 
   // Dispatch after commit, matching `recordAbsenceAction` — a slow or failing
   // send must not roll back a claim that already landed.
+  await dispatch(outcome.notifications);
+  revalidatePath("/");
+  return { ok: true };
+}
+
+/**
+ * Third-party cover (#183, ADR-0023): the signed-in member records that someone
+ * outside the household is doing pickup on `date`. Same shape as a direct claim
+ * — newest action wins, an open request on the day auto-withdraws, notices go
+ * out after commit. `label` is optional free text, trimmed and length-checked
+ * here so the cap holds whatever the client sends.
+ */
+export async function arrangeThirdPartyCoverAction(
+  date: CalendarDate,
+  label: string,
+): Promise<RequestActionResult> {
+  const session = await getCurrentSession();
+  if (!session) return EXPIRED;
+  if (typeof label !== "string" || label.trim().length > MAX_THIRD_PARTY_LABEL_LENGTH) {
+    return {
+      ok: false,
+      error: `Keep the name to ${MAX_THIRD_PARTY_LABEL_LENGTH} characters or fewer.`,
+    };
+  }
+
+  let outcome: Awaited<ReturnType<typeof arrangeThirdPartyCover>>;
+  try {
+    outcome = await db.transaction((tx) =>
+      arrangeThirdPartyCover(
+        {
+          ...createRepositories(tx),
+          clock: noopAdapters.systemClock,
+          ids: noopAdapters.systemIdGenerator,
+        },
+        { householdId: session.household.id, date, actingMemberId: session.member.id, label },
+      ),
+    );
+  } catch (thrown) {
+    return toResult(thrown, "arrangeThirdPartyCoverAction");
+  }
+
   await dispatch(outcome.notifications);
   revalidatePath("/");
   return { ok: true };

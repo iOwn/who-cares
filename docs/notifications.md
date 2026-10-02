@@ -44,6 +44,7 @@ domain service ──returns──▶ Notification[] ──▶ dispatchAll()
 | 3 | `pickup-request-declined` | requester | `declineRequest` |
 | 4–6 | `pickup-request-withdrawn` | the parent who still had it (4, 5) / requester (6) | `withdrawRequest`, `absenceCancellation`, `claimDay`, `acceptRequest` (superseded) |
 | 7 | `direct-claim` | bumped parent | `claimDay` |
+| 13 | `third-party-cover` | other parent | `arrangeThirdPartyCover` (issue #183, ADR-0023) |
 | 8 | `assignment-stands` | assignee | `absenceCancellation` |
 | 9 | `day-at-risk-both-absent` | **both** | `runAtRiskEscalation` (daily cron) |
 | 10 | `day-at-risk-escalated` | **both** | `runAtRiskEscalation` (daily cron) |
@@ -98,6 +99,7 @@ every caller respects it by passing one action's worth:
 | --- | --- |
 | `cancelAbsenceAction` / `shortenAbsenceAction` | every withdrawal + "still stands" that change produced |
 | `claimDayAction` | the bumped parent + the withdrawn request's requester |
+| `arrangeThirdPartyCoverAction` | the other parent (one notice, covering a bump / withdrawal too) |
 | `answerAllRequestsAction` | every day the "Accept all" / "Decline all" answered |
 | `saveClosureAction` | every date in the closure range that was newly closed (the range commits as one transaction; the dispatch follows it) |
 | `/api/cron/at-risk` | one household's newly at-risk days |

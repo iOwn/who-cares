@@ -36,6 +36,7 @@ export type DayState = "Resolved" | "Pending" | "At-risk" | "n/a";
 export type DayStateReason =
   | "not-childcare-day"
   | "assignee-covers"
+  | "third-party-covers"
   | "uncontested"
   | "both-absent"
   | "assignee-now-absent"
@@ -108,6 +109,7 @@ export function hasCrossedAtRiskThreshold(
  * `now`.
  *
  * - Not a childcare day → `n/a`.
+ * - A third-party cover → `Resolved`, whoever is absent (ADR-0023).
  * - An assignee who is **not** absent that day → `Resolved` (an accepted
  *   request or a direct claim; the assignee covers it).
  * - Otherwise no safe assignee. Both members absent → `At-risk` immediately
@@ -123,6 +125,11 @@ export function dayState(facts: DayStateFacts, now: Date): DayStateResult {
   const { date, isChildcareDay, assignment, openRequest, absentMemberIds } = facts;
 
   if (!isChildcareDay) return { state: "n/a", reason: "not-childcare-day" };
+
+  // A third-party cover (issue #183, ADR-0023) is not a member, so it can't be
+  // absent — it covers the day whoever is away, even both parents.
+  if (assignment?.source === "third-party")
+    return { state: "Resolved", reason: "third-party-covers" };
 
   const assigneeId = assignment?.assigneeId ?? null;
   const assigneeCovers = assigneeId !== null && !absentMemberIds.includes(assigneeId);

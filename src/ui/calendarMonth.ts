@@ -284,6 +284,10 @@ function describeDay({
       const who = assignment?.assigneeId ? nameOf(assignment.assigneeId) : "Someone";
       return { whoLabel: who, narrative: `${who} is on pickup.` };
     }
+    case "third-party-covers": {
+      const who = assignment?.thirdPartyLabel ?? "Someone else";
+      return { whoLabel: who, narrative: `${who} is on pickup.` };
+    }
     case "request-pending": {
       const asked = openRequest ? nameOf(openRequest.recipientId) : "the other parent";
       const by = openRequest ? nameOf(openRequest.requesterId) : "A parent";

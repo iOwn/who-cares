@@ -78,8 +78,8 @@ existing assignment and exactly one member is absent that day; asks the
 other member to take responsibility for that day's pickup. Moves from
 **Open** to a terminal state — **Accepted**, **Declined**, or
 **Withdrawn** — and never reopens and is never re-raised: once a request
-is Declined or Withdrawn, the only way the day gets covered is a direct
-claim. If both members are absent on the same childcare day, no request
+is Declined or Withdrawn, the day gets covered only by a direct claim or a
+**Third-party cover**. If both members are absent on the same childcare day, no request
 is raised at all — the day goes straight to at-risk. A request whose day has
 passed is inert: it can't be answered, is not shown or counted, and sends no
 notifications — it keeps its stored state rather than gaining a new one.
@@ -99,10 +99,21 @@ or already assigned — the newest claim wins, displacing whatever
 assignment came before it.
 _Avoid_: Reassignment, override
 
+**Third-party cover**:
+A member recording that they have arranged someone outside the household
+(grandparent, friend, sitter) to do pickup on a childcare day. An
+**Assignment** with source `third-party` and an optional free-text label —
+not a person in the model: no login, no record, never notified. Behaves like a
+direct claim (newest wins, replaces any assignment, withdraws an open request)
+and always derives **Resolved**, because a third party cannot be absent. See
+ADR-0023.
+_Avoid_: Sitter, helper, stand-in
+
 **Assignment**:
 The record of who is responsible for collecting the child on a given
-childcare day. At most one per date; its assignee is a member or nobody.
-Arises from an accepted pickup request or a direct claim, and stands on
+childcare day. At most one per date; its assignee is a member, a
+**Third-party cover**, or nobody.
+Arises from an accepted pickup request, a direct claim or a third-party cover, and stands on
 its own once made: it doesn't change retroactively if the pickup request
 or absence behind it is later cancelled, and a later direct claim
 replaces it without altering the original request's own terminal state.

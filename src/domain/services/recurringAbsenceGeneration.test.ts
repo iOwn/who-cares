@@ -588,6 +588,7 @@ function makeAbsenceSpanAssignment(date: string): Assignment {
     date,
     assigneeId: MEMBER_2_ID,
     source: "direct-claim",
+    thirdPartyLabel: null,
     createdAt: new Date(`${date}T09:00:00.000Z`),
   };
 }

@@ -56,7 +56,7 @@ const INSERT_PATTERN_VERSION = `INSERT INTO childcare_pattern_versions (id, hous
 const INSERT_CLOSURE = `INSERT INTO closures (id, household_id, date, reason) VALUES ($1, $2, $3, $4)`;
 const INSERT_ABSENCE = `INSERT INTO absences (id, household_id, member_id, start_date, end_date, label, note) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
 const INSERT_PICKUP_REQUEST = `INSERT INTO pickup_requests (id, household_id, date, requester_id, recipient_id, absence_id, state, raised_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
-const INSERT_ASSIGNMENT = `INSERT INTO assignments (id, household_id, date, assignee_id, source, created_at) VALUES ($1, $2, $3, $4, $5, $6)`;
+const INSERT_ASSIGNMENT = `INSERT INTO assignments (id, household_id, date, assignee_id, source, third_party_label, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
 
 export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedReport> {
   const { household, members, child, pattern, closures, absences, pickupRequests, assignments } =
@@ -128,6 +128,7 @@ export async function seed(db: Database, graph: HouseholdGraph): Promise<SeedRep
         assignment.date,
         assignment.assigneeId,
         assignment.source,
+        assignment.thirdPartyLabel,
         assignment.createdAt,
       ]);
     }

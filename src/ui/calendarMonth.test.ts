@@ -192,6 +192,48 @@ describe("buildCalendarMonth", () => {
     );
   });
 
+  it("shows a third-party cover (#183) as Sorted, named by its label or generically", () => {
+    const view = buildCalendarMonth({
+      year: 2025,
+      month: 1,
+      pattern: monToFri,
+      closures: [],
+      members: [
+        makeMember({ id: MEMBER_1_ID, name: "Alex" }),
+        makeMember({ id: MEMBER_2_ID, name: "Bailey" }),
+      ],
+      assignments: [
+        makeAssignment({
+          date: "2025-01-14",
+          assigneeId: null,
+          source: "third-party",
+          thirdPartyLabel: "Grandma",
+        }),
+        makeAssignment({ date: "2025-01-15", assigneeId: null, source: "third-party" }),
+      ],
+      pickupRequests: [],
+      absences: [
+        absence({ from: "2025-01-14", to: "2025-01-14" }, { memberId: MEMBER_1_ID }),
+        absence({ from: "2025-01-14", to: "2025-01-14" }, { memberId: MEMBER_2_ID }),
+      ],
+      today: "2025-01-06",
+      now: new Date("2025-01-06T09:00:00.000Z"),
+    });
+    const byDate = new Map(view.weeks.flat().map((day) => [day.date, day]));
+
+    expect(byDate.get("2025-01-14")).toMatchObject({
+      dayState: "Resolved",
+      displayState: "resolved",
+      whoLabel: "Grandma",
+      narrative: "Grandma is on pickup.",
+    });
+    expect(byDate.get("2025-01-15")).toMatchObject({
+      dayState: "Resolved",
+      whoLabel: "Someone else",
+      narrative: "Someone else is on pickup.",
+    });
+  });
+
   it("folds live Day state (#50) over seeded assignments / requests / absences", () => {
     const members = [
       makeMember({ id: MEMBER_1_ID, name: "Alex" }),

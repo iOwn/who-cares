@@ -138,6 +138,7 @@ export function assignmentFromAcceptedRequest(
     date: request.date,
     assigneeId: request.recipientId,
     source: "accepted-request",
+    thirdPartyLabel: null,
     createdAt,
   };
 }

@@ -121,6 +121,7 @@ export async function claimDay(
     date,
     assigneeId: actingMemberId,
     source: "direct-claim",
+    thirdPartyLabel: null,
     createdAt: deps.clock.now(),
   };
 

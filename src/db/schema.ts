@@ -241,10 +241,21 @@ export const assignments = pgTable(
     date: date("date").notNull(),
     assigneeId: text("assignee_id").references(() => members.id, { onDelete: "set null" }),
     source: text("source").notNull(),
+    /** Free-text name of a `third-party` cover (issue #183, ADR-0023); `NULL` otherwise. */
+    thirdPartyLabel: text("third_party_label"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    check("assignments_source_valid", sql`${table.source} in ('accepted-request', 'direct-claim')`),
+    check(
+      "assignments_source_valid",
+      sql`${table.source} in ('accepted-request', 'direct-claim', 'third-party')`,
+    ),
+    // A third-party cover has no member assignee. One-directional on purpose: a
+    // deleted member nulls `assignee_id` on member-sourced rows (`set null`).
+    check(
+      "assignments_third_party_has_no_assignee",
+      sql`${table.source} <> 'third-party' or ${table.assigneeId} is null`,
+    ),
     unique("assignments_household_date_unique").on(table.householdId, table.date),
   ],
 );

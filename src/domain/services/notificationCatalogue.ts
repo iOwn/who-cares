@@ -20,6 +20,7 @@ import {
   PICKUP_REQUEST_DECLINED_EVENT,
   PICKUP_REQUEST_WITHDRAWN_EVENT,
 } from "./pickupRequestResolution";
+import { THIRD_PARTY_COVER_EVENT } from "./thirdPartyCover";
 
 /* ------------------------------------------------------------------ *
  * Event keys the at-risk backstop and the settings actions own.
@@ -50,6 +51,7 @@ export const NOTIFICATION_EVENTS = [
   PICKUP_REQUEST_DECLINED_EVENT,
   PICKUP_REQUEST_WITHDRAWN_EVENT,
   DIRECT_CLAIM_EVENT,
+  THIRD_PARTY_COVER_EVENT,
   ASSIGNMENT_STANDS_EVENT,
   DAY_AT_RISK_BOTH_ABSENT_EVENT,
   DAY_AT_RISK_ESCALATED_EVENT,
