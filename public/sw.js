@@ -10,10 +10,11 @@
  *   { "title": string, "body": string, "url"?: string, "tag"?: string,
  *     "badge"?: number }
  *
- * `badge` is the recipient's unresolved count at send time (issue #134) — this
- * is the only path that can move the app-icon badge while the app is closed,
- * which is the whole point of the feature. `src/app/useAppBadge.ts` re-asserts
- * it from server truth whenever the app is open.
+ * `badge` is what needs the recipient at send time — open requests plus at-risk
+ * days (issues #134, #174, ADR-0022). This is the only path that can move the
+ * app-icon badge while the app is closed, which is the whole point of the
+ * feature. `src/app/useAppBadge.ts` re-asserts it from server truth whenever the
+ * app is open.
  *
  * Served statically from `/sw.js` (root scope) with a no-cache header — see the
  * `headers()` entry in `next.config.ts`.

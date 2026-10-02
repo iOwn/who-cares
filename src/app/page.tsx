@@ -3,7 +3,14 @@ import { getCurrentSession } from "@/auth";
 import { db } from "@/auth/config";
 // Deep import, not the `@/db` barrel — see the comment in `src/auth/config.ts`.
 import { createRepositories } from "@/db/repositories";
-import { mergeClosures, publicHolidayClosures, publicHolidayWindow } from "@/domain";
+import {
+  buildDayStateFacts,
+  DEFAULT_ESCALATION_HORIZON_DAYS,
+  mergeClosures,
+  needsAttentionCount,
+  publicHolidayClosures,
+  publicHolidayWindow,
+} from "@/domain";
 import { AppShell } from "./AppShell";
 import { HIDE_WEEKENDS_COOKIE, parseHideWeekends } from "./calendarPreferences";
 import { SignInScreen } from "./SignInScreen";
@@ -50,6 +57,23 @@ export default async function Home() {
       )
     : storedClosures;
 
+  // The icon badge (issue #174, ADR-0022): open requests + at-risk days, the same
+  // function `dispatch` uses for the push payload, over the data loaded above.
+  const iconBadgeCount = needsAttentionCount({
+    memberId: current.member.id,
+    requests: pickupRequests,
+    days: buildDayStateFacts({
+      pattern,
+      closures,
+      absences,
+      assignments,
+      requests: pickupRequests,
+      today,
+      horizonDays: DEFAULT_ESCALATION_HORIZON_DAYS,
+    }),
+    now: serverNow,
+  });
+
   return (
     <AppShell
       childName={current.child?.name ?? ""}
@@ -60,6 +84,7 @@ export default async function Home() {
       absences={absences}
       assignments={assignments}
       pickupRequests={pickupRequests}
+      iconBadgeCount={iconBadgeCount}
       initialToday={today}
       initialNow={serverNow.toISOString()}
       hideWeekends={hideWeekends}

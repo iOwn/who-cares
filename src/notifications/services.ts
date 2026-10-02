@@ -15,6 +15,7 @@
 import type { DbExecutor } from "@/db/client";
 import { createRepositories, type Repositories } from "@/db/repositories";
 import {
+  loadNeedsAttentionCount,
   type Mailer,
   type Notification,
   type Notifier,
@@ -39,7 +40,17 @@ export interface NotificationServices {
   readonly dispatchAll: (notifications: readonly Notification[]) => Promise<void>;
 }
 
-type NotificationRepos = Pick<Repositories, "members" | "pushSubscriptions" | "pickupRequests">;
+type NotificationRepos = Pick<
+  Repositories,
+  | "members"
+  | "pushSubscriptions"
+  | "pickupRequests"
+  | "households"
+  | "childcarePattern"
+  | "closures"
+  | "absences"
+  | "assignments"
+>;
 
 /** Adapter overrides — only tests pass these; production reads them from env. */
 export interface NotificationServiceOverrides {
@@ -88,7 +99,8 @@ export function createNotificationServices(
     mailer,
     pushSender,
     members: repos.members,
-    pickupRequests: repos.pickupRequests,
+    badgeCount: (memberId) =>
+      loadNeedsAttentionCount({ ...repos, clock: noopAdapters.systemClock }, memberId),
   };
   const notifier = createNotifier(dispatchDeps);
 

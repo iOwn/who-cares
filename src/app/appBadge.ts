@@ -1,5 +1,5 @@
 /**
- * Pure decision behind the app-icon badge (issue #134, ADR-0017).
+ * Pure decision behind the app-icon badge (issues #134, #174, ADR-0017, ADR-0022).
  *
  * Number in, variant out — no `navigator`, no React — so it lives in the `node`
  * Vitest project (`appBadge.test.ts`) while the `navigator.setAppBadge` wiring
@@ -22,7 +22,7 @@ export type BadgeUpdate =
   | { readonly kind: "clear" };
 
 /**
- * What the icon should show for `count` unresolved items.
+ * What the icon should show for `count` items that need the member.
  *
  * Zero clears rather than showing a "0" — `CountBadge` renders nothing at 0 for
  * the same reason, and `setAppBadge(0)` is specified to clear anyway. Anything

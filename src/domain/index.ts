@@ -14,6 +14,7 @@ export * from "./services/closureRanges";
 export * from "./services/dayState";
 export * from "./services/directClaim";
 export * from "./services/memberName";
+export * from "./services/needsAttention";
 export * from "./services/notificationBundling";
 export * from "./services/notificationCatalogue";
 export * from "./services/pickupRequestGeneration";

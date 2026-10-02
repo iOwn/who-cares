@@ -40,17 +40,14 @@ import type {
   PickupRequestRepository,
 } from "../ports";
 import type { CalendarDate } from "../types";
-import { isChildcareDay } from "./childcareDay";
 import { type DayStateFacts, dayState } from "./dayState";
+import { buildDayStateFacts, DEFAULT_ESCALATION_HORIZON_DAYS } from "./needsAttention";
 import {
   DAY_AT_RISK_BOTH_ABSENT_EVENT,
   DAY_AT_RISK_ESCALATED_EVENT,
 } from "./notificationCatalogue";
-import { eachDateInclusive, todayOf } from "./pickupRequestGeneration";
+import { todayOf } from "./pickupRequestGeneration";
 import { mergeClosures, publicHolidayClosures } from "./publicHolidays";
-
-/** How far forward `runAtRiskEscalation` scans by default, in days. */
-export const DEFAULT_ESCALATION_HORIZON_DAYS = 28;
 
 /** One childcare day the backstop is telling both parents about. */
 export interface AtRiskEscalation {
@@ -227,20 +224,14 @@ export async function runAtRiskEscalation(
     ),
   );
 
-  const days: DayStateFacts[] = eachDateInclusive(today, horizonEnd).map((date) => {
-    const openRequest = requests.find((r) => r.date === date && r.state === "Open") ?? null;
-    const absentMemberIds = [
-      ...new Set(
-        absences.filter((a) => a.startDate <= date && date <= a.endDate).map((a) => a.memberId),
-      ),
-    ];
-    return {
-      date,
-      isChildcareDay: isChildcareDay(pattern, closures, date),
-      assignment: assignments.find((a) => a.date === date) ?? null,
-      openRequest,
-      absentMemberIds,
-    };
+  const days = buildDayStateFacts({
+    pattern,
+    closures,
+    absences,
+    assignments,
+    requests,
+    today,
+    horizonDays,
   });
 
   const escalations = planAtRiskEscalations({

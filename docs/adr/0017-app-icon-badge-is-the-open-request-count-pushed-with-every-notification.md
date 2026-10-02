@@ -1,5 +1,7 @@
 # The app-icon badge is the open-request count, pushed with every notification
 
+> **Count rule superseded by ADR-0022** — the icon now also counts at-risk days and no longer equals the bell.
+
 An installed WhoCares (`display: standalone`, ADR-0013) sits on the Home Screen
 with no chrome and, once closed, no way to say that something is waiting. Push
 notifications land in the tray and are dismissed or missed; after that the icon
