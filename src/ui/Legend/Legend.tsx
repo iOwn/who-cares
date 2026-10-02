@@ -20,10 +20,15 @@ export interface LegendProps extends Omit<HTMLAttributes<HTMLUListElement>, "chi
   states?: readonly StatusDisplayState[];
   /** Dot size — forwarded to `StateDot`. Default `sm`. */
   size?: StateDotProps["size"];
+  /**
+   * Also key the closed-at-home marker (issue #181): a marker over a normal
+   * state, not a fifth state, so it is a separate item after the state dots.
+   */
+  showAtHome?: boolean;
 }
 
 export const Legend = forwardRef<HTMLUListElement, LegendProps>(function Legend(
-  { states = DEFAULT_ORDER, size = "sm", className, style, ...props },
+  { states = DEFAULT_ORDER, size = "sm", showAtHome = false, className, style, ...props },
   ref,
 ) {
   return (
@@ -34,6 +39,14 @@ export const Legend = forwardRef<HTMLUListElement, LegendProps>(function Legend(
           {STATUS_LABELS[state]}
         </li>
       ))}
+      {showAtHome ? (
+        <li className={styles.item}>
+          <span className={styles.atHomeSwatch} aria-hidden>
+            ⌂
+          </span>
+          Care needed at home
+        </li>
+      ) : null}
     </ul>
   );
 });

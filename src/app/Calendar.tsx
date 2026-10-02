@@ -176,7 +176,7 @@ export function Calendar({
 
       {tab === "grid" ? (
         <>
-          <Legend className={styles.legend} />
+          <Legend className={styles.legend} showAtHome />
           <CalendarGrid month={view} onDayPress={setSelectedDate} />
         </>
       ) : (
@@ -196,9 +196,14 @@ export function Calendar({
                   <ListRow
                     onPress={() => setSelectedDate(day.date)}
                     trailing={
-                      isStatusDisplayState(day.displayState) ? (
-                        <StatePill state={day.displayState} size="sm" />
-                      ) : null
+                      <span className={styles.listPills}>
+                        {isStatusDisplayState(day.displayState) ? (
+                          <StatePill state={day.displayState} size="sm" />
+                        ) : null}
+                        {day.isClosedAtHome ? (
+                          <span className={styles.atHomePill}>At home</span>
+                        ) : null}
+                      </span>
                     }
                   >
                     <span className={styles.listDate}>{shortDate(day.date)}</span>

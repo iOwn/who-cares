@@ -20,3 +20,17 @@
   align-items: center;
   gap: var(--space-6);
 }
+
+/* The closed-at-home marker key (issue #181) — a miniature of the DayCell strip. */
+.atHomeSwatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 0.875rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-at-home-solid);
+  font-size: var(--text-2xs);
+  line-height: 1;
+  color: var(--color-text-on-accent);
+}

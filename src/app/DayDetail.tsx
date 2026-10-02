@@ -1,5 +1,6 @@
 "use client";
 
+import { House } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Absence, Assignment, CalendarDate, Member, PickupRequest } from "@/domain";
@@ -147,6 +148,11 @@ export function DayDetail({
       ) : (
         <div className={styles.body}>
           <Dialog.Header title={longDate(day.date)} closeButton />
+          {day.isClosedAtHome ? (
+            <Callout tone="info" icon={House} title="Facility closed — care at home needed">
+              {day.closureReason ? `Reason given: ${day.closureReason}` : undefined}
+            </Callout>
+          ) : null}
           <div className={styles.state}>
             {isStatusDisplayState(day.displayState) ? (
               <StatePill state={day.displayState}>
@@ -160,12 +166,6 @@ export function DayDetail({
             )}
           </div>
           <p className={styles.narrative}>{day.narrative}</p>
-          {day.isClosedAtHome ? (
-            <p className={styles.reason}>
-              Facility closed — care at home needed
-              {day.closureReason ? ` · Reason given: ${day.closureReason}` : ""}
-            </p>
-          ) : null}
           {day.displayState === "closed" && day.closureReason ? (
             <p className={styles.reason}>
               {day.closureKind === "public-holiday"

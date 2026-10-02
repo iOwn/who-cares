@@ -245,6 +245,8 @@ A UI-only display state (`closed`), never a domain `Day state`. Surfaces on:
 | `ListRow` | `StatePill` "Closed" + generic narrative; colour rail (deferred to Calendar feature) |
 | `DayDetail` `Dialog` | grey `StatePill` + narrative **with the closure reason** if one was entered |
 | `Legend` | 4th dot |
+
+A closure that needs cover is *not* `closed`: its day keeps its state and gains the closed-at-home marker (dashed border + "⌂ Home" strip on `DayCell`, "At home" pill on the List row, `Callout` in `DayDetail`, opt-in `Legend` marker key via `showAtHome`) — see ADR-0021.
 | Settings closure list | the reason verbatim (it edits the `Closure`, not day-state) |
 
 Grid cell + list row keep a **generic** line; only `DayDetail` surfaces the free-text reason.
