@@ -24,6 +24,10 @@ body {
 }
 
 html {
+  /* Double-tap zoom off (issue #173); pan and pinch-zoom stay (WCAG 1.4.4,
+   * see the `viewport` export in layout.tsx). Intersected down the ancestor
+   * chain, so this one declaration covers every descendant. */
+  touch-action: manipulation;
   /* The ground (docs/design-system.md "Direction: Toybox": warm off-white
    * --sand-50). tokens.css only *defines* --color-bg; painting it on the root
    * element propagates it to the canvas, so overscroll, the rubber-band region

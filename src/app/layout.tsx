@@ -44,6 +44,9 @@ export const metadata: Metadata = {
  * `user-scalable=no`, no `maximum-scale=1`. Next's default viewport meta
  * already allows it; this makes the requirement explicit so a later
  * "fix the iOS zoom-on-focus jump" change has to argue with a comment.
+ * Accidental zoom is cut off the allowed way instead (issue #173): double-tap
+ * zoom via `touch-action: manipulation` (globals.css) and focus-zoom via 16px
+ * editable controls on coarse pointers (the field primitives).
  */
 export const viewport: Viewport = {
   width: "device-width",
