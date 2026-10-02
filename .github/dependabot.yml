@@ -19,6 +19,14 @@ updates:
         update-types:
           - minor
           - patch
+    # `@types/node` tracks the runtime major (`engines.node` is 22.x, CI on 22):
+    # types for a newer Node than we run can typecheck APIs that don't exist at
+    # runtime. Majors are bumped by hand together with the runtime; minor/patch
+    # still flow through the group above.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: "/"
