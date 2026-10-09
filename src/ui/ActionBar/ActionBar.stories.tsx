@@ -41,3 +41,30 @@ export const Default: Story = () => (
     </ActionBar>
   </ScrollFrame>
 );
+
+/** Inside a padded sheet surface: the bar bleeds to the edges and paints the surface colour. */
+export const InSheet: Story = () => (
+  <div
+    style={{
+      maxWidth: "24rem",
+      height: "16rem",
+      overflow: "auto",
+      padding: "var(--space-20)",
+      background: "var(--color-surface)",
+      border: "1px dashed var(--color-border)",
+    }}
+  >
+    <p>Sheet content above the bar…</p>
+    <div style={{ height: "20rem" }} />
+    <ActionBar
+      style={{
+        margin: "0 calc(-1 * var(--space-20)) calc(-1 * var(--space-20))",
+        background: "var(--color-surface)",
+      }}
+    >
+      <Button variant="primary" fullWidth>
+        Save absence
+      </Button>
+    </ActionBar>
+  </div>
+);

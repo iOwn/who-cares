@@ -299,7 +299,7 @@ export function AbsenceForm({
           </Callout>
         )}
 
-        <ActionBar>
+        <ActionBar className={styles.actionBar}>
           <Button variant="primary" fullWidth isDisabled={!canSubmit} onPress={submit}>
             {pending ? "Saving…" : "Save absence"}
           </Button>
