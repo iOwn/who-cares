@@ -220,7 +220,7 @@ opt-in `showAtHome` that keys the marker after the four state dots — not a fif
 ### P1 — feature-composed (documented lighter in #30, built with their features)
 
 `CalendarGrid`, `DayCell`, `MonthPager`, `MonthPicker`, `Legend`, `ListRow`, `RequestCard`,
-`FactList` / `FactRow`, `DateRangeField`, `WeekdayPicker`, `ClosureRow`, `AbsenceImpact`,
+`DateRangeField`, `WeekdayPicker`, `ClosureRow`, `AbsenceImpact`,
 `RecurringPreview`.
 
 Screens / flows (`DayDetailSheet`, `AbsenceForm`, `InboxScreen`, `ChildcareSettings`) are
