@@ -36,6 +36,7 @@ import { weekdayOf } from "./childcareDay";
 import {
   AbsenceInputError,
   eachDateInclusive,
+  MAX_ABSENCE_NOTE_LENGTH,
   PICKUP_REQUEST_RECEIVED_EVENT,
   pickupRequestDigestBody,
   type RecordAbsenceDeps,
@@ -226,6 +227,14 @@ export async function recordRecurringAbsences(
   }
   if (input.endDate < input.startDate) {
     throw new AbsenceInputError("The end date can't be before the start date.");
+  }
+  // Checked here as well as in `recordAbsence`: when every day is already
+  // covered nothing reaches `recordAbsence`, and an over-long note would be
+  // silently ignored instead of rejected.
+  if ((input.note?.trim().length ?? 0) > MAX_ABSENCE_NOTE_LENGTH) {
+    throw new AbsenceInputError(
+      `The message can be at most ${MAX_ABSENCE_NOTE_LENGTH} characters.`,
+    );
   }
 
   const today = todayOf(deps.clock);

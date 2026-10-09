@@ -34,6 +34,7 @@ import {
   pattern,
   resetIdCounter,
 } from "@/testing";
+import { AbsenceInputError, MAX_ABSENCE_NOTE_LENGTH } from "./pickupRequestGeneration";
 import {
   MAX_RECURRING_HORIZON_DAYS,
   planRecurringAbsences,
@@ -502,6 +503,17 @@ describe("recordRecurringAbsences", () => {
       event: "pickup-request-received",
     });
     expect(result.notification?.body).toContain("3 childcare days");
+  });
+
+  it("rejects a note over 500 characters even when every day is already covered (#207)", async () => {
+    const fakes = createFakes();
+    await recordRecurringAbsences(fakes.deps, baseInput);
+    await expect(
+      recordRecurringAbsences(fakes.deps, {
+        ...baseInput,
+        note: "x".repeat(MAX_ABSENCE_NOTE_LENGTH + 1),
+      }),
+    ).rejects.toBeInstanceOf(AbsenceInputError);
   });
 
   it("carries the note once in the batch digest (#207)", async () => {
