@@ -255,8 +255,17 @@ Vercel Authentication answers every request with a 302 to vercel.com SSO (pages)
 `401 {"error":{"message":"Protected deployment"}}` (APIs) until the caller is either a
 vercel.com session in the browser or carries the bypass secret. A human just signs in to
 vercel.com; anything scripted uses the same secret `e2e.yml` does. Keep it in `.env.local`
-as `VERCEL_AUTOMATION_BYPASS_SECRET` (gitignored; Project → Settings → Deployment
-Protection → Protection Bypass for Automation shows the value).
+as `VERCEL_AUTOMATION_BYPASS_SECRET` for your own scripts, and in `.claude/settings.local.json`
+under `env` for the agent shell (issue #202) — both gitignored; **never** in the checked-in
+`.claude/settings.json`. Project → Settings → Deployment Protection → Protection Bypass for
+Automation shows the value.
+
+**Agents verify UI changes with `/verify-ui`** (`.claude/skills/verify-ui/`, issue #203): after
+a UI-touching PR has a green preview, it screenshots the affected screens at 390 and 1280px,
+measures edge alignment and overflow with `getBoundingClientRect`, and reports on the PR.
+Caveat: it **seeds** — truncates — the shared Preview Neon branch, the same as `e2e.yml`, so it
+waits for any running E2E smoke first. Dark mode is not captured until it exists (a stub in
+`tokens.css`, #27).
 
 ```sh
 PREVIEW=https://who-cares-git-<branch>-florians-projects-3fc478e2.vercel.app   # or the per-deploy URL
