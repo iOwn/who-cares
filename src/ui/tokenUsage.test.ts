@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { lintCss, stripComments } from "./tokenUsage";
+import { inlineStyleFiles, lintCss, stripComments } from "./tokenUsage";
 
 /**
  * Lint rule: component and feature CSS may only use the predefined tokens.
@@ -19,8 +19,11 @@ import { lintCss, stripComments } from "./tokenUsage";
  *   4. spacing / border / radius / type / shadow / z-index / grid-track / motion-duration
  *      properties take tokens, not raw lengths (0 and percentages are fine)
  *
+ *   5. shipped TSX may not grow a new inline `style={{}}` unnoticed: the files that have one are
+ *      pinned in `INLINE_STYLE_ALLOWED` (stories and tests are exempt)
+ *
  * Not covered (issue #190): widths/heights/offsets, `outline` (the 2px focus-ring recipe has
- * no token), inline `style={{}}` in TSX, the `animation` shorthand.
+ * no token).
  *
  * See docs/design-system.md "Token model" and the Component Authoring Checklist.
  * A deliberate exception goes in `ALLOWED` with the reason, not a looser rule.
@@ -40,6 +43,19 @@ const ALLOWED: Record<string, string> = {
     "optical 3px nudge aligning the dot with the first text line",
   "ui/Spinner/Spinner.module.css|margin: -1px;":
     "the standard visually-hidden recipe (1px box, -1px margin)",
+  "app/RouteSkeleton.module.css|animation: skeleton-pulse 1.4s var(--ease-standard) infinite;":
+    "deliberate 1.4s skeleton pulse, slower than any transition token",
+};
+
+/**
+ * Shipped TSX files (relative to `src/`) that set an inline `style={{}}`, and why that can't be a
+ * token or a CSS Module. A new file here is a decision, not an accident.
+ */
+const INLINE_STYLE_ALLOWED: Record<string, string> = {
+  "app/appIcon.tsx":
+    "Satori ImageResponse renders outside the CSS cascade: no var(), sizes derive from `size`",
+  "app/PullToRefresh.tsx": "gesture-driven translate / opacity / rotate, computed per frame",
+  "ui/CalendarGrid/CalendarGrid.tsx": "sets --calendar-columns, a unitless count (no length)",
 };
 
 /** Custom properties supplied by react-aria-components at runtime, not declared in src/. */
@@ -107,6 +123,15 @@ describe("CSS uses only predefined tokens", () => {
     });
     expect(stale).toEqual([]);
   });
+
+  it("pins the shipped TSX that sets an inline style (stories and tests exempt)", () => {
+    const sources = Object.fromEntries(
+      files
+        .filter((f) => f.endsWith(".tsx"))
+        .map((f) => [relative(SRC, f).replaceAll("\\", "/"), read(f)]),
+    );
+    expect(inlineStyleFiles(sources)).toEqual(Object.keys(INLINE_STYLE_ALLOWED).sort());
+  });
 });
 
 describe("lintCss (seeded with known-bad input)", () => {
@@ -148,6 +173,26 @@ describe("lintCss (seeded with known-bad input)", () => {
     flags(".a { transition: opacity 120ms; }", "raw length in transition");
     flags(".a { border: 2px solid var(--color-text); }", "raw length in border");
     flags(".a { grid-template-columns: 1fr 120px; }", "raw length in grid-template-columns");
+  });
+
+  it("flags a raw animation duration but not tokenised ones", () => {
+    flags(".a { animation: pulse 1.4s ease infinite; }", "raw length in animation");
+    flags(".a { animation-duration: 300ms; }", "raw length in animation-duration");
+    clean(".a { animation: pulse var(--space-8) linear infinite; animation: none; }");
+  });
+
+  it("finds inline styles in shipped TSX only", () => {
+    const inline = "<div style={{ width: 4 }} />";
+    expect(
+      inlineStyleFiles({
+        "app/New.tsx": inline,
+        "ui/A/A.stories.tsx": inline,
+        "ui/A/A.test.tsx": inline,
+        "ui/A/A.ts": inline,
+        "ui/B/B.tsx": "<div style={styles} className={x} />",
+        "ui/C/C.tsx": "<div style={{}} />",
+      }),
+    ).toEqual(["app/New.tsx", "ui/C/C.tsx"]);
   });
 
   it("sees what a line-based scan would miss", () => {

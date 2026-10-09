@@ -53,7 +53,7 @@ const TOKENIZED_PROPERTY = new RegExp(
     "box-shadow",
     "z-index",
     "transition(?:-duration)?",
-    "animation-duration",
+    "animation(?:-duration)?",
     "grid-template-(?:columns|rows)",
   ].join("|")})$`,
   "i",
@@ -64,6 +64,18 @@ const COLOR_PROPERTY = new RegExp(
   `^(?:color|background(?:-color)?|fill|stroke|caret-color|accent-color|text-decoration-color|(?:border|outline|column-rule)${SIDES}(?:-color)?|box-shadow|text-shadow)$`,
   "i",
 );
+
+/**
+ * Paths (from a `path → source text` map) of shipped TSX that sets an inline `style={{…}}`.
+ * Stories and tests are workbench/test code and exempt.
+ */
+export function inlineStyleFiles(sources: Readonly<Record<string, string>>): string[] {
+  return Object.entries(sources)
+    .filter(([path]) => /\.tsx$/.test(path) && !/\.(?:stories|test)\.tsx$/.test(path))
+    .filter(([, text]) => /\bstyle=\{\{/.test(text))
+    .map(([path]) => path)
+    .sort();
+}
 
 /** Blank out comments but keep newlines so reported line numbers stay right. */
 export function stripComments(css: string): string {
