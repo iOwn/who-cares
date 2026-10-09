@@ -54,7 +54,7 @@ const TOKENIZED_PROPERTY = new RegExp(
     "box-shadow",
     "z-index",
     "transition(?:-duration)?",
-    "animation-duration",
+    "animation(?:-duration)?",
     "grid-template-(?:columns|rows)",
   ].join("|")})$`,
   "i",
@@ -82,6 +82,18 @@ export function parseSizeTokens(tokensCss: string): Map<number, string> {
     sizes.set(toPx(Number(amount), unit), name);
   }
   return sizes;
+}
+
+/**
+ * Paths (from a `path → source text` map) of shipped TSX that sets an inline `style={{…}}`.
+ * Stories and tests are workbench/test code and exempt.
+ */
+export function inlineStyleFiles(sources: Readonly<Record<string, string>>): string[] {
+  return Object.entries(sources)
+    .filter(([path]) => /\.tsx$/.test(path) && !/\.(?:stories|test)\.tsx$/.test(path))
+    .filter(([, text]) => /\bstyle=\{\{/.test(text))
+    .map(([path]) => path)
+    .sort();
 }
 
 /** Blank out comments but keep newlines so reported line numbers stay right. */
