@@ -44,3 +44,16 @@ export const RemoveDisabled: Story = () => (
     />
   </div>
 );
+
+export const LongReason: Story = () => (
+  <div style={{ maxWidth: "20rem" }}>
+    <ClosureRow
+      title="Mon, Aug 4 – Fri, Aug 8, 2026"
+      dayCount={5}
+      reason="Facility closed for the annual deep clean, fire-safety inspection and staff retreat"
+      kind="Care at home"
+      onEdit={noop}
+      onRemove={noop}
+    />
+  </div>
+);
