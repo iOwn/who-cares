@@ -16,6 +16,7 @@ import {
   ActionBar,
   Button,
   Callout,
+  ClosureRow,
   DateField,
   DateRangeField,
   SectionHeading,
@@ -107,7 +108,7 @@ function formatRange(start: CalendarDate, end: CalendarDate): string {
 }
 
 /** One range in the add form (issue #166). `key` is a stable React key across removals. */
-interface ClosureRow {
+interface ClosureFormRow {
   key: number;
   range: RangeValue<DateValue> | null;
   reason: string;
@@ -116,7 +117,12 @@ interface ClosureRow {
 
 let nextRowKey = 0;
 /** New rows default to *care still needed* — a wrongly hidden day is the dangerous error (ADR-0021). */
-const newRow = (): ClosureRow => ({ key: nextRowKey++, range: null, reason: "", needsCover: true });
+const newRow = (): ClosureFormRow => ({
+  key: nextRowKey++,
+  range: null,
+  reason: "",
+  needsCover: true,
+});
 
 /** Care still needed (the facility is shut, the child is not) vs. no care needed. */
 function CareToggle({
@@ -153,7 +159,7 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
   // Closures. Adding takes a *list* of rows (issue #166) — a whole year of
   // training days and the summer break in one submit; editing is pinned to the
   // one row's date, so the edit form swaps the row list for a single `DateField`.
-  const [rows, setRows] = useState<ClosureRow[]>(() => [newRow()]);
+  const [rows, setRows] = useState<ClosureFormRow[]>(() => [newRow()]);
   const [closureDate, setClosureDate] = useState<DateValue | null>(null);
   // The edited group's range (issue #171) — used when the group spans several days.
   const [closureRange, setClosureRange] = useState<RangeValue<DateValue> | null>(null);
@@ -163,7 +169,7 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
   const [editing, setEditing] = useState<ClosureRange | null>(null);
   const ranges = groupClosureRanges(closures);
 
-  const updateRow = (key: number, patch: Partial<ClosureRow>) =>
+  const updateRow = (key: number, patch: Partial<ClosureFormRow>) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
 
   const resetClosureForm = () => {
@@ -306,37 +312,20 @@ export function ChildcareSettings({ pattern, closures, holidays, today }: Childc
           <ul className={styles.closureList}>
             {ranges.map((range) => (
               <li key={range.ids[0]}>
-                <Surface className={styles.closureRow}>
-                  <div className={styles.closureText}>
-                    <p className={styles.closureDate}>
-                      {formatRange(range.startDate, range.endDate)}
-                    </p>
-                    {range.dayCount > 1 ? (
-                      <p className={styles.closureReason}>{range.dayCount} days</p>
-                    ) : null}
-                    {range.reason ? <p className={styles.closureReason}>{range.reason}</p> : null}
-                    <p className={styles.closureKind}>
-                      {range.needsCover ? "Care at home" : "No care needed"}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" onPress={() => editClosure(range)}>
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    tone="danger"
-                    size="sm"
-                    isDisabled={pending}
-                    aria-label={
-                      range.dayCount > 1
-                        ? `Remove ${formatRange(range.startDate, range.endDate)}`
-                        : undefined
-                    }
-                    onPress={() => run(() => removeClosuresAction([...range.ids]))}
-                  >
-                    <Trash2 size={14} aria-hidden /> Remove
-                  </Button>
-                </Surface>
+                <ClosureRow
+                  title={formatRange(range.startDate, range.endDate)}
+                  dayCount={range.dayCount}
+                  reason={range.reason}
+                  kind={range.needsCover ? "Care at home" : "No care needed"}
+                  isRemoveDisabled={pending}
+                  removeLabel={
+                    range.dayCount > 1
+                      ? `Remove ${formatRange(range.startDate, range.endDate)}`
+                      : undefined
+                  }
+                  onEdit={() => editClosure(range)}
+                  onRemove={() => run(() => removeClosuresAction([...range.ids]))}
+                />
               </li>
             ))}
           </ul>
