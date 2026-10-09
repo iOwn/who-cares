@@ -20,6 +20,8 @@
 .actionBar {
   margin: 0 calc(-1 * var(--space-20)) calc(-1 * var(--space-20));
   --action-bar-bg: var(--color-surface);
+  /* inline padding matches .dialog's content inset so the button lines up with the fields; extra room below it */
+  --action-bar-padding: var(--space-12) var(--space-20) var(--space-24);
   /* sticky offsets from the padding edge of the scroll port, so pull it down over .dialog's bottom padding */
   bottom: calc(-1 * var(--space-20));
 }
