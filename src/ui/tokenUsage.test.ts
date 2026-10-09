@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { lintCss, stripComments } from "./tokenUsage";
+import { inlineStyleFiles, lintCss, parseSizeTokens, stripComments } from "./tokenUsage";
 
 /**
  * Lint rule: component and feature CSS may only use the predefined tokens.
@@ -17,10 +17,14 @@ import { lintCss, stripComments } from "./tokenUsage";
  *   3. every `var(--x)` resolves to a token (tokens.css) or a custom property declared
  *      in `src/` (CSS declaration or a `"--x"` key set from TSX)
  *   4. spacing / border / radius / type / shadow / z-index / grid-track / motion-duration
- *      properties take tokens, not raw lengths (0 and percentages are fine)
+ *      properties (incl. `outline` / `outline-offset`) take tokens, not raw lengths (0 and percentages are fine)
  *
- * Not covered (issue #190): widths/heights/offsets, `outline` (the 2px focus-ring recipe has
- * no token), inline `style={{}}` in TSX, the `animation` shorthand.
+ *   5. a raw width/height whose value equals a `--size-*` token must use the token (one-off
+ *      sizes with no token — pips, skeletons, max-widths — stay raw on purpose, ADR-0024)
+ *   6. shipped TSX may not grow a new inline `style={{}}` unnoticed: the files that have one are
+ *      pinned in `INLINE_STYLE_ALLOWED` (stories and tests are exempt)
+ *
+ * Not covered (issue #190): `top`/`right`/`bottom`/`left`.
  *
  * See docs/design-system.md "Token model" and the Component Authoring Checklist.
  * A deliberate exception goes in `ALLOWED` with the reason, not a looser rule.
@@ -38,8 +42,23 @@ const ALLOWED: Record<string, string> = {
     "optical 1px nudge aligning the icon with the first text line",
   "ui/Callout/Callout.module.css|margin-top: 0.1875rem;":
     "optical 3px nudge aligning the dot with the first text line",
+  "app/RouteSkeleton.module.css|height: 2.25rem;":
+    "tab-strip skeleton; its height only coincides with --size-icon-36",
   "ui/Spinner/Spinner.module.css|margin: -1px;":
     "the standard visually-hidden recipe (1px box, -1px margin)",
+  "app/RouteSkeleton.module.css|animation: skeleton-pulse 1.4s var(--ease-standard) infinite;":
+    "deliberate 1.4s skeleton pulse, slower than any transition token",
+};
+
+/**
+ * Shipped TSX files (relative to `src/`) that set an inline `style={{}}`, and why that can't be a
+ * token or a CSS Module. A new file here is a decision, not an accident.
+ */
+const INLINE_STYLE_ALLOWED: Record<string, string> = {
+  "app/appIcon.tsx":
+    "Satori ImageResponse renders outside the CSS cascade: no var(), sizes derive from `size`",
+  "app/PullToRefresh.tsx": "gesture-driven translate / opacity / rotate, computed per frame",
+  "ui/CalendarGrid/CalendarGrid.tsx": "sets --calendar-columns, a unitless count (no length)",
 };
 
 /** Custom properties supplied by react-aria-components at runtime, not declared in src/. */
@@ -77,9 +96,10 @@ function declaredCustomProperties(): Set<string> {
 
 function lintRepo(): string[] {
   const known = declaredCustomProperties();
+  const sizeTokens = parseSizeTokens(read(TOKENS));
   return cssFiles.flatMap((file) => {
     const rel = relative(SRC, file).replaceAll("\\", "/");
-    return lintCss(read(file), known)
+    return lintCss(read(file), known, sizeTokens)
       .filter((v) => !(`${rel}|${v.declaration}` in ALLOWED))
       .map((v) => `${rel}:${v.line}  ${v.message}: ${v.declaration}`);
   });
@@ -106,6 +126,15 @@ describe("CSS uses only predefined tokens", () => {
       }
     });
     expect(stale).toEqual([]);
+  });
+
+  it("pins the shipped TSX that sets an inline style (stories and tests exempt)", () => {
+    const sources = Object.fromEntries(
+      files
+        .filter((f) => f.endsWith(".tsx"))
+        .map((f) => [relative(SRC, f).replaceAll("\\", "/"), read(f)]),
+    );
+    expect(inlineStyleFiles(sources)).toEqual(Object.keys(INLINE_STYLE_ALLOWED).sort());
   });
 });
 
@@ -148,6 +177,69 @@ describe("lintCss (seeded with known-bad input)", () => {
     flags(".a { transition: opacity 120ms; }", "raw length in transition");
     flags(".a { border: 2px solid var(--color-text); }", "raw length in border");
     flags(".a { grid-template-columns: 1fr 120px; }", "raw length in grid-template-columns");
+  });
+
+  it("flags a raw animation duration but not tokenised ones", () => {
+    flags(".a { animation: pulse 1.4s ease infinite; }", "raw length in animation");
+    flags(".a { animation-duration: 300ms; }", "raw length in animation-duration");
+    clean(".a { animation: pulse var(--space-8) linear infinite; animation: none; }");
+  });
+
+  it("finds inline styles in shipped TSX only", () => {
+    const inline = "<div style={{ width: 4 }} />";
+    expect(
+      inlineStyleFiles({
+        "app/New.tsx": inline,
+        "ui/A/A.stories.tsx": inline,
+        "ui/A/A.test.tsx": inline,
+        "ui/A/A.ts": inline,
+        "ui/B/B.tsx": "<div style={styles} className={x} />",
+        "ui/C/C.tsx": "<div style={{}} />",
+      }),
+    ).toEqual(["app/New.tsx", "ui/C/C.tsx"]);
+  });
+
+  it("flags raw outline widths and offsets, not outline: none", () => {
+    flags(".a { outline: 2px solid var(--color-text); }", "raw length in outline");
+    flags(".a { outline-offset: 2px; }", "raw length in outline-offset");
+    clean(
+      ".a { outline: var(--space-8) solid var(--color-text); outline-offset: var(--space-8); }",
+    );
+    clean(".a { outline: none; }");
+  });
+
+  it("flags a raw dimension that equals a size token, in any unit spelling", () => {
+    const sizes = new Map([
+      [40, "--size-control-md"],
+      [24, "--size-icon-24"],
+    ]);
+    const sized = (css: string) => lintCss(css, known, sizes).map((v) => v.message);
+    expect(sized(".a { min-height: 2.5rem; }")).toEqual([
+      "raw 2.5rem in min-height — use --size-control-md",
+    ]);
+    expect(sized(".a { height: 40px; }")).toHaveLength(1);
+    expect(sized(".a { width: calc(100% - 1.5rem); }")).toHaveLength(1);
+    expect(sized(".a { width: min(24rem, 90vw); }")).toEqual([]);
+  });
+
+  it("leaves other dimensions, other properties and custom properties alone", () => {
+    const sizes = new Map([[40, "--size-control-md"]]);
+    const sized = (css: string) => lintCss(css, known, sizes).map((v) => v.message);
+    expect(sized(".a { min-height: 2.6rem; width: 100%; max-width: 22rem; }")).toEqual([]);
+    expect(sized(".a { flex-basis: 2.5rem; }")).toEqual([]);
+    expect(
+      lintCss(".a { min-height: var(--size-control-md); }", new Set(["--size-control-md"]), sizes),
+    ).toEqual([]);
+    expect(lintCss(".a { height: 2.5rem; }", known)).toEqual([]);
+  });
+
+  it("reads size tokens from tokens.css text", () => {
+    const css =
+      "/* --size-x: 9rem; */ :root { --size-a: 2.5rem; --size-b: 24px; --space-8: 0.5rem; }";
+    expect([...parseSizeTokens(css)]).toEqual([
+      [40, "--size-a"],
+      [24, "--size-b"],
+    ]);
   });
 
   it("sees what a line-based scan would miss", () => {

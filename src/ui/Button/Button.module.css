@@ -23,8 +23,8 @@
 
 /* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
 .base[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .base[data-disabled] {
@@ -34,14 +34,14 @@
 
 /* --- size --- */
 .sizeMd {
-  min-height: 2.5rem;
+  min-height: var(--size-control-md);
   padding-block: var(--space-8);
   padding-inline: var(--space-16);
   font-size: var(--text-md);
 }
 
 .sizeSm {
-  min-height: 2.125rem;
+  min-height: var(--size-control-sm);
   padding-block: var(--space-6);
   padding-inline: var(--space-12);
   font-size: var(--text-sm);

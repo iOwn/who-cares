@@ -20,8 +20,8 @@
 }
 
 .sizeSm {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--size-icon-24);
+  height: var(--size-icon-24);
   font-size: var(--text-sm);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .sizeLg {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--size-icon-36);
+  height: var(--size-icon-36);
   font-size: var(--text-md);
 }

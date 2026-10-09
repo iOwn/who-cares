@@ -26,10 +26,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  /* 2.5rem: the shared 40px control height — same rem literal Button uses for
-     its `md` size (Button.module.css); the token scale has no control-height
-     step. */
-  min-height: 2.5rem;
+  /* The shared 40px control height — the same token Button uses for its `md` size. */
+  min-height: var(--size-control-md);
   padding-block: var(--space-4);
   padding-inline: var(--space-12);
   border: var(--border) solid var(--color-border);
@@ -40,8 +38,8 @@
 
 /* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
 .group[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
   border-color: var(--color-border-strong);
 }
 
@@ -123,8 +121,8 @@
 }
 
 .trigger[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .trigger[data-disabled] {
@@ -188,8 +186,8 @@
 }
 
 .navButton[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .navButton[data-disabled] {
@@ -242,8 +240,8 @@
 }
 
 .cell[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .cell[data-disabled] {

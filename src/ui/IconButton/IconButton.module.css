@@ -17,8 +17,8 @@
 }
 
 .base[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .base[data-hovered] {
@@ -32,13 +32,13 @@
 
 /* --- size (square) --- */
 .sizeMd {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
 }
 
 .sizeSm {
-  width: 2.125rem;
-  height: 2.125rem;
+  width: var(--size-control-sm);
+  height: var(--size-control-sm);
 }
 
 /* --- variant: secondary (white tile + offset shadow) --- */

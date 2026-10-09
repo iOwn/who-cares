@@ -93,8 +93,12 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
   (light) → dark stubs. Imported **once per runtime** and nowhere else: `src/app/layout.tsx`
   for the app, `.ladle/components.tsx` for the workbench. Components reach tokens through the
   cascade — a component that imports `tokens.css` is a bug.
-- **Sizes** (decision only, not yet built): a focus-ring width/offset pair and a small
-  `--size-control-*` / `--size-icon-*` scale; pips, skeletons and container widths stay raw
+- **Focus ring**: `--focus-ring-width` / `--focus-ring-offset` (2px each); components declare
+  `outline: var(--focus-ring-width) solid var(--color-focus-ring)` themselves (#191).
+- **Sizes** (#192): `--size-control-sm` / `--size-control-md` (34 / 40px) and `--size-icon-24` /
+  `--size-icon-36`, only for values shared by 2+ components. Pips, skeletons, container widths and
+  FAB's 3rem stay raw; the lint rule flags a raw width/height only when it equals one of these
+  tokens' values
   ([ADR-0024](./adr/0024-sizes-get-a-small-control-scale-focus-ring-first-the-rest-stays-raw.md)).
 - **Units**: type + space in `rem` (root 16px); radius / border-width / shadow-offset in `px`.
 - **Categories**: colour, type scale, weight / leading / tracking, space, radius, border-width,
@@ -245,7 +249,7 @@ Confirmed + mechanically pinned in
 2. **Passthrough & refs** — every component forwards `className` **and** `style` (merged last as
    an escape hatch) and forwards `ref` to its root DOM node.
 3. **Focus ring — MANDATORY.** Every interactive primitive renders
-   `outline: 2px solid var(--color-focus-ring)` + `outline-offset: 2px`, applied via
+   `outline: var(--focus-ring-width) solid var(--color-focus-ring)` + `outline-offset: var(--focus-ring-offset)`, applied via
    `&[data-focus-visible]` (RAC) or native `:focus-visible` (non-RAC elements). A shared
    `focus-ring` utility class lives in the token `@layer` (`tokens.css` / a `mixins.css`).
    **Hard rule**: no component may set `outline: none` without an equivalent-or-better indicator
