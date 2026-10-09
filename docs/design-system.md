@@ -325,7 +325,10 @@ A PR adding a `src/ui/` primitive must:
 - [ ] forward **and** merge `className` / `style` **last**
 - [ ] forward `ref` to the root DOM node
 - [ ] render a `[data-focus-visible]` (or `:focus-visible`) ring — **no naked `outline: none`**
-- [ ] consume **only** semantic tokens (no primitive tokens, no raw hex / px)
+- [ ] consume **only** semantic tokens (no primitive tokens, no raw hex / px) — enforced by
+      `src/ui/tokenUsage.test.ts`, which fails on raw colours, primitive or unknown tokens, and raw
+      lengths in spacing / radius / type / shadow / z-index / motion properties; a deliberate
+      exception goes in its `ALLOWED` map with a reason
 - [ ] gate motion on `prefers-reduced-motion` (drop `transform` / `animation`, not just
       duration)
 - [ ] ship a `<Component>.stories.tsx` (P0 mandatory — see [Workbench](#workbench-ladle))
