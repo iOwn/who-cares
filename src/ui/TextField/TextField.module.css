@@ -20,9 +20,8 @@
 
 .input {
   width: 100%;
-  /* 2.5rem: the shared 40px control height — same rem literal Button uses for
-     its `md` size (Button.module.css); the token scale has no control-height step. */
-  min-height: 2.5rem;
+  /* The shared 40px control height — the same token Button uses for its `md` size. */
+  min-height: var(--size-control-md);
   padding-block: var(--space-8);
   padding-inline: var(--space-12);
   border: var(--border) solid var(--color-border);

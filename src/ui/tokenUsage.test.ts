@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { lintCss, stripComments } from "./tokenUsage";
+import { lintCss, parseSizeTokens, stripComments } from "./tokenUsage";
 
 /**
  * Lint rule: component and feature CSS may only use the predefined tokens.
@@ -19,7 +19,11 @@ import { lintCss, stripComments } from "./tokenUsage";
  *   4. spacing / border / radius / type / shadow / z-index / grid-track / motion-duration
  *      properties (incl. `outline` / `outline-offset`) take tokens, not raw lengths (0 and percentages are fine)
  *
- * Not covered (issue #190): widths/heights/offsets, inline `style={{}}` in TSX, the `animation` shorthand.
+ *   5. a raw width/height whose value equals a `--size-*` token must use the token (one-off
+ *      sizes with no token — pips, skeletons, max-widths — stay raw on purpose, ADR-0024)
+ *
+ * Not covered (issue #190): inline `style={{}}` in TSX and the `animation` shorthand (#193),
+ * `top`/`right`/`bottom`/`left`.
  *
  * See docs/design-system.md "Token model" and the Component Authoring Checklist.
  * A deliberate exception goes in `ALLOWED` with the reason, not a looser rule.
@@ -37,6 +41,8 @@ const ALLOWED: Record<string, string> = {
     "optical 1px nudge aligning the icon with the first text line",
   "ui/Callout/Callout.module.css|margin-top: 0.1875rem;":
     "optical 3px nudge aligning the dot with the first text line",
+  "app/RouteSkeleton.module.css|height: 2.25rem;":
+    "tab-strip skeleton; its height only coincides with --size-icon-36",
   "ui/Spinner/Spinner.module.css|margin: -1px;":
     "the standard visually-hidden recipe (1px box, -1px margin)",
 };
@@ -76,9 +82,10 @@ function declaredCustomProperties(): Set<string> {
 
 function lintRepo(): string[] {
   const known = declaredCustomProperties();
+  const sizeTokens = parseSizeTokens(read(TOKENS));
   return cssFiles.flatMap((file) => {
     const rel = relative(SRC, file).replaceAll("\\", "/");
-    return lintCss(read(file), known)
+    return lintCss(read(file), known, sizeTokens)
       .filter((v) => !(`${rel}|${v.declaration}` in ALLOWED))
       .map((v) => `${rel}:${v.line}  ${v.message}: ${v.declaration}`);
   });
@@ -156,6 +163,40 @@ describe("lintCss (seeded with known-bad input)", () => {
       ".a { outline: var(--space-8) solid var(--color-text); outline-offset: var(--space-8); }",
     );
     clean(".a { outline: none; }");
+  });
+
+  it("flags a raw dimension that equals a size token, in any unit spelling", () => {
+    const sizes = new Map([
+      [40, "--size-control-md"],
+      [24, "--size-icon-24"],
+    ]);
+    const sized = (css: string) => lintCss(css, known, sizes).map((v) => v.message);
+    expect(sized(".a { min-height: 2.5rem; }")).toEqual([
+      "raw 2.5rem in min-height — use --size-control-md",
+    ]);
+    expect(sized(".a { height: 40px; }")).toHaveLength(1);
+    expect(sized(".a { width: calc(100% - 1.5rem); }")).toHaveLength(1);
+    expect(sized(".a { width: min(24rem, 90vw); }")).toEqual([]);
+  });
+
+  it("leaves other dimensions, other properties and custom properties alone", () => {
+    const sizes = new Map([[40, "--size-control-md"]]);
+    const sized = (css: string) => lintCss(css, known, sizes).map((v) => v.message);
+    expect(sized(".a { min-height: 2.6rem; width: 100%; max-width: 22rem; }")).toEqual([]);
+    expect(sized(".a { flex-basis: 2.5rem; }")).toEqual([]);
+    expect(
+      lintCss(".a { min-height: var(--size-control-md); }", new Set(["--size-control-md"]), sizes),
+    ).toEqual([]);
+    expect(lintCss(".a { height: 2.5rem; }", known)).toEqual([]);
+  });
+
+  it("reads size tokens from tokens.css text", () => {
+    const css =
+      "/* --size-x: 9rem; */ :root { --size-a: 2.5rem; --size-b: 24px; --space-8: 0.5rem; }";
+    expect([...parseSizeTokens(css)]).toEqual([
+      [40, "--size-a"],
+      [24, "--size-b"],
+    ]);
   });
 
   it("sees what a line-based scan would miss", () => {

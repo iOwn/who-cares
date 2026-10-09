@@ -82,8 +82,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--size-icon-24);
+  height: var(--size-icon-24);
   border-radius: var(--radius-pill);
   background: var(--color-resolved-surface);
   color: var(--color-resolved-text);

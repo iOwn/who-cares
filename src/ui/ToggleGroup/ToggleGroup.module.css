@@ -18,7 +18,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.5rem;
+  min-width: var(--size-control-md);
   padding-block: var(--space-8);
   padding-inline: var(--space-12);
   border: var(--border) solid var(--color-border);
