@@ -196,6 +196,11 @@ state names; ToggleGroup's sibling `WeekdayPicker` tops out at 7 short keys). RA
 Props: `label, options ({value, label}[]), value, defaultValue, onChange, placeholder,
 description, errorMessage, isRequired, isOptional, isDisabled`.
 
+## Also in the library
+
+- **VisuallyHidden** — static screen-reader-only text; a straight re-export of RAC's (no wrapper, no
+  styling). Transient announcements use `announce()` instead.
+
 ## P1 — feature-composed (documented lighter, built with their features)
 
 - **CalendarGrid** — the month grid. Composes `DayCell` ×35–42 + weekday header row; owns
@@ -219,14 +224,12 @@ description, errorMessage, isRequired, isOptional, isDisabled`.
   {date}" + timing line + question + Accept/Decline `Button` row; sub-variant `escalating` =
   `Surface variant="danger"` + red timing) and `answered` (compact — status icon + "You
   accepted · {date}" + subline; `declined` dimmed).
-- **FactList / FactRow** — DayDetail evidence list. `FactRow` = icon + key (bold) + value
-  (muted), hairline top divider. Feature supplies the rows.
 - **DateRangeField** — composes two `DateField`s + cross-field validation + the 4-week
   `maxValue` cap. ImOut, Recurring.
 - **WeekdayPicker** — `ToggleGroup` specialised to Mon–Fri keys, weekday-typed value, starts
   blank (SPEC — no saved preference). Recurring, Settings.
 - **ClosureRow** — Settings closure list item, one per *range* of consecutive same-kind/reason closures (issue #171: date range + "N days"). Composes `Surface` + date range + date/reason
-  text + destructive "Remove" `Button`.
+  text + destructive "Remove" `Button`. Lives in `src/ui/ClosureRow`.
 - **AbsenceImpact** — `Callout tone="info"` wrapper deriving "covers N childcare days, M
   requests fire". ImOut.
 - **RecurringPreview** — `Callout tone="info"` wrapper (`title` + `footnote`) deriving the
@@ -252,6 +255,9 @@ A closure that needs cover is *not* `closed`: its day keeps its state and gains 
 Grid cell + list row keep a **generic** line; only `DayDetail` surfaces the free-text reason.
 
 ## Confirmed exclusions
+
+0. **No `FactList` / `FactRow`.** Specified for a DayDetail evidence list that was never built —
+   `DayDetail` shows a `Callout` + narrative instead. Add it when a feature actually needs one.
 
 1. **No Toast / transient-notification primitive** in v1. Feedback routing: validation → inline
    `FieldError` + RAC form summary; save success → navigate back to the calendar (the visible

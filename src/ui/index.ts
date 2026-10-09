@@ -25,6 +25,7 @@ export { Button, type ButtonProps } from "./Button";
 export { type Breakpoint, breakpoints, mq } from "./breakpoints";
 export { CalendarGrid, type CalendarGridProps } from "./CalendarGrid";
 export { Callout, type CalloutProps } from "./Callout";
+export { ClosureRow, type ClosureRowProps } from "./ClosureRow";
 export { CountBadge, type CountBadgeProps } from "./CountBadge";
 export {
   type BuildCalendarMonthParams,
