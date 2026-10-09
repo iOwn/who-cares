@@ -20,4 +20,6 @@
 .actionBar {
   margin: 0 calc(-1 * var(--space-20)) calc(-1 * var(--space-20));
   --action-bar-bg: var(--color-surface);
+  /* sticky offsets from the padding edge of the scroll port, so pull it down over .dialog's bottom padding */
+  bottom: calc(-1 * var(--space-20));
 }
