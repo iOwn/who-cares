@@ -95,8 +95,10 @@ extraction + WCAG audit: [iOwn/who-cares#29](https://github.com/iOwn/who-cares/i
   cascade — a component that imports `tokens.css` is a bug.
 - **Focus ring**: `--focus-ring-width` / `--focus-ring-offset` (2px each); components declare
   `outline: var(--focus-ring-width) solid var(--color-focus-ring)` themselves (#191).
-- **Sizes** (decision only, not yet built): a small
-  `--size-control-*` / `--size-icon-*` scale; pips, skeletons and container widths stay raw
+- **Sizes** (#192): `--size-control-sm` / `--size-control-md` (34 / 40px) and `--size-icon-24` /
+  `--size-icon-36`, only for values shared by 2+ components. Pips, skeletons, container widths and
+  FAB's 3rem stay raw; the lint rule flags a raw width/height only when it equals one of these
+  tokens' values
   ([ADR-0024](./adr/0024-sizes-get-a-small-control-scale-focus-ring-first-the-rest-stays-raw.md)).
 - **Units**: type + space in `rem` (root 16px); radius / border-width / shadow-offset in `px`.
 - **Categories**: colour, type scale, weight / leading / tracking, space, radius, border-width,

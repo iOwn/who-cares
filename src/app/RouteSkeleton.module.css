@@ -62,8 +62,8 @@
 }
 
 .icon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
 }
 
 .card {

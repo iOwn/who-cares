@@ -32,14 +32,14 @@
 }
 
 .sizeMd {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--size-icon-24);
+  height: var(--size-icon-24);
   border-width: var(--border-heavy);
 }
 
 .sizeLg {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: var(--size-icon-36);
+  height: var(--size-icon-36);
   border-width: var(--border-heavy);
 }
 

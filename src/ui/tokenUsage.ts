@@ -66,6 +66,24 @@ const COLOR_PROPERTY = new RegExp(
   "i",
 );
 
+/** Dimension properties checked against the `--size-*` tokens. */
+const DIMENSION_PROPERTY = /^(?:min-|max-)?(?:width|height)$/i;
+const SIZE_LENGTH = /(?<![\w.-])(\d*\.?\d+)(px|rem)\b/gi;
+
+const toPx = (amount: number, unit: string) =>
+  Math.round(amount * (unit.toLowerCase() === "rem" ? 16 : 1) * 1000) / 1000;
+
+/** `--size-*: <n>rem|px` declarations in tokens.css → px value → token name. */
+export function parseSizeTokens(tokensCss: string): Map<number, string> {
+  const sizes = new Map<number, string>();
+  for (const [, name, amount, unit] of stripComments(tokensCss).matchAll(
+    /(--size-[\w-]+)\s*:\s*(\d*\.?\d+)(px|rem)\s*;/gi,
+  )) {
+    sizes.set(toPx(Number(amount), unit), name);
+  }
+  return sizes;
+}
+
 /**
  * Paths (from a `path → source text` map) of shipped TSX that sets an inline `style={{…}}`.
  * Stories and tests are workbench/test code and exempt.
@@ -107,9 +125,14 @@ function removeCalls(value: string, fn: string): string {
 
 /**
  * `known` = every custom property that resolves (tokens.css, other declarations, TSX keys,
- * runtime-supplied ones).
+ * runtime-supplied ones). `sizeTokens` (see `parseSizeTokens`) turns on the dimension check:
+ * a raw width/height equal to a size token's value must use the token.
  */
-export function lintCss(source: string, known: ReadonlySet<string>): Violation[] {
+export function lintCss(
+  source: string,
+  known: ReadonlySet<string>,
+  sizeTokens: ReadonlyMap<number, string> = new Map(),
+): Violation[] {
   const css = stripComments(source);
   const violations: Violation[] = [];
 
@@ -146,6 +169,12 @@ export function lintCss(source: string, known: ReadonlySet<string>): Violation[]
     }
     if (!isCustom && TOKENIZED_PROPERTY.test(property) && RAW_LENGTH.test(bare)) {
       report(`raw length in ${property} — use a token`);
+    }
+    if (!isCustom && sizeTokens.size > 0 && DIMENSION_PROPERTY.test(property)) {
+      for (const [length, amount, unit] of bare.matchAll(SIZE_LENGTH)) {
+        const token = sizeTokens.get(toPx(Number(amount), unit));
+        if (token) report(`raw ${length} in ${property} — use ${token}`);
+      }
     }
   }
   return violations;
