@@ -14,13 +14,15 @@ dimensions, 32 outline lines, 13 transforms and a handful of one-offs.
    `--focus-ring-offset: 2px`, route all 16 focus-ring declarations (13 files) through the existing
    `focus-ring` mixin in `mixins.css`, then add `outline` / `outline-offset` to `TOKENIZED_PROPERTY`.
 2. **A small control-size scale** for sizes repeated across components: `--size-control-sm` (34px),
-   `--size-control-md` (40px), `--size-control-lg` (48px), plus `--size-icon-*`. This replaces the ~25
-   repeated control and touch-target heights (`2.5rem` alone is used 9 times in 7 files).
+   `--size-control-md` (40px), plus `--size-icon-24` / `--size-icon-36`. This replaces the repeated
+   control and touch-target heights (`2.5rem` alone is used 9 times in 7 files). Refined in #192:
+   only values used by 2+ components get a token, so there is no `--size-control-lg` (its only
+   consumer would be FAB's `3rem`, which stays raw).
 3. **Everything else stays raw:** dots and pips, skeleton shapes (RouteSkeleton is ~12 of the 72) and
    container max-widths. A `--measure-*` set was considered, but it would cover only 5 uses in 5 files.
 4. **The lint rule does not take dimensions wholesale.** Skeletons and one-off pips would need many
-   `ALLOWED` entries. A narrower rule on `height` / `min-height` / `width` in `src/ui/**`, once the
-   control scale exists, is workable.
+   `ALLOWED` entries. Instead (#192) the rule flags a raw width/height/min-/max- value only when it
+   equals a `--size-*` token's value — "use the token when one exists".
 
 ## Alternatives considered
 

@@ -102,7 +102,7 @@
 
 .grabber {
   align-self: center;
-  width: 2.25rem;
+  width: var(--size-icon-36);
   height: var(--border-heavy);
   border-radius: var(--radius-pill);
   background: var(--color-border);
@@ -113,7 +113,7 @@
      reserved on BOTH sides so a single close button on one side still leaves the
      title optically centred. The title track is the flexible one so it shrinks
      (and wraps) instead of pushing the trailing slot out of the row (#137). */
-  --dialog-header-slot: 2.125rem;
+  --dialog-header-slot: var(--size-control-sm);
   display: grid;
   grid-template-columns:
     minmax(var(--dialog-header-slot), auto)

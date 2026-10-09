@@ -215,6 +215,12 @@
     --border: 2px; /* default */
     --border-heavy: 3px; /* Today cell, primary buttons, FAB */
 
+    /* --- size (rem) — only values shared by 2+ components; one-offs stay raw --- */
+    --size-control-sm: 2.125rem; /* compact Button / IconButton, dialog header slot (34px) */
+    --size-control-md: 2.5rem; /* Button, IconButton, text fields, select (40px) */
+    --size-icon-24: 1.5rem; /* Avatar, Spinner, settings icon */
+    --size-icon-36: 2.25rem; /* Avatar, Spinner, dialog grabber */
+
     /* --- shadow: the signature hard offset --- */
     --shadow-color: var(--ink-900);
     --shadow-sm: 0 2px 0 var(--shadow-color); /* icon buttons, mini, weekday-on */
