@@ -39,7 +39,7 @@ domain service ──returns──▶ Notification[] ──▶ dispatchAll()
 
 | # | Event key | Recipient | Raised by |
 | --- | --- | --- | --- |
-| 1 | `pickup-request-received` | other parent | `recordAbsence` / recurring generator (one bundled digest per action) |
+| 1 | `pickup-request-received` | other parent | `recordAbsence` / recurring generator (one bundled digest per action; the absence note, if any, is quoted at the end, cut at 140 characters — issue #207) |
 | 2 | `pickup-request-accepted` | requester | `acceptRequest` |
 | 3 | `pickup-request-declined` | requester | `declineRequest` |
 | 4–6 | `pickup-request-withdrawn` | the parent who still had it (4, 5) / requester (6) | `withdrawRequest`, `absenceCancellation`, `claimDay`, `acceptRequest` (superseded) |

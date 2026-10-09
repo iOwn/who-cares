@@ -37,8 +37,11 @@ import {
   resetIdCounter,
 } from "@/testing";
 import {
+  AbsenceInputError,
   isPastDate,
+  MAX_ABSENCE_NOTE_LENGTH,
   MAX_ABSENCE_SPAN_DAYS,
+  MAX_DIGEST_NOTE_LENGTH,
   PICKUP_REQUEST_RECEIVED_EVENT,
   planPickupRequests,
   recordAbsence,
@@ -395,6 +398,45 @@ describe("recordAbsence", () => {
       event: PICKUP_REQUEST_RECEIVED_EVENT,
     });
     expect(result.notification?.body).toContain("5 childcare days");
+    expect(result.notification?.body).not.toContain("message");
+  });
+
+  it("quotes the note in the digest (#207)", async () => {
+    const fakes = createFakes({});
+    const result = await recordAbsence(fakes.deps, {
+      householdId: HOUSEHOLD_ID,
+      memberId: MEMBER_1_ID,
+      startDate: "2025-01-06",
+      endDate: "2025-01-06",
+      note: "  Flight lands at 5pm  ",
+    });
+    expect(result.notification?.body).toContain("“Flight lands at 5pm”");
+  });
+
+  it("cuts a long note in the digest at 140 characters with an ellipsis (#207)", async () => {
+    const fakes = createFakes({});
+    const result = await recordAbsence(fakes.deps, {
+      householdId: HOUSEHOLD_ID,
+      memberId: MEMBER_1_ID,
+      startDate: "2025-01-06",
+      endDate: "2025-01-06",
+      note: "x".repeat(300),
+    });
+    expect(result.notification?.body).toContain(`“${"x".repeat(MAX_DIGEST_NOTE_LENGTH)}…”`);
+    expect(result.absence.note).toHaveLength(300);
+  });
+
+  it("rejects a note over 500 characters (#207)", async () => {
+    const fakes = createFakes({});
+    await expect(
+      recordAbsence(fakes.deps, {
+        householdId: HOUSEHOLD_ID,
+        memberId: MEMBER_1_ID,
+        startDate: "2025-01-06",
+        endDate: "2025-01-06",
+        note: "x".repeat(MAX_ABSENCE_NOTE_LENGTH + 1),
+      }),
+    ).rejects.toBeInstanceOf(AbsenceInputError);
   });
 
   it("returns no notification when no request is raised", async () => {

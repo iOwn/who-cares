@@ -31,6 +31,11 @@ export interface RequestCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "
   now?: Date;
   /** `true` once the request has crossed a 48h threshold (ADR-0003). */
   escalating?: boolean;
+  /**
+   * The requester's free-text message (the absence's note, #207). Rendered as
+   * plain text, line breaks kept; omitted or empty → no message block.
+   */
+  message?: string;
   /** Accept / Decline controls, supplied by the request-lifecycle feature (#52). */
   actions?: ReactNode;
 }
@@ -42,6 +47,7 @@ export const RequestCard = forwardRef<HTMLDivElement, RequestCardProps>(function
     raisedAt,
     now = new Date(),
     escalating,
+    message,
     actions,
     className,
     ...props
@@ -66,6 +72,7 @@ export const RequestCard = forwardRef<HTMLDivElement, RequestCardProps>(function
           </div>
           {escalating ? <StatePill state="at-risk" size="sm" /> : null}
         </div>
+        {message ? <blockquote className={styles.message}>{message}</blockquote> : null}
         <p className={styles.question}>Can you cover this pickup?</p>
         {actions != null ? <div className={styles.actions}>{actions}</div> : null}
       </article>

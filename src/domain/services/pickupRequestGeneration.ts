@@ -163,6 +163,16 @@ export interface RecordAbsenceDeps {
  */
 export const MAX_ABSENCE_SPAN_DAYS = 28;
 
+/**
+ * Longest absence note accepted (issue #207). The note is shown to the other
+ * parent on the request card and in the notification digest, so it is bounded
+ * server-side as well as by the form's `maxLength`.
+ */
+export const MAX_ABSENCE_NOTE_LENGTH = 500;
+
+/** How much of the note the notification digest carries before cutting with "…". */
+export const MAX_DIGEST_NOTE_LENGTH = 140;
+
 export interface RecordAbsenceInput {
   readonly householdId: string;
   /** The member declaring the absence. */
@@ -198,9 +208,20 @@ export const PICKUP_REQUEST_RECEIVED_EVENT = "pickup-request-received";
  * raises the same event across several generated absences and still sends one
  * digest.
  */
-export function pickupRequestDigestBody(count: number, requesterName: string): string {
+export function pickupRequestDigestBody(
+  count: number,
+  requesterName: string,
+  note?: string,
+): string {
   const days = count === 1 ? "one childcare day" : `${count} childcare days`;
-  return `${requesterName} is out and asked you to cover pickup on ${days}. Open the app to accept or decline each day.`;
+  const base = `${requesterName} is out and asked you to cover pickup on ${days}. Open the app to accept or decline each day.`;
+  const message = note?.trim();
+  if (!message) return base;
+  const shown =
+    message.length > MAX_DIGEST_NOTE_LENGTH
+      ? `${message.slice(0, MAX_DIGEST_NOTE_LENGTH).trimEnd()}…`
+      : message;
+  return `${base} Their message: “${shown}”`;
 }
 
 /**
@@ -263,6 +284,11 @@ export async function recordAbsence(
   }
   if (spanDays(input.startDate, input.endDate) > MAX_ABSENCE_SPAN_DAYS) {
     throw new AbsenceInputError("An absence can cover at most four weeks at a time.");
+  }
+  if ((input.note?.trim().length ?? 0) > MAX_ABSENCE_NOTE_LENGTH) {
+    throw new AbsenceInputError(
+      `The message can be at most ${MAX_ABSENCE_NOTE_LENGTH} characters.`,
+    );
   }
 
   const members = await deps.members.listByHousehold(input.householdId);
@@ -346,7 +372,7 @@ export async function recordAbsence(
           recipientId: other.id,
           event: PICKUP_REQUEST_RECEIVED_EVENT,
           title: `${requester.name} asked you to cover pickup`,
-          body: pickupRequestDigestBody(requests.length, requester.name),
+          body: pickupRequestDigestBody(requests.length, requester.name, input.note),
         }
       : null;
 

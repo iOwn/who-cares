@@ -69,7 +69,10 @@ _Avoid_: Pickup day, care day
 **Absence**:
 A member's declaration that they are unavailable for pickup across a range
 of consecutive dates (startDate–endDate, inclusive). Carries an optional
-free-text label and note, neither of which changes app behaviour.
+free-text label and note, neither of which changes app behaviour. The note
+is the requester's **message** to the other parent: it is shown on each
+**Pickup request** the absence raises and quoted (cut at 140 characters) in
+the notification digest. The label stays private to the requester's own views.
 _Avoid_: Unavailability, trip, out-of-office
 
 **Pickup request**:
