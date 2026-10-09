@@ -59,7 +59,7 @@ export const InSheet: Story = () => (
     <ActionBar
       style={{
         margin: "0 calc(-1 * var(--space-20)) calc(-1 * var(--space-20))",
-        background: "var(--color-surface)",
+        ["--action-bar-bg" as string]: "var(--color-surface)",
       }}
     >
       <Button variant="primary" fullWidth>
