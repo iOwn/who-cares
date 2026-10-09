@@ -41,6 +41,11 @@ gh pr review <pr-id> --approve --body "<your conclusion>"
 gh pr review <pr-id> --request-changes --body "<your conclusion>"
 ```
 
+## UI
+
+This project uses a design system (see [General Info on the Design system](/docs/design-system.md) and [the Design System Inventory](/docs/design-system-inventory.md)).
+Preferably use existing components or create new ones as variant or completely new entity for every new UI element that is needed.
+
 ## Next.js
 
 The app is pinned to Next.js 16 (see `docs/adr/0004-serverless-vercel-stack-over-always-on-fly-io.md`).
@@ -62,3 +67,4 @@ Issues and specs live as GitHub issues, managed via the `gh` CLI. See `docs/agen
 ### Domain docs
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
