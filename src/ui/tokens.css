@@ -215,6 +215,10 @@
     --border: 2px; /* default */
     --border-heavy: 3px; /* Today cell, primary buttons, FAB */
 
+    /* --- focus ring (px) — the mandatory keyboard-focus outline, see mixins.css --- */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
     /* --- shadow: the signature hard offset --- */
     --shadow-color: var(--ink-900);
     --shadow-sm: 0 2px 0 var(--shadow-color); /* icon buttons, mini, weekday-on */

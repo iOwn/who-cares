@@ -11,8 +11,8 @@ dimensions, 32 outline lines, 13 transforms and a handful of one-offs.
 **Tokenize only what is shared; leave one-offs raw; do not lint dimensions wholesale.**
 
 1. **Focus ring first, as its own change.** Add `--focus-ring-width: 2px` and
-   `--focus-ring-offset: 2px`, route all 16 focus-ring declarations (13 files) through the existing
-   `focus-ring` mixin in `mixins.css`, then add `outline` / `outline-offset` to `TOKENIZED_PROPERTY`.
+   `--focus-ring-offset: 2px`, use them in all 16 focus-ring declarations (13 files; the `.focus-ring` class cannot be composed
+   into a module's state selectors, so each keeps its own two lines), then add `outline` / `outline-offset` to `TOKENIZED_PROPERTY`.
 2. **A small control-size scale** for sizes repeated across components: `--size-control-sm` (34px),
    `--size-control-md` (40px), `--size-control-lg` (48px), plus `--size-icon-*`. This replaces the ~25
    repeated control and touch-target heights (`2.5rem` alone is used 9 times in 7 files).
