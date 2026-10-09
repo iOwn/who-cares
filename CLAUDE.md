@@ -18,6 +18,9 @@ An issue is implemented from its refined body, never from a one-line ask. `/refi
 
 When you are about to implement or develop something create a branch first. After you are finished with a development task create a PR.
 
+If the PR touches UI (`src/ui/**`, or `.tsx` / `.css` under `src/app/`), run `/verify-ui` once its
+preview deployment is green and before spawning the review agent below. Docs- or domain-only PRs skip it.
+
 ### 2. Reviewing
 
 Spawn a review agent with the following brief:
