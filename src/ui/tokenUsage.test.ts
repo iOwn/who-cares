@@ -17,13 +17,13 @@ import { lintCss, parseSizeTokens, stripComments } from "./tokenUsage";
  *   3. every `var(--x)` resolves to a token (tokens.css) or a custom property declared
  *      in `src/` (CSS declaration or a `"--x"` key set from TSX)
  *   4. spacing / border / radius / type / shadow / z-index / grid-track / motion-duration
- *      properties take tokens, not raw lengths (0 and percentages are fine)
+ *      properties (incl. `outline` / `outline-offset`) take tokens, not raw lengths (0 and percentages are fine)
  *
  *   5. a raw width/height whose value equals a `--size-*` token must use the token (one-off
  *      sizes with no token — pips, skeletons, max-widths — stay raw on purpose, ADR-0024)
  *
- * Not covered (issue #190): `outline` (#191), inline `style={{}}` in TSX and the `animation`
- * shorthand (#193), `top`/`right`/`bottom`/`left`.
+ * Not covered (issue #190): inline `style={{}}` in TSX and the `animation` shorthand (#193),
+ * `top`/`right`/`bottom`/`left`.
  *
  * See docs/design-system.md "Token model" and the Component Authoring Checklist.
  * A deliberate exception goes in `ALLOWED` with the reason, not a looser rule.
@@ -154,6 +154,15 @@ describe("lintCss (seeded with known-bad input)", () => {
     flags(".a { transition: opacity 120ms; }", "raw length in transition");
     flags(".a { border: 2px solid var(--color-text); }", "raw length in border");
     flags(".a { grid-template-columns: 1fr 120px; }", "raw length in grid-template-columns");
+  });
+
+  it("flags raw outline widths and offsets, not outline: none", () => {
+    flags(".a { outline: 2px solid var(--color-text); }", "raw length in outline");
+    flags(".a { outline-offset: 2px; }", "raw length in outline-offset");
+    clean(
+      ".a { outline: var(--space-8) solid var(--color-text); outline-offset: var(--space-8); }",
+    );
+    clean(".a { outline: none; }");
   });
 
   it("flags a raw dimension that equals a size token, in any unit spelling", () => {

@@ -215,6 +215,10 @@
     --border: 2px; /* default */
     --border-heavy: 3px; /* Today cell, primary buttons, FAB */
 
+    /* --- focus ring (px) — the mandatory keyboard-focus outline, see mixins.css --- */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
     /* --- size (rem) — only values shared by 2+ components; one-offs stay raw --- */
     --size-control-sm: 2.125rem; /* compact Button / IconButton, dialog header slot (34px) */
     --size-control-md: 2.5rem; /* Button, IconButton, text fields, select (40px) */

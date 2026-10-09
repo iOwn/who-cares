@@ -50,6 +50,7 @@ const TOKENIZED_PROPERTY = new RegExp(
     "font-size",
     "line-height",
     "letter-spacing",
+    "outline(?:-width|-offset)?",
     "box-shadow",
     "z-index",
     "transition(?:-duration)?",

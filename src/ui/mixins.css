@@ -17,8 +17,8 @@
    * FOCUS RING — MANDATORY on every interactive primitive
    * (docs/design-system.md "API & authoring conventions" §3).
    *
-   * The literal rule is `outline: 2px solid var(--color-focus-ring)` +
-   * `outline-offset: 2px`. Each RAC-backed primitive re-declares these two
+   * The rule is `outline: var(--focus-ring-width) solid var(--color-focus-ring)` +
+   * `outline-offset: var(--focus-ring-offset)`. Each RAC-backed primitive re-declares these two
    * lines inside its own `&[data-focus-visible]` selector (RAC emits
    * `[data-focus-visible]` on keyboard focus); non-RAC elements use native
    * `:focus-visible`. This class is the shared definition for anything that
@@ -31,8 +31,8 @@
    * --------------------------------------------------------------------- */
   .focus-ring:focus-visible,
   .focus-ring[data-focus-visible] {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--color-focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   /* -----------------------------------------------------------------------

@@ -38,8 +38,8 @@
 
 /* FOCUS RING — mandatory (docs/design-system.md §3). Never removed. */
 .group[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
   border-color: var(--color-border-strong);
 }
 
@@ -121,8 +121,8 @@
 }
 
 .trigger[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .trigger[data-disabled] {
@@ -186,8 +186,8 @@
 }
 
 .navButton[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .navButton[data-disabled] {
@@ -240,8 +240,8 @@
 }
 
 .cell[data-focus-visible] {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .cell[data-disabled] {
