@@ -156,7 +156,8 @@ specified below.
 
 **Absence entry**
 - As a parent, I can declare a one-off absence over a date range, with an optional label and
-  note.
+  a message (up to 500 characters). The message travels with the pickup requests the absence
+  raises: the other parent sees it on each request card and in the notification digest.
 - As a parent, I can enter a **Recurring** absence instead: pick weekdays + a start/end date
   range (end date hard-capped at 4 weeks from today), which generates one ordinary `Absence`
   per matching weekday. Idempotent — re-running silently skips days I've already covered. No

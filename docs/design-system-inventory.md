@@ -221,7 +221,8 @@ description, errorMessage, isRequired, isOptional, isDisabled`.
   content) + optional trailing slot (e.g. `StatePill`). Pressable → RAC `Button` when `onPress`
   supplied; otherwise plain `<div>`.
 - **RequestCard** — inbox request. One component, variants `open` (avatar + "{name} is out ·
-  {date}" + timing line + question + Accept/Decline `Button` row; sub-variant `escalating` =
+  {date}" + timing line + optional requester `message` (quoted block, plain text, line breaks
+  kept) + question + Accept/Decline `Button` row; sub-variant `escalating` =
   `Surface variant="danger"` + red timing) and `answered` (compact — status icon + "You
   accepted · {date}" + subline; `declined` dimmed).
 - **DateRangeField** — composes two `DateField`s + cross-field validation + the 4-week

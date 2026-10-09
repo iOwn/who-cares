@@ -14,7 +14,7 @@ import type {
   PickupRequest,
   Weekday,
 } from "@/domain";
-import { planPickupRequests, planRecurringAbsences } from "@/domain";
+import { MAX_ABSENCE_NOTE_LENGTH, planPickupRequests, planRecurringAbsences } from "@/domain";
 import {
   AbsenceImpact,
   ActionBar,
@@ -265,10 +265,11 @@ export function AbsenceForm({
         />
 
         <TextArea
-          label="Note"
+          label="Message"
           isOptional
           value={note}
           onChange={setNote}
+          maxLength={MAX_ABSENCE_NOTE_LENGTH}
           placeholder="Anything the other parent should know"
           className={styles.field}
         />

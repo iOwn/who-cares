@@ -46,6 +46,18 @@
   color: var(--color-text-muted);
 }
 
+.message {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .question {
   margin: 0;
   font-size: var(--text-base);

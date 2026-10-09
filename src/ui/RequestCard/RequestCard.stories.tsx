@@ -45,6 +45,35 @@ export const WithActions: Story = () => (
   </Stack>
 );
 
+export const WithMessage: Story = () => (
+  <Stack>
+    <RequestCard
+      requesterName="Alex"
+      dateLabel="Mon, Jan 13"
+      raisedAt={new Date(NOW.getTime() - 3 * 60 * 60 * 1000)}
+      now={NOW}
+      message={"Flight lands at 5pm.\nHappy to swap another day."}
+      actions={
+        <>
+          <Button variant="primary" size="sm">
+            Accept
+          </Button>
+          <Button variant="secondary" size="sm">
+            Decline
+          </Button>
+        </>
+      }
+    />
+    <RequestCard
+      requesterName="Alex"
+      dateLabel="Tue, Jan 14"
+      raisedAt={new Date(NOW.getTime() - 3 * 60 * 60 * 1000)}
+      now={NOW}
+      message={`Conference ${"supercalifragilisticexpialidocious".repeat(4)} and a very long note that keeps going so we can see how it wraps inside the card.`}
+    />
+  </Stack>
+);
+
 export const Escalating: Story = () => (
   <Stack>
     <RequestCard

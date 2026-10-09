@@ -281,6 +281,6 @@ async function buildBatchDigest(
     recipientId: other.id,
     event: PICKUP_REQUEST_RECEIVED_EVENT,
     title: `${requester.name} asked you to cover pickup`,
-    body: pickupRequestDigestBody(requests.length, requester.name),
+    body: pickupRequestDigestBody(requests.length, requester.name, input.note),
   };
 }

@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import type { Member, PickupRequest } from "@/domain";
+import type { Absence, Member, PickupRequest } from "@/domain";
 import { hasCrossedAtRiskThreshold } from "@/domain";
 import { Button, Callout, EmptyState, IconButton, RequestCard, RouteHeader } from "@/ui";
 import { shortDate } from "./formatCalendarDate";
@@ -44,11 +44,13 @@ export interface InboxProps {
   /** Open requests addressed to the current member, soonest childcare day first. */
   readonly requests: readonly PickupRequest[];
   readonly members: readonly Member[];
+  /** The household's absences — a request's message is its absence's note (#207). */
+  readonly absences: readonly Absence[];
   /** The current instant, for the timing lines + the 48h threshold check. */
   readonly now: Date;
 }
 
-export function Inbox({ onClose, requests, members, now }: InboxProps) {
+export function Inbox({ onClose, requests, members, absences, now }: InboxProps) {
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
@@ -175,6 +177,7 @@ export function Inbox({ onClose, requests, members, now }: InboxProps) {
                 requesterName={nameOf(request.requesterId)}
                 dateLabel={shortDate(request.date)}
                 raisedAt={request.raisedAt}
+                message={absences.find((a) => a.id === request.absenceId)?.note}
                 now={now}
                 escalating={hasCrossedAtRiskThreshold(request.raisedAt, request.date, now)}
                 actions={

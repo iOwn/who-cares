@@ -135,6 +135,7 @@ export function AppShell({
           onClose={() => setInboxOpen(false)}
           requests={myOpenRequests}
           members={members}
+          absences={absences}
           now={now}
         />
       ) : null}

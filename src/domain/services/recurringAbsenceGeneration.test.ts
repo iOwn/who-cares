@@ -504,6 +504,17 @@ describe("recordRecurringAbsences", () => {
     expect(result.notification?.body).toContain("3 childcare days");
   });
 
+  it("carries the note once in the batch digest (#207)", async () => {
+    const fakes = createFakes();
+    const result = await recordRecurringAbsences(fakes.deps, {
+      ...baseInput,
+      note: "Back by Friday",
+    });
+    const body = result.notification?.body ?? "";
+    expect(body).toContain("“Back by Friday”");
+    expect(body.split("Back by Friday")).toHaveLength(2);
+  });
+
   it("is idempotent: a second identical run creates nothing and sends no digest", async () => {
     const fakes = createFakes();
     await recordRecurringAbsences(fakes.deps, baseInput);
