@@ -173,7 +173,7 @@ childcare"). Props: `title, onBack, trailing?`.
 ### 20. ActionBar
 
 Sticky bottom container with gradient fade-in. ImOut, Recurring, Settings. Holds a full-width
-primary Button. Props: `children`.
+primary Button. Props: `children`. Override `--action-bar-bg` (bar + fade colour) when it sits on a non-`--color-bg` surface, e.g. a Dialog sheet.
 
 ### 21. Spinner
 
